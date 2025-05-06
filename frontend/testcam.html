@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chấm công bằng khuôn mặt</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    h2 {
+      font-weight: 600;
+      color: #343a40;
+    }
+
+    video, #preview {
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 2px solid #dee2e6;
+      background-color: #fff;
+    }
+
+    #countdown {
+      font-size: 2.5rem;
+      color: #00378a;
+      font-weight: bold;
+      margin-top: 12px;
+    }
+
+    .btn-group button {
+      min-width: 130px;
+      font-weight: 500;
+      font-size: 1rem;
+      transition: 0.2s ease;
+    }
+
+    .btn-group button:hover {
+      transform: scale(1.03);
+    }
+
+    .alert {
+      font-size: 1rem;
+      padding: 0.75rem 1rem;
+    }
+
+    #response pre {
+      background-color: #f1f3f5;
+      padding: 10px;
+      text-align: left;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body class="container py-5 text-center">
+
+  <h2 class="mb-4">📷 Chấm công bằng khuôn mặt</h2>
+
+  <div class="d-flex flex-column align-items-center">
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="countdown"></div>
+    <img id="preview" src="#" alt="Ảnh xem trước" class="d-none mt-3" />
+    <p class="text-muted mt-2">💡 Giữ khuôn mặt rõ nét, ánh sáng đủ và nhìn thẳng vào camera</p>
+
+    <div class="btn-group mt-3 gap-2">
+      <button class="btn btn-success" onclick="startCountdown()">📸 Chụp ảnh</button>
+      <button class="btn btn-outline-warning d-none" id="retakeBtn" onclick="retake()">🔁 Chụp lại</button>
+      <button class="btn btn-outline-primary d-none" id="submitBtn" onclick="submitImage()">📤 Gửi chấm công</button>
+    </div>
+  </div>
+
+  <div id="response" class="mt-4 text-center"></div>
+
+  
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const preview = document.getElementById("preview");
+    const countdownEl = document.getElementById("countdown");
+    //const cameraSound = document.getElementById("cameraSound");
+    const submitBtn = document.getElementById("submitBtn");
+    const retakeBtn = document.getElementById("retakeBtn");
+    const responseDiv = document.getElementById("response");
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(err => alert("Không thể truy cập camera"));
+
+    function startCountdown() {
+      responseDiv.innerHTML = '';
+      let seconds = 3;
+      countdownEl.textContent = seconds;
+      const interval = setInterval(() => {
+        seconds--;
+        countdownEl.textContent = seconds > 0 ? seconds : '';
+        if (seconds <= 0) {
+          clearInterval(interval);
+          takePicture();
+        }
+      }, 1000);
+    }
+
+    function takePicture() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      const dataURL = canvas.toDataURL("image/jpeg");
+
+      const imageData = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+      const gray = [];
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        gray.push(0.299 * imageData.data[i] + 0.587 * imageData.data[i + 1] + 0.114 * imageData.data[i + 2]);
+      }
+
+      let laplacian = [];
+      const w = canvas.width;
+      const h = canvas.height;
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const idx = y * w + x;
+          const lap =
+            -gray[idx - w] - gray[idx - 1] + 4 * gray[idx] - gray[idx + 1] - gray[idx + w];
+          laplacian.push(lap);
+        }
+      }
+
+      const mean = laplacian.reduce((a, b) => a + b, 0) / laplacian.length;
+      const variance = laplacian.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / laplacian.length;
+
+      if (variance < 10) {
+        responseDiv.innerHTML = `<div class="alert alert-warning">⚠️ Ảnh quá mờ! Vui lòng chụp lại.</div>`;
+        preview.classList.add("d-none");
+        retakeBtn.classList.remove("d-none");
+        return;
+      }
+
+      preview.src = dataURL;
+      preview.setAttribute("data-base64", dataURL);
+      preview.classList.remove("d-none");
+     // cameraSound.play();
+
+      submitBtn.classList.remove("d-none");
+      retakeBtn.classList.remove("d-none");
+    }
+
+    function retake() {
+      preview.classList.add("d-none");
+      preview.removeAttribute("data-base64");
+      submitBtn.classList.add("d-none");
+      retakeBtn.classList.add("d-none");
+      countdownEl.textContent = '';
+      responseDiv.innerHTML = '';
+    }
+
+    async function submitImage() {
+      const base64Image = preview.getAttribute("data-base64");
+      if (!base64Image) return;
+
+      const response = await fetch("http://127.0.0.1:5000/api/face-checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_base64: base64Image })
+      });
+
+      const result = await response.json();
+      responseDiv.innerHTML = `<div class="alert alert-${response.ok ? 'success' : 'danger'}">
+        ${result.message || 'Lỗi không xác định'}
+      </div>`;
+
+      if (result.cham_cong) {
+        responseDiv.innerHTML += `<pre>${JSON.stringify(result.cham_cong, null, 2)}</pre>`;
+      }
+
+      retake();
+    }
+  </script>
+</body>
+</html>
