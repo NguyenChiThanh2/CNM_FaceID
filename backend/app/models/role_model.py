@@ -8,8 +8,8 @@ class Role(db.Model):
     ten_role = db.Column(db.String(50), nullable=False)
     mo_ta = db.Column(db.String(50), nullable=False)
 
-    # Sửa lại tên mối quan hệ cho đúng
-    role_users = db.relationship("User", back_populates="role_users")
+    # Quan hệ ngược lại, tên rõ nghĩa hơn
+    users = db.relationship("User", back_populates="role", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Role {self.ten_role}>"
@@ -21,3 +21,4 @@ class Role(db.Model):
             'ten_role': self.ten_role,
             'mo_ta': self.mo_ta
         }
+

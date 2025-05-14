@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Button } from "react-bootstrap";
+import { Button , Breadcrumb } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 
 const ChamCongList = () => {
@@ -70,9 +70,12 @@ const ChamCongList = () => {
     <div className="container min-vh-100">
       <div className="row">
         <div className="col-12 mt-5">
-          <button className="btn btn-secondary mb-3" onClick={() => navigate("/")}>
-            ← Về trang chủ
-          </button>
+          <Breadcrumb className="mt-3">
+            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
+            <Breadcrumb.Item active>Quản lý chấm công</Breadcrumb.Item>
+          </Breadcrumb>
+
+          <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
 
           <h2 className="mb-4 text-center">Quản lý chấm công</h2>
 

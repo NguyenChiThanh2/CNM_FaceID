@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { toast } from "react-toastify";
 
 const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
   const [nhanVienList, setNhanVienList] = useState([]);
   const [loaiNghiPhepList, setLoaiNghiPhepList] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Lấy danh sách nhân viên
@@ -58,15 +60,13 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
       [name]: value,
     }));
   };
-
-  const handleDateChange = (date, name) => {
-    // Chuyển đổi ngày thành định dạng yyyy-mm-dd
-    const formattedDate = date ? date.toISOString().split("T")[0] : "";
+  const handleDateChange = (date, field) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: formattedDate,
+      [field]: date.toISOString().split("T")[0], // lưu dưới dạng yyyy-mm-dd
     }));
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,9 +79,11 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
         );
         if (response.status === 200) {
           onAdded();
-          setEditingNghiPhep(null); // Reset form sau khi cập nhật
+          setEditingNghiPhep(null);
+          toast.success("Cập nhật đơn nghỉ phép thành công!");
         } else {
           setErrorMessage("Lỗi cập nhật nghỉ phép: " + response.data.error);
+          toast.error("Cập nhật đơn nghỉ phép thất bại!");
         }
       } else {
         // Thêm mới đơn nghỉ phép
@@ -98,18 +100,21 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
             den_ngay: "",
             ly_do: "",
             trang_thai: "Chờ duyệt",
-          }); // Reset form sau khi thêm mới
+          });
+          toast.success("Thêm đơn nghỉ phép thành công!");
         } else {
           setErrorMessage("Lỗi thêm mới nghỉ phép: " + response.data.error);
+          toast.error("Thêm đơn nghỉ phép thất bại!");
         }
       }
     } catch (error) {
-      console.error("Lỗi khi xử lý form:", error);
-      setErrorMessage(
-        "Lỗi hệ thống: " + (error.response?.data?.error || error.message)
-      );
+      const message = error.response?.data?.error || error.message;
+      console.error("Lỗi khi xử lý form:", message);
+      setErrorMessage("Lỗi hệ thống: " + message);
+      toast.error("Đã xảy ra lỗi: " + message);
     }
   };
+
 
   return (
     <div className="container mt-4">

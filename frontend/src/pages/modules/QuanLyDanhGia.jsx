@@ -123,85 +123,89 @@ const QuanLyDanhGia = () => {
     };
 
     return (
-        <Container fluid className="bg-light py-4 px-5">
-            <Breadcrumb className="mt-3">
-                <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
-                <Breadcrumb.Item active>Quản lý đánh giá</Breadcrumb.Item>
-            </Breadcrumb>
+        <div className="container min-vh-100">
+            <div className="row">
+                <div className="col-12 mt-5">
+                    <Breadcrumb className="mt-3">
+                        <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
+                        <Breadcrumb.Item active>Quản lý đánh giá</Breadcrumb.Item>
+                    </Breadcrumb>
+                    <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
+                    <Row className="mb-3">
+                        <Col><h2 className="text-center">Quản lý đánh giá nhân sự</h2></Col>
+                    </Row>
 
-            <Row className="mb-3">
-                <Col><h2 className="text-center">Quản lý đánh giá nhân sự</h2></Col>
-            </Row>
+                    <Row className="mb-3">
+                        <Col md={4}>
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Tìm theo ID nhân viên..."
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </Col>
+                        <Col className="text-end">
+                            <Button variant="outline-success" className="me-2" onClick={handleExportExcel}>Xuất Excel</Button>
 
-            <Row className="mb-3">
-                <Col md={4}>
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Tìm theo ID nhân viên..."
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </Col>
-                <Col className="text-end">
-                    <Button variant="outline-success" className="me-2" onClick={handleExportExcel}>Xuất Excel</Button>
+                            <Button variant="outline-primary" onClick={handleCreate}>+ Thêm đánh giá</Button>
+                        </Col>
+                    </Row>
 
-                    <Button variant="outline-primary" onClick={handleCreate}>+ Thêm đánh giá</Button>
-                </Col>
-            </Row>
 
-            <div className="shadow-sm p-4">
-                <Table bordered hover className="bg-white shadow-sm">
-                    <thead className="table-dark text-center">
-                        <tr>
-                            <th>ID</th>
-                            <th>Nhân viên</th>
-                            <th>Người đánh giá</th>
-                            <th>Kỹ năng</th>
-                            <th>Thái độ</th>
-                            <th>Hiệu suất</th>
-                            <th>Điểm TB</th>
-                            <th>Ngày</th>
-                            <th>Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredDanhGias.map((dg) => (
-                            <tr key={dg.id} className={`text-center ${getRowClass(dg)}`}>
-                                <td>{dg.id}</td>
-                                <td>{dg.nhan_vien.ho_ten}</td>
-                                <td>{dg.nguoi_danh_gia.ho_ten}</td>
-                                <td>{dg.diem_ky_nang}</td>
-                                <td>{dg.diem_thai_do}</td>
-                                <td>{dg.diem_hieu_suat}</td>
-                                <td>{((dg.diem_ky_nang + dg.diem_thai_do + dg.diem_hieu_suat) / 3).toFixed(1)}</td>
-                                <td>{dg.thoi_gian}</td>
-                                <td>
-                                    <Button variant="outline-warning" size="sm" onClick={() => handleEdit(dg)}>
-                                        Sửa
-                                    </Button>{" "}
-                                    <Button variant="outline-danger" size="sm" onClick={() => handleDelete(dg.id)}>
-                                        Xóa
-                                    </Button>
-                                </td>
+                    <Table bordered hover className="bg-white shadow-sm">
+                        <thead className="table-dark text-center">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nhân viên</th>
+                                <th>Người đánh giá</th>
+                                <th>Kỹ năng</th>
+                                <th>Thái độ</th>
+                                <th>Hiệu suất</th>
+                                <th>Điểm TB</th>
+                                <th>Ngày</th>
+                                <th>Hành động</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </Table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {filteredDanhGias.map((dg) => (
+                                <tr key={dg.id} className={`text-center ${getRowClass(dg)}`}>
+                                    <td>{dg.id}</td>
+                                    <td>{dg.nhan_vien.ho_ten}</td>
+                                    <td>{dg.nguoi_danh_gia.ho_ten}</td>
+                                    <td>{dg.diem_ky_nang}</td>
+                                    <td>{dg.diem_thai_do}</td>
+                                    <td>{dg.diem_hieu_suat}</td>
+                                    <td>{((dg.diem_ky_nang + dg.diem_thai_do + dg.diem_hieu_suat) / 3).toFixed(1)}</td>
+                                    <td>{dg.thoi_gian}</td>
+                                    <td>
+                                        <Button variant="outline-warning" size="sm" onClick={() => handleEdit(dg)}>
+                                            Sửa
+                                        </Button>{" "}
+                                        <Button variant="outline-danger" size="sm" onClick={() => handleDelete(dg.id)}>
+                                            Xóa
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
 
-            <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>{selectedDG ? "Cập nhật đánh giá" : "Thêm đánh giá mới"}</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <DanhGiaForm
-                        initialData={selectedDG}
-                        onSubmit={handleFormSubmit}
-                        onClose={() => setShowModal(false)}
-                    />
-                </Modal.Body>
-            </Modal>
-        </Container>
+
+                    <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+                        <Modal.Header closeButton>
+                            <Modal.Title>{selectedDG ? "Cập nhật đánh giá" : "Thêm đánh giá mới"}</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                            <DanhGiaForm
+                                initialData={selectedDG}
+                                onSubmit={handleFormSubmit}
+                                onClose={() => setShowModal(false)}
+                            />
+                        </Modal.Body>
+                    </Modal>
+                </div>
+            </div>
+        </div>
     );
 };
 

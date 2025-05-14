@@ -104,6 +104,7 @@ const PhucLoiForm = ({ fetchPhucLoiList, selected, onClose, onAdded }) => {
             className="form-control"
             value={form.loai}
             onChange={handleChange}
+            required
           />
         </div>
 
@@ -115,6 +116,7 @@ const PhucLoiForm = ({ fetchPhucLoiList, selected, onClose, onAdded }) => {
             className="form-control"
             value={form.gia_tri}
             onChange={handleChange}
+            required
           />
         </div>
 
@@ -126,6 +128,7 @@ const PhucLoiForm = ({ fetchPhucLoiList, selected, onClose, onAdded }) => {
             value={form.mo_ta}
             onChange={handleChange}
             rows={3}
+            required
           />
         </div>
 

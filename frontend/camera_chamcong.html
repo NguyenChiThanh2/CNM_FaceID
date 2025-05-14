@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Chấm công bằng khuôn mặt</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    h2 {
+      font-weight: 600;
+      color: #343a40;
+    }
+
+    video {
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 2px solid #dee2e6;
+      background-color: #fff;
+    }
+
+    #countdown {
+      font-size: 2.5rem;
+      color: #00378a;
+      font-weight: bold;
+      margin-top: 12px;
+    }
+
+    .btn-group button {
+      min-width: 130px;
+      font-weight: 500;
+      font-size: 1rem;
+      transition: 0.2s ease;
+    }
+
+    .btn-group button:hover {
+      transform: scale(1.03);
+    }
+
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+    }
+  </style>
+</head>
+
+<body class="container py-5 text-center">
+
+  <h2 class="mb-4"> Chấm công bằng FaceID</h2>
+
+  <div class="d-flex flex-column align-items-center">
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="countdown"></div>
+    <h5 class="text-muted mt-2">💡 Giữ khuôn mặt rõ nét, ánh sáng đủ và nhìn thẳng vào camera</h5>
+
+    <div class="btn-group mt-3 gap-2">
+      <button class="btn btn-success" onclick="takePicture()"> Chấm công</button>
+
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container">
+    <div id="toastMessage" class="toast align-items-center text-white bg-success border-0" role="alert"
+      aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body"></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+          aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const countdownEl = document.getElementById("countdown");
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(err => alert("Không thể truy cập camera"));
+
+    function startCountdown() {
+      takePicture(); // Gọi chụp ảnh ngay lập tức
+    }
+
+
+    function takePicture() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      const dataURL = canvas.toDataURL("image/jpeg");
+
+      const imageData = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+      const gray = [];
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        gray.push(0.299 * imageData.data[i] + 0.587 * imageData.data[i + 1] + 0.114 * imageData.data[i + 2]);
+      }
+
+      let laplacian = [];
+      const w = canvas.width;
+      const h = canvas.height;
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const idx = y * w + x;
+          const lap = -gray[idx - w] - gray[idx - 1] + 4 * gray[idx] - gray[idx + 1] - gray[idx + w];
+          laplacian.push(lap);
+        }
+      }
+
+      const mean = laplacian.reduce((a, b) => a + b, 0) / laplacian.length;
+      const variance = laplacian.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / laplacian.length;
+
+      if (variance < 20) {
+        showToast("⚠️ Ảnh quá mờ! Vui lòng thử lại.", "warning");
+        countdownEl.textContent = '';
+        return;
+      }
+
+      submitImage(dataURL);
+    }
+
+    async function submitImage(base64Image) {
+      try {
+        fetch("http://127.0.0.1:5000/api/face-checkin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image_base64: base64Image })
+        });
+
+        const now = new Date();
+        const timeString = now.toLocaleString("vi-VN", {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+
+        showToast(`Chấm công lúc <strong>${timeString}</strong>`, "success");
+        // Đợi 3 giây rồi reload trang
+        setTimeout(() => {
+          location.reload();
+        }, 3000);
+
+
+
+
+
+      } catch (error) {
+        showToast("❌ Lỗi kết nối đến server.", "danger");
+      } finally {
+        countdownEl.textContent = '';
+      }
+    }
+
+    function showToast(message, type) {
+      const toastEl = document.getElementById("toastMessage");
+      const toastBody = toastEl.querySelector(".toast-body");
+
+      toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+      toastBody.innerHTML = message;
+
+      const toast = new bootstrap.Toast(toastEl, {
+        delay: 3000,
+        autohide: true
+      });
+      toast.show();
+    }
+  </script>
+</body>
+
+</html>

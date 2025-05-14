@@ -99,98 +99,102 @@ const QuanLyPhucLoi = () => {
   };
 
   return (
-    <Container fluid className="bg-light min-vh-100 py-4 px-5">
-      <ToastContainer position="top-end" className="p-3">
-        <Toast onClose={() => setShowToast(false)} show={showToast} bg="success" delay={3000} autohide>
-          <Toast.Body className="text-white">{toastMessage}</Toast.Body>
-        </Toast>
-      </ToastContainer>
-      <Breadcrumb className="mt-3">
-        <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
-        <Breadcrumb.Item active>Quản lý phúc lợi</Breadcrumb.Item>
-      </Breadcrumb>
-      <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
+    <div className="container min-vh-100">
+      <div className="row">
+        <div className="col-12 mt-5">
+          <ToastContainer position="top-end" className="p-3">
+            <Toast onClose={() => setShowToast(false)} show={showToast} bg="success" delay={3000} autohide>
+              <Toast.Body className="text-white">{toastMessage}</Toast.Body>
+            </Toast>
+          </ToastContainer>
+          <Breadcrumb className="mt-3">
+            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
+            <Breadcrumb.Item active>Quản lý phúc lợi</Breadcrumb.Item>
+          </Breadcrumb>
+          <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
 
 
-      <h2 className="text-center  mb-4">📋 Quản lý Phúc lợi</h2>
+          <h2 className="text-center  mb-4">📋 Quản lý Phúc lợi</h2>
 
-      <div className="shadow-sm bg-white p-4 rounded">
-        <Row className="mb-3">
-          <Col md={6}>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="🔍 Tìm kiếm theo tên hoặc mô tả..."
-              value={searchKeyword}
-              onChange={(e) => {
-                setSearchKeyword(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-          </Col>
-          <Col md={6} className="text-end">
-            <Button variant="outline-success" className="me-2" onClick={handleAdd}>➕ Thêm phúc lợi</Button>
-            <Button variant="outline-primary" onClick={exportToExcel}>📤 Xuất Excel</Button>
-          </Col>
-        </Row>
 
-        {currentItems.length === 0 ? (
-          <div className="text-center py-3">Không có dữ liệu phù hợp</div>
-        ) : (
-          <Table striped bordered hover responsive className="align-middle">
-            <thead className="table-dark text-center">
-              <tr>
-                <th>Tên</th>
-                <th>Mô tả</th>
-                <th>Giá trị</th>
-                <th>Loại</th>
-                <th>Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentItems.map((pl) => (
-                <tr key={pl.id}>
-                  <td>{pl.ten_phuc_loi}</td>
-                  <td>{pl.mo_ta}</td>
-                  <td>{pl.gia_tri}</td>
-                  <td>{pl.loai}</td>
-                  <td className="text-center">
-                    <Button variant="outline-warning" size="sm" className="me-2" onClick={() => handleEdit(pl)}>✏️ Sửa</Button>
-                    <Button variant="outline-danger" size="sm" onClick={() => handleDelete(pl.id)}>🗑️ Xóa</Button>
-                  </td>
+          <Row className="mb-3">
+            <Col md={6}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="🔍 Tìm kiếm theo tên hoặc mô tả..."
+                value={searchKeyword}
+                onChange={(e) => {
+                  setSearchKeyword(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </Col>
+            <Col md={6} className="text-end">
+              <Button variant="outline-success" className="me-2" onClick={handleAdd}>➕ Thêm phúc lợi</Button>
+              <Button variant="outline-primary" onClick={exportToExcel}>📤 Xuất Excel</Button>
+            </Col>
+          </Row>
+
+          {currentItems.length === 0 ? (
+            <div className="text-center py-3">Không có dữ liệu phù hợp</div>
+          ) : (
+            <Table striped bordered hover responsive className="align-middle">
+              <thead className="table-dark text-center">
+                <tr>
+                  <th>Tên</th>
+                  <th>Mô tả</th>
+                  <th>Giá trị</th>
+                  <th>Loại</th>
+                  <th>Hành động</th>
                 </tr>
+              </thead>
+              <tbody>
+                {currentItems.map((pl) => (
+                  <tr key={pl.id}>
+                    <td>{pl.ten_phuc_loi}</td>
+                    <td>{pl.mo_ta}</td>
+                    <td>{pl.gia_tri}</td>
+                    <td>{pl.loai}</td>
+                    <td className="text-center">
+                      <Button variant="outline-warning" size="sm" className="me-2" onClick={() => handleEdit(pl)}>✏️ Sửa</Button>
+                      <Button variant="outline-danger" size="sm" onClick={() => handleDelete(pl.id)}>🗑️ Xóa</Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+
+          {totalPages > 1 && (
+            <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap">
+              <Button variant="outline-secondary" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>← Trước</Button>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <Button key={i} variant={i + 1 === currentPage ? "primary" : "outline-primary"} onClick={() => setCurrentPage(i + 1)}>
+                  {i + 1}
+                </Button>
               ))}
-            </tbody>
-          </Table>
-        )}
+              <Button variant="outline-secondary" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Sau →</Button>
+            </div>
+          )}
 
-        {totalPages > 1 && (
-          <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap">
-            <Button variant="outline-secondary" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>← Trước</Button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <Button key={i} variant={i + 1 === currentPage ? "primary" : "outline-primary"} onClick={() => setCurrentPage(i + 1)}>
-                {i + 1}
-              </Button>
-            ))}
-            <Button variant="outline-secondary" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Sau →</Button>
-          </div>
-        )}
+
+          <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+            <Modal.Header closeButton>
+              <Modal.Title>{selectedPhucLoi ? "✏️ Cập nhật phúc lợi" : "➕ Thêm phúc lợi"}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <PhucLoiForm
+                selected={selectedPhucLoi}
+                onAdded={handleFormSubmit}
+                onClose={() => setShowModal(false)}
+                fetchPhucLoiList={fetchPhucLoiList}
+              />
+            </Modal.Body>
+          </Modal>
+        </div>
       </div>
-
-      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>{selectedPhucLoi ? "✏️ Cập nhật phúc lợi" : "➕ Thêm phúc lợi"}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <PhucLoiForm
-            selected={selectedPhucLoi}
-            onAdded={handleFormSubmit}
-            onClose={() => setShowModal(false)}
-            fetchPhucLoiList={fetchPhucLoiList}
-          />
-        </Modal.Body>
-      </Modal>
-    </Container>
+    </div>
   );
 };
 

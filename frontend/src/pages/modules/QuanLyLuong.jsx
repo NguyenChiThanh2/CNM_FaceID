@@ -7,6 +7,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { OverlayTrigger, Tooltip , Breadcrumb } from "react-bootstrap";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const API_URL = "http://127.0.0.1:5000/api";
 
@@ -182,9 +185,11 @@ const QuanLyLuong = () => {
     <div className="container min-vh-100">
       <div className="row">
         <div className="col-12 mt-5">
-          <button className="btn btn-secondary mb-3" onClick={() => navigate("/")}>
-            ← Về trang chủ
-          </button>
+          <Breadcrumb className="mt-3">
+            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
+            <Breadcrumb.Item active>Quản lý lương</Breadcrumb.Item>
+          </Breadcrumb>
+          <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
 
 
           <h2 className="mb-4 text-center">Quản lý lương</h2>
@@ -244,21 +249,38 @@ const QuanLyLuong = () => {
             </div>
 
             <div className="col-md-4 mb-2">
-              <button className="btn btn-success w-100" onClick={() => setShowModal(true)}>
-                Tính lương cho 1 nhân viên
-              </button>
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip>Tính lương cho 1 nhân viên </Tooltip>}
+              >
+                <Button
+                  variant="outline-success"
+                  className="w-100"
+                  onClick={() => {
+                    setShowModal(true);
+                  }}
+                >
+                  Tính lương cho 1 nhân viên
+                </Button>
+              </OverlayTrigger>
             </div>
             <div className="col-md-4 mb-2">
-              <Button
-                variant="outline-warning"
-                className="w-100"
-                onClick={() => {
-                  setIsTinhTatCa(true);
-                  setShowModal(true);
-                }}
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip>Tính lương toàn bộ nhân viên </Tooltip>}
               >
-                Tính lương tất cả nhân viên
-              </Button>
+                <Button
+                  variant="outline-warning"
+                  className="w-100"
+                  onClick={() => {
+                    setIsTinhTatCa(true);
+                    setShowModal(true);
+                  }}
+                >
+                  Tính lương tất cả nhân viên
+                </Button>
+              </OverlayTrigger>
+
             </div>
             <div className="col-md-2 mb-2 d-flex justify-content-md-end justify-content-center">
               <Button variant="outline-success" className="w-100 w-md-auto" onClick={exportToExcel}>
@@ -295,12 +317,18 @@ const QuanLyLuong = () => {
                       <td>{formatCurrency(luong.khau_tru)}</td>
                       <td>{formatCurrency(luong.tong_luong)}</td>
                       <td>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleDeleteLuong(luong.id)}
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={<Tooltip>Xoá dòng lương này</Tooltip>}
                         >
-                          Xoá
-                        </button>
+                          <button
+                            className="btn btn-sm btn-danger"
+                            onClick={() => handleDeleteLuong(luong.id)}
+                          >
+                            Xoá
+                          </button>
+                        </OverlayTrigger>
+
                       </td>
                     </tr>
                   );
@@ -391,6 +419,8 @@ const QuanLyLuong = () => {
           </Modal>
         </div>
       </div>
+
+
     </div>
   );
 };

@@ -4,7 +4,7 @@ import NghiPhepForm from "../../components/nghiphep/NghiPhepForm";
 import {
   Modal,
   Button,
-  Container,
+
   Table,
   Breadcrumb,
 } from "react-bootstrap";
@@ -130,145 +130,144 @@ const QuanLyNghiPhep = () => {
   });
 
   return (
-    <Container fluid className="bg-light min-vh-100 py-4 px-5">
-      <Breadcrumb className="mt-3">
-        <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
-        <Breadcrumb.Item active>Quản lý nhân sự</Breadcrumb.Item>
-      </Breadcrumb>
-
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <button className="btn btn-secondary" onClick={() => navigate("/")}>
-          ← Về trang chủ
-        </button>
-        <h2 className="text-center flex-grow-1">Quản lý đơn nghỉ phép</h2>
-      </div>
-
-      <div className="shadow-sm p-4 bg-white rounded">
-        <div className="row mb-3">
-          <div className="col-md-6 mb-2">
-            <input
-              type="text"
-              className="form-control rounded-pill"
-              placeholder="🔍 Tìm theo tên nhân viên hoặc lý do..."
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-            />
+    <div className="container min-vh-100">
+      <div className="row">
+        <div className="col-12 mt-5">
+          <Breadcrumb className="mt-3">
+            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
+            <Breadcrumb.Item active>Quản lý nghỉ phép</Breadcrumb.Item>
+          </Breadcrumb>
+          <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h2 className="text-center flex-grow-1">Quản lý đơn nghỉ phép</h2>
           </div>
-          <div className="col-md-6 mb-2">
-            <select
-              className="form-select rounded-pill"
-              value={filterTrangThai}
-              onChange={(e) => setFilterTrangThai(e.target.value)}
-            >
-              <option value="">-- Tất cả trạng thái --</option>
-              <option value="Chờ duyệt">Chờ duyệt</option>
-              <option value="Đã duyệt">Đã duyệt</option>
-              <option value="Từ chối">Từ chối</option>
-              <option value="Đã hủy">Đã hủy</option>
-            </select>
+
+
+          <div className="row mb-3">
+            <div className="col-md-6 mb-2">
+              <input
+                type="text"
+                className="form-control "
+                placeholder="🔍 Tìm theo tên nhân viên hoặc lý do..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+              />
+            </div>
+            <div className="col-md-6 mb-2">
+              <select
+                className="form-select rounded-pill"
+                value={filterTrangThai}
+                onChange={(e) => setFilterTrangThai(e.target.value)}
+              >
+                <option value="">-- Tất cả trạng thái --</option>
+                <option value="Chờ duyệt">Chờ duyệt</option>
+                <option value="Đã duyệt">Đã duyệt</option>
+                <option value="Từ chối">Từ chối</option>
+                <option value="Đã hủy">Đã hủy</option>
+              </select>
+            </div>
           </div>
-        </div>
 
-        <div className="d-flex justify-content-end mb-3">
-          <button className="btn btn-outline-success px-4" onClick={handleAdd}>
-            + Thêm đơn nghỉ phép
-          </button>
-        </div>
+          <div className="d-flex justify-content-end mb-3">
+            <button className="btn btn-outline-success px-4" onClick={handleAdd}>
+              + Thêm đơn nghỉ phép
+            </button>
+          </div>
 
-        <div className="table-responsive">
-          <Table bordered hover striped className="rounded">
-            <thead className="table-dark text-center">
-              <tr>
-                <th>Nhân viên</th>
-                <th>Từ ngày</th>
-                <th>Đến ngày</th>
-                <th>Tổng ngày nghỉ</th>
-                <th>Lý do</th>
-                <th>Trạng thái</th>
-                <th>Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+          <div className="table-responsive">
+            <Table bordered hover striped className="rounded">
+              <thead className="table-dark text-center">
                 <tr>
-                  <td colSpan="7" className="text-center">Đang tải dữ liệu...</td>
+                  <th>Nhân viên</th>
+                  <th>Từ ngày</th>
+                  <th>Đến ngày</th>
+                  <th>Tổng ngày nghỉ</th>
+                  <th>Lý do</th>
+                  <th>Trạng thái</th>
+                  <th>Hành động</th>
                 </tr>
-              ) : filteredList.length > 0 ? (
-                filteredList.map((nghiPhep) => (
-                  <tr key={nghiPhep.id}>
-                    <td>{nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
-                    <td>{formatDate(nghiPhep.tu_ngay)}</td>
-                    <td>{formatDate(nghiPhep.den_ngay)}</td>
-                    <td>{nghiPhep.so_ngay_nghi}</td>
-                    <td>{nghiPhep.ly_do}</td>
-                    <td className="text-center">
-                      <span className={`badge ${
-                        nghiPhep.trang_thai === "Chờ duyệt"
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" className="text-center">Đang tải dữ liệu...</td>
+                  </tr>
+                ) : filteredList.length > 0 ? (
+                  filteredList.map((nghiPhep) => (
+                    <tr key={nghiPhep.id}>
+                      <td>{nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
+                      <td>{formatDate(nghiPhep.tu_ngay)}</td>
+                      <td>{formatDate(nghiPhep.den_ngay)}</td>
+                      <td>{nghiPhep.so_ngay_nghi}</td>
+                      <td>{nghiPhep.ly_do}</td>
+                      <td className="text-center">
+                        <span className={`badge ${nghiPhep.trang_thai === "Chờ duyệt"
                           ? "bg-warning text-dark"
                           : nghiPhep.trang_thai === "Đã duyệt"
-                          ? "bg-success"
-                          : nghiPhep.trang_thai === "Từ chối"
-                          ? "bg-danger"
-                          : "bg-secondary"
-                      }`}>
-                        {nghiPhep.trang_thai}
-                      </span>
-                    </td>
-                    <td>
-                      {nghiPhep.trang_thai === "Chờ duyệt" && (
-                        <>
-                          <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>
-                            ✔ Duyệt
+                            ? "bg-success"
+                            : nghiPhep.trang_thai === "Từ chối"
+                              ? "bg-danger"
+                              : "bg-secondary"
+                          }`}>
+                          {nghiPhep.trang_thai}
+                        </span>
+                      </td>
+                      <td>
+                        {nghiPhep.trang_thai === "Chờ duyệt" && (
+                          <>
+                            <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>
+                              ✔ Duyệt
+                            </button>
+                            <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>
+                              ✖ Từ chối
+                            </button>
+                            <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>
+                              🗑 Hủy
+                            </button>
+                          </>
+                        )}
+                        {["Chờ duyệt", "Từ chối"].includes(nghiPhep.trang_thai) && (
+                          <button className="btn btn-sm btn-outline-warning" onClick={() => handleEdit(nghiPhep)}>
+                            ✏️ Sửa
                           </button>
-                          <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>
-                            ✖ Từ chối
-                          </button>
-                          <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>
-                            🗑 Hủy
-                          </button>
-                        </>
-                      )}
-                      {["Chờ duyệt", "Từ chối"].includes(nghiPhep.trang_thai) && (
-                        <button className="btn btn-sm btn-outline-warning" onClick={() => handleEdit(nghiPhep)}>
-                          ✏️ Sửa
-                        </button>
-                      )}
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center text-muted">
+                      Không có đơn nghỉ phép nào phù hợp
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7" className="text-center text-muted">
-                    Không có đơn nghỉ phép nào phù hợp
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </Table>
-        </div>
-      </div>
+                )}
+              </tbody>
+            </Table>
+          </div>
 
-      {/* Modal thêm/sửa đơn nghỉ phép */}
-      <Modal show={showModal} onHide={handleModalClose} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>
-            {editingNghiPhep ? "Chỉnh sửa đơn nghỉ phép" : "Thêm đơn nghỉ phép"}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <NghiPhepForm
-            onAdded={handleFormSubmit}
-            editingNghiPhep={editingNghiPhep}
-            setEditingNghiPhep={setEditingNghiPhep}
-          />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleModalClose}>
-            Đóng
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </Container>
+
+          {/* Modal thêm/sửa đơn nghỉ phép */}
+          <Modal show={showModal} onHide={handleModalClose} size="lg">
+            <Modal.Header closeButton>
+              <Modal.Title>
+                {editingNghiPhep ? "Chỉnh sửa đơn nghỉ phép" : "Thêm đơn nghỉ phép"}
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <NghiPhepForm
+                onAdded={handleFormSubmit}
+                editingNghiPhep={editingNghiPhep}
+                setEditingNghiPhep={setEditingNghiPhep}
+              />
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={handleModalClose}>
+                Đóng
+              </Button>
+            </Modal.Footer>
+          </Modal>
+        </div></div></div>
+
   );
 };
 

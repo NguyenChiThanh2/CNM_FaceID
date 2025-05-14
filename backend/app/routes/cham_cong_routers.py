@@ -45,30 +45,5 @@ def create_cham_cong_from_face():
         return jsonify({'message': 'Thiếu ảnh base64'}), 400
     result, status_code = create_cham_cong_from_face_service(base64_image)
     return jsonify(result), status_code
-# Route: Chấm công từ ảnh (Face)
-# @cham_cong_bp.route('/cham-cong-face', methods=['POST'])
-# def cham_cong_face():
-#     try:
-#         data = request.get_json()
-#         if not data or 'image_base64' not in data:
-#             return jsonify({"error": "Missing image data"}), 400
 
-#         image_base64 = data['image_base64']
-#         if not image_base64:
-#             return jsonify({'message': 'Thiếu hình ảnh'}), 400
-
-#         if "," in image_base64:
-#             image_base64 = image_base64.split(",")[1]
-
-#         cham_cong, error = create_cham_cong_from_face_service(image_base64)
-#         if cham_cong:
-#             return jsonify({
-#                 'message': 'Chấm công thành công',
-#                 'cham_cong': cham_cong.to_dict()  # Đảm bảo cham_cong có phương thức to_dict()
-#             }), 201
-#         else:
-#             return jsonify({'message': error}), 404
-
-#     except Exception as e:
-#         return jsonify({'message': f'Lỗi không xác định: {str(e)}'}), 500
 

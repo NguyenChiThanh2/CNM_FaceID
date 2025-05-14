@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import DaoTaoForm from "../../components/daotao/DaoTaoForm";
-import { Modal, Button, Form, Card, Breadcrumb } from "react-bootstrap";
+import { Modal, Button, Form, Breadcrumb } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
+import { OverlayTrigger, Tooltip } from "react-bootstrap";
 
 const QuanLyDaoTao = () => {
     const [daoTaoList, setDaoTaoList] = useState([]);
@@ -19,6 +22,7 @@ const QuanLyDaoTao = () => {
     const [selectedDaoTaoId, setSelectedDaoTaoId] = useState(null);
 
     const navigate = useNavigate();
+    const API_BASE = "http://localhost:5000";
 
     useEffect(() => {
         fetchDaoTao();
@@ -28,7 +32,7 @@ const QuanLyDaoTao = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get("http://127.0.0.1:5000/api/get-all-dao-tao");
+            const response = await axios.get(`${API_BASE}/api/get-all-dao-tao`);
             setDaoTaoList(response.data);
         } catch (error) {
             console.error("Lỗi khi gọi API khóa đào tạo:", error);
@@ -51,10 +55,12 @@ const QuanLyDaoTao = () => {
     const handleDelete = async (id) => {
         if (window.confirm("Bạn có chắc muốn xóa khóa đào tạo này không?")) {
             try {
-                await axios.delete(`http://127.0.0.1:5000/api/delete-dao-tao/${id}`);
+                await axios.delete(`${API_BASE}/api/delete-dao-tao/${id}`);
                 fetchDaoTao();
+                toast.success("Xóa thành công!");
             } catch (error) {
                 console.error("Lỗi khi xóa khóa đào tạo:", error);
+                toast.error("Xóa khóa đào tạo thất bại!");
             }
         }
     };
@@ -66,18 +72,19 @@ const QuanLyDaoTao = () => {
 
     const handleFormSubmit = () => {
         fetchDaoTao();
+        toast.success(editingDaoTao ? "Cập nhật khóa đào tạo thành công!" : "Thêm khóa đào tạo thành công!");
         handleModalClose();
     };
 
     const handleViewNhanVien = async (daoTaoId) => {
         try {
-            const response = await axios.get(`http://127.0.0.1:5000/api/get-all-nhan-vien-by-dao-tao-id/${daoTaoId}`);
+            const response = await axios.get(`${API_BASE}/api/get-all-nhan-vien-by-dao-tao-id/${daoTaoId}`);
             setSelectedDaoTaoId(daoTaoId);
             setSelectedNhanVien(response.data);
-            setShowNhanVienModal(true);
         } catch (error) {
             console.error("Lỗi khi lấy danh sách nhân viên:", error);
             setSelectedNhanVien([]);
+        } finally {
             setShowNhanVienModal(true);
         }
     };
@@ -87,16 +94,17 @@ const QuanLyDaoTao = () => {
 
         if (window.confirm("Bạn có chắc muốn xóa nhân viên này khỏi khóa đào tạo?")) {
             try {
-                await axios.post("http://localhost:5000/api/remove-nhan-vien-from-dao-tao", {
+                await axios.post(`${API_BASE}/api/remove-nhan-vien-from-dao-tao`, {
                     dao_tao_id: selectedDaoTaoId,
                     nhan_vien_id: nhanVienId,
                 });
 
-                // Cập nhật lại danh sách nhân viên
-                const response = await axios.get(`http://localhost:5000/api/get-all-nhan-vien-by-dao-tao-id/${selectedDaoTaoId}`);
+                const response = await axios.get(`${API_BASE}/api/get-all-nhan-vien-by-dao-tao-id/${selectedDaoTaoId}`);
                 setSelectedNhanVien(response.data);
+                toast.success("Đã xóa nhân viên khỏi khóa đào tạo.");
             } catch (error) {
                 console.error("Lỗi khi xóa nhân viên khỏi khóa đào tạo:", error);
+                toast.error("Không thể xóa nhân viên.");
             }
         }
     };
@@ -106,10 +114,10 @@ const QuanLyDaoTao = () => {
         setShowAddNhanVienModal(true);
 
         try {
-            const allNhanVienRes = await axios.get("http://localhost:5000/api/get-all-nhan-vien");
+            const allNhanVienRes = await axios.get(`${API_BASE}/api/get-all-nhan-vien`);
             setNhanVienList(allNhanVienRes.data);
 
-            const existedNhanVienRes = await axios.get(`http://localhost:5000/api/get-all-nhan-vien-by-dao-tao-id/${daoTaoId}`);
+            const existedNhanVienRes = await axios.get(`${API_BASE}/api/get-all-nhan-vien-by-dao-tao-id/${daoTaoId}`);
             const existedNhanVienIds = existedNhanVienRes.data.map((nv) => nv.id);
             setSelectedNhanVienIds(existedNhanVienIds);
         } catch (err) {
@@ -118,24 +126,27 @@ const QuanLyDaoTao = () => {
     };
 
     const handleSelectNhanVien = (e, id) => {
+        const newSet = new Set(selectedNhanVienIds);
         if (e.target.checked) {
-            setSelectedNhanVienIds([...selectedNhanVienIds, id]);
+            newSet.add(id);
         } else {
-            setSelectedNhanVienIds(selectedNhanVienIds.filter((nid) => nid !== id));
+            newSet.delete(id);
         }
+        setSelectedNhanVienIds([...newSet]);
     };
 
     const handleAddNhanVienToDaoTao = async () => {
         try {
-            await axios.post("http://localhost:5000/api/add-nhan-vien-to-dao-tao", {
+            await axios.post(`${API_BASE}/api/add-nhan-vien-to-dao-tao`, {
                 dao_tao_id: selectedDaoTaoId,
                 nhan_vien_ids: selectedNhanVienIds,
             });
-            alert("Thêm nhân viên thành công!");
+            toast.success("Thêm nhân viên thành công!");
             setShowAddNhanVienModal(false);
             setSelectedNhanVienIds([]);
         } catch (err) {
-            console.error("Lỗi khi thêm nhân viên vào khóa đào tạo:", err);
+            toast.error("Lỗi khi thêm nhân viên vào khóa đào tạo.");
+            console.error(err);
         }
     };
 
@@ -146,8 +157,8 @@ const QuanLyDaoTao = () => {
 
     const filteredList = daoTaoList.filter((dt) =>
         dt.khoa_dao_tao.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        dt.ngay_bat_dau.includes(searchKeyword) ||
-        dt.ngay_ket_thuc.includes(searchKeyword)
+        formatDate(dt.ngay_bat_dau).includes(searchKeyword) ||
+        formatDate(dt.ngay_ket_thuc).includes(searchKeyword)
     );
 
     return (
@@ -160,25 +171,32 @@ const QuanLyDaoTao = () => {
                     </Breadcrumb>
                     <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
 
+                    <h2 className="mb-4 text-center ">Quản lý khóa đào tạo</h2>
 
+                    <Form.Control
+                        type="text"
+                        placeholder="Tìm theo tên khóa đào tạo hoặc ngày..."
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                        className="mb-4"
+                    />
 
-                    <h2 className="mb-4 text-center text-primary">Quản lý khóa đào tạo</h2>
+                    {loading && (
+                        <div className="text-center my-4">
+                            <div className="spinner-border text-primary" role="status">
+                                <span className="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                    )}
 
-
-                    <div className="mb-4">
-                        <Form.Control
-                            type="text"
-                            placeholder="Tìm theo tên khóa đào tạo hoặc ngày..."
-                            value={searchKeyword}
-                            onChange={(e) => setSearchKeyword(e.target.value)}
-                        />
-                    </div>
-
-                    {loading && <p>Đang tải dữ liệu...</p>}
                     {error && <div className="alert alert-danger">{error}</div>}
 
                     <div className="mb-4 d-flex justify-content-end me-4">
-                        <Button variant="success" onClick={handleAdd}>Thêm khóa đào tạo</Button>
+                        <OverlayTrigger placement="top" overlay={<Tooltip>Thêm khóa đào tạo</Tooltip>}>
+                            <Button variant="success" className="d-flex align-items-center gap-2 px-3 rounded-3" onClick={handleAdd}>
+                                <i className="bi bi-plus-circle"></i> Thêm khóa đào tạo
+                            </Button>
+                        </OverlayTrigger>
                     </div>
 
 
@@ -198,10 +216,38 @@ const QuanLyDaoTao = () => {
                                     <td>{formatDate(daoTao.ngay_bat_dau)}</td>
                                     <td>{formatDate(daoTao.ngay_ket_thuc)}</td>
                                     <td className="text-center">
-                                        <Button variant="outline-warning" className="me-2" size="sm" onClick={() => handleEdit(daoTao)}>Sửa</Button>
-                                        <Button variant="outline-danger" className="me-2" size="sm" onClick={() => handleDelete(daoTao.id)}>Xóa</Button>
-                                        <Button variant="outline-info" className="me-2" size="sm" onClick={() => handleViewNhanVien(daoTao.id)}>Xem nhân viên</Button>
-                                        <Button variant="outline-primary" size="sm" onClick={() => handleShowAddNhanVienModal(daoTao.id)}>Thêm nhân viên</Button>
+                                        <OverlayTrigger placement="top" overlay={<Tooltip>Chỉnh sửa khóa đào tạo</Tooltip>}>
+                                            <Button variant="outline-warning" className="me-2" size="sm" onClick={() => handleEdit(daoTao)}>
+                                                Sửa
+                                            </Button>
+                                        </OverlayTrigger>
+
+                                        <OverlayTrigger
+                                            placement="top"
+                                            overlay={<Tooltip>Xóa khóa đào tạo</Tooltip>}
+                                        >
+                                            <Button variant="outline-danger" size="sm" className="me-2" onClick={() => handleDelete(daoTao.id)}>
+                                                Xóa
+                                            </Button>
+                                        </OverlayTrigger>
+
+                                        <OverlayTrigger
+                                            placement="top"
+                                            overlay={<Tooltip>Xem danh sách nhân viên tham gia</Tooltip>}
+                                        >
+                                            <Button variant="outline-info" size="sm" className="me-2" onClick={() => handleViewNhanVien(daoTao.id)}>
+                                                Xem nhân viên
+                                            </Button>
+                                        </OverlayTrigger>
+
+                                        <OverlayTrigger
+                                            placement="top"
+                                            overlay={<Tooltip>Thêm nhân viên vào khóa đào tạo</Tooltip>}
+                                        >
+                                            <Button variant="outline-primary" size="sm" onClick={() => handleShowAddNhanVienModal(daoTao.id)}>
+                                                Thêm nhân viên
+                                            </Button>
+                                        </OverlayTrigger>
 
                                     </td>
                                 </tr>
@@ -209,8 +255,7 @@ const QuanLyDaoTao = () => {
                         </tbody>
                     </table>
 
-
-                    {/* Modal: Thêm / Sửa khóa đào tạo */}
+                    {/* Modal thêm/sửa đào tạo */}
                     <Modal show={showModal} onHide={handleModalClose} size="lg">
                         <Modal.Header closeButton>
                             <Modal.Title>{editingDaoTao ? "Chỉnh sửa khóa đào tạo" : "Thêm khóa đào tạo"}</Modal.Title>
@@ -227,7 +272,7 @@ const QuanLyDaoTao = () => {
                         </Modal.Footer>
                     </Modal>
 
-                    {/* Modal: Danh sách nhân viên */}
+                    {/* Modal xem nhân viên */}
                     <Modal show={showNhanVienModal} onHide={() => setShowNhanVienModal(false)} size="lg">
                         <Modal.Header closeButton>
                             <Modal.Title>Danh sách nhân viên tham gia khóa đào tạo</Modal.Title>
@@ -252,11 +297,7 @@ const QuanLyDaoTao = () => {
                                                 <td>{nv.email}</td>
                                                 <td>{nv.ket_qua}</td>
                                                 <td>
-                                                    <Button
-                                                        variant="danger"
-                                                        size="sm"
-                                                        onClick={() => handleDeleteNhanVienFromDaoTao(nv.id)}
-                                                    >
+                                                    <Button variant="danger" size="sm" onClick={() => handleDeleteNhanVienFromDaoTao(nv.id)}>
                                                         Xóa
                                                     </Button>
                                                 </td>
@@ -271,7 +312,7 @@ const QuanLyDaoTao = () => {
                         </Modal.Footer>
                     </Modal>
 
-                    {/* Modal: Thêm nhân viên */}
+                    {/* Modal thêm nhân viên */}
                     <Modal show={showAddNhanVienModal} onHide={() => setShowAddNhanVienModal(false)} size="lg">
                         <Modal.Header closeButton>
                             <Modal.Title>Thêm nhân viên vào khóa đào tạo</Modal.Title>
@@ -305,6 +346,7 @@ const QuanLyDaoTao = () => {
                     </Modal>
                 </div>
             </div>
+            <ToastContainer position="top-right" autoClose={2000} />
         </div>
     );
 };

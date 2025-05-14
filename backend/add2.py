@@ -7,21 +7,37 @@ from app.models import (
     ChamCong, Luong, DaoTao, DanhGia, NghiPhep,
     PhucLoi, NhanVienPhucLoi, DaoTaoNhanVien, LoaiNghiPhep  # Đã thêm LoaiNghiPhep
 )
+from werkzeug.security import generate_password_hash
 
 app = create_app()
 with app.app_context():
     # Roles
-    admin_role = Role(ma_vai_tro="admin", ten_role="Admin", mo_ta="Quản trị hệ thống")
-    user_role = Role(ma_vai_tro="user", ten_role="User", mo_ta="Người dùng thông thường")
-    db.session.add_all([admin_role, user_role])
+    roles = [
+        Role(ma_vai_tro="admin", ten_role="Admin", mo_ta="Quản trị hệ thống"),
+        Role(ma_vai_tro="manager", ten_role="Manager", mo_ta="Quản lý cấp cao"),
+        Role(ma_vai_tro="staff", ten_role="Staff", mo_ta="Nhân viên bình thường"),
+        Role(ma_vai_tro="user", ten_role="User", mo_ta="Người dùng thông thường")
+    ]
+    
+    # Thêm tất cả Roles vào cơ sở dữ liệu
+    db.session.add_all(roles)
     db.session.commit()
 
     # Users
     users = [
-        User(username="admin", password="hashed_pw1", email="admin@example.com", role_id=admin_role.id),
-        User(username="user1", password="hashed_pw2", email="user1@example.com", role_id=user_role.id),
-        User(username="user2", password="hashed_pw3", email="user2@example.com", role_id=user_role.id)
+        User(username="admin", password=generate_password_hash("admin123"), email="admin@example.com", role_id=roles[0].id),
+        User(username="manager1", password=generate_password_hash("manager123"), email="manager1@example.com", role_id=roles[1].id),
+        User(username="staff1", password=generate_password_hash("staff123"), email="staff1@example.com", role_id=roles[2].id),
+        User(username="user1", password=generate_password_hash("user123"), email="user1@example.com", role_id=roles[3].id),
+        User(username="manager2", password=generate_password_hash("manager123"), email="manager2@example.com", role_id=roles[1].id),
+        User(username="staff2", password=generate_password_hash("staff123"), email="staff2@example.com", role_id=roles[2].id),
+        User(username="user2", password=generate_password_hash("user123"), email="user2@example.com", role_id=roles[3].id),
+        User(username="staff3", password=generate_password_hash("staff123"), email="staff3@example.com", role_id=roles[2].id),
+        User(username="user3", password=generate_password_hash("user123"), email="user3@example.com", role_id=roles[3].id),
+        User(username="manager3", password=generate_password_hash("manager123"), email="manager3@example.com", role_id=roles[1].id),
     ]
+    
+    # Thêm tất cả Users vào cơ sở dữ liệu
     db.session.add_all(users)
     db.session.commit()
 
