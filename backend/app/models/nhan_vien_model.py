@@ -66,7 +66,7 @@ class NhanVien(db.Model):
             'face_encoding': None  # Không trả về dữ liệu nhạy cảm
         }
 
-    def compare_face_encoding(self, face_encoding, tolerance=0.6):
+    def compare_face_encoding(self, face_encoding, tolerance=0.4):
         if not self.face_encoding:
             return False
         return face_recognition.compare_faces([self.face_encoding], face_encoding, tolerance=tolerance)[0]

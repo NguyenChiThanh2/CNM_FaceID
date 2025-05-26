@@ -2,9 +2,9 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Chấm công bằng khuôn mặt</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
     body {
       background-color: #f8f9fa;
@@ -44,19 +44,14 @@
       transform: scale(1.03);
     }
 
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 9999;
+    .alert {
+      max-width: 500px;
     }
   </style>
 </head>
 
 <body class="container py-5 text-center">
-
-  <h2 class="mb-4"> Chấm công bằng FaceID</h2>
+  <h2 class="mb-4">Chấm công bằng FaceID</h2>
 
   <div class="d-flex flex-column align-items-center">
     <video id="video" autoplay></video>
@@ -65,19 +60,26 @@
     <h5 class="text-muted mt-2">💡 Giữ khuôn mặt rõ nét, ánh sáng đủ và nhìn thẳng vào camera</h5>
 
     <div class="btn-group mt-3 gap-2">
-      <button class="btn btn-success" onclick="takePicture()"> Chấm công</button>
-
+      <button type="button" class="btn btn-success" onclick="takePicture()">Chấm công</button>
     </div>
+
+    <!-- Alert hiển thị kết quả (vẫn giữ nếu cần dùng cho mục đích khác) -->
+    <div id="alertBox" class="alert d-none mt-4" role="alert"></div>
   </div>
 
-  <!-- Toast -->
-  <div class="toast-container">
-    <div id="toastMessage" class="toast align-items-center text-white bg-success border-0" role="alert"
-      aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div class="toast-body"></div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
-          aria-label="Close"></button>
+  <!-- Modal kết quả -->
+  <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="resultModalLabel">Thông báo</h5>
+        </div>
+        <div class="modal-body" id="modalMessage">
+          <!-- Nội dung thông báo sẽ được chèn bằng JavaScript -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="okButton">OK</button>
+        </div>
       </div>
     </div>
   </div>
@@ -87,23 +89,21 @@
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const countdownEl = document.getElementById("countdown");
+    const alertBox = document.getElementById("alertBox");
 
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => video.srcObject = stream)
-      .catch(err => alert("Không thể truy cập camera"));
-
-    function startCountdown() {
-      takePicture(); // Gọi chụp ảnh ngay lập tức
-    }
-
+      .catch(err => showToast("❌ Không thể truy cập camera", "danger"));
 
     function takePicture() {
+      console.log("Bắt đầu takePicture");
+
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      canvas.getContext("2d").drawImage(video, 0, 0);
-      const dataURL = canvas.toDataURL("image/jpeg");
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0);
 
-      const imageData = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const gray = [];
       for (let i = 0; i < imageData.data.length; i += 4) {
         gray.push(0.299 * imageData.data[i] + 0.587 * imageData.data[i + 1] + 0.114 * imageData.data[i + 2]);
@@ -125,59 +125,82 @@
 
       if (variance < 20) {
         showToast("⚠️ Ảnh quá mờ! Vui lòng thử lại.", "warning");
-        countdownEl.textContent = '';
         return;
       }
 
+      const dataURL = canvas.toDataURL("image/jpeg");
       submitImage(dataURL);
     }
 
     async function submitImage(base64Image) {
       try {
-        fetch("http://127.0.0.1:5000/api/face-checkin", {
+        const response = await fetch("http://127.0.0.1:5000/api/face-checkin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image_base64: base64Image })
+
         });
 
-        const now = new Date();
-        const timeString = now.toLocaleString("vi-VN", {
-          day: '2-digit',
-          month: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-        });
+        const text = await response.text();
+        console.log("Phản hồi raw:", text);
+        let result;
 
-        showToast(`Chấm công lúc <strong>${timeString}</strong>`, "success");
-        // Đợi 3 giây rồi reload trang
-        setTimeout(() => {
-          location.reload();
-        }, 3000);
+        try {
+          result = JSON.parse(text);
+        } catch (e) {
+          console.error("Lỗi parse JSON:", e);
+          showToast("❌ Server trả về dữ liệu không hợp lệ.", "danger");
+          return;
+        }
 
+        console.log("Phản hồi parse:", result);
 
+        if (response.ok) {
+          const now = new Date();
+          const timeString = now.toLocaleString("vi-VN", {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
 
-
+          showToast(`✅ ${result.message}<br><small>Thời gian: ${timeString}</small>`, "success");
+        } else {
+          showToast(`❌ ${result.message || 'Lỗi không xác định'}`, "danger");
+        }
 
       } catch (error) {
+        console.error("Lỗi kết nối:", error);
         showToast("❌ Lỗi kết nối đến server.", "danger");
-      } finally {
-        countdownEl.textContent = '';
       }
+
     }
 
     function showToast(message, type) {
-      const toastEl = document.getElementById("toastMessage");
-      const toastBody = toastEl.querySelector(".toast-body");
+      const modalMessage = document.getElementById("modalMessage");
+      const resultModal = new bootstrap.Modal(document.getElementById("resultModal"));
+      const okButton = document.getElementById("okButton");
 
-      toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
-      toastBody.innerHTML = message;
+      // Gán màu dựa trên kiểu alert
+      let alertClass = "text-dark";
+      if (type === "success") alertClass = "text-success";
+      else if (type === "danger") alertClass = "text-danger";
+      else if (type === "warning") alertClass = "text-warning";
 
-      const toast = new bootstrap.Toast(toastEl, {
-        delay: 3000,
-        autohide: true
-      });
-      toast.show();
+      modalMessage.innerHTML = `<div class="${alertClass}">${message}</div>`;
+      resultModal.show();
+
+      okButton.onclick = () => {
+        resultModal.hide();
+        if (type === "success") {
+          location.reload();  // Chỉ reload nếu là thành công
+        }
+      };
     }
+
+    document.querySelector("form")?.addEventListener("submit", function (e) {
+      e.preventDefault();
+    });
   </script>
 </body>
 

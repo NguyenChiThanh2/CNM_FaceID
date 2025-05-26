@@ -4,11 +4,10 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Button, Modal } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { OverlayTrigger, Tooltip , Breadcrumb } from "react-bootstrap";
-import { ToastContainer } from "react-toastify";
+import { OverlayTrigger, Tooltip, Breadcrumb } from "react-bootstrap";
 import "react-toastify/dist/ReactToastify.css";
 
 const API_URL = "http://127.0.0.1:5000/api";
@@ -143,11 +142,12 @@ const QuanLyLuong = () => {
       const searchMatch = hoTen.includes(searchKeyword.toLowerCase());
       const monthMatch =
         selectedMonthNumber && selectedYear
-          ? String(luong.thang) === `${selectedYear}-${selectedMonthNumber}`
+          ? luong.thang === parseInt(selectedMonthNumber) &&
+          luong.nam === parseInt(selectedYear)
           : true;
       return searchMatch && monthMatch;
     })
-    .sort((a, b) => String(b.thang).localeCompare(String(a.thang)));
+    .sort((a, b) => b.id - a.id);
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
   const paginatedList = filteredList.slice(
@@ -160,11 +160,13 @@ const QuanLyLuong = () => {
       const nv = nhanVienList.find((nv) => nv.id === luong.nhan_vien_id);
       return {
         "Nhân viên": nv?.ho_ten || "Không rõ",
-        "Tháng": luong.thang,
+        "Tháng": `${luong.thang}/${luong.nam}`,
         "Số ngày công": luong.so_ngay_cong,
         "Lương cơ bản": luong.luong_co_ban,
         "Phụ cấp": luong.phu_cap,
         "Khấu trừ": luong.khau_tru,
+        "Bảo hiểm xã hội": luong.bao_hiem,
+        "Thuế thu nhập cá nhân": luong.thue_thu_nhap_ca_nhan,
         "Tổng lương": luong.tong_luong,
       };
     });
@@ -183,6 +185,7 @@ const QuanLyLuong = () => {
 
   return (
     <div className="container min-vh-100">
+      <ToastContainer />
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
@@ -190,10 +193,9 @@ const QuanLyLuong = () => {
             <Breadcrumb.Item active>Quản lý lương</Breadcrumb.Item>
           </Breadcrumb>
           <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
-
-
           <h2 className="mb-4 text-center">Quản lý lương</h2>
 
+          {/* Bộ lọc và thao tác */}
           <div className="row mb-4">
             <div className="col-md-4 mb-2">
               <input
@@ -238,7 +240,7 @@ const QuanLyLuong = () => {
               >
                 <option value="">Chọn tháng</option>
                 {[...Array(12).keys()].map((i) => {
-                  const month = String(i + 1).padStart(2, "0");
+                  const month = i + 1;
                   return (
                     <option key={month} value={month}>
                       Tháng {month}
@@ -247,28 +249,15 @@ const QuanLyLuong = () => {
                 })}
               </select>
             </div>
-
             <div className="col-md-4 mb-2">
-              <OverlayTrigger
-                placement="top"
-                overlay={<Tooltip>Tính lương cho 1 nhân viên </Tooltip>}
-              >
-                <Button
-                  variant="outline-success"
-                  className="w-100"
-                  onClick={() => {
-                    setShowModal(true);
-                  }}
-                >
+              <OverlayTrigger placement="top" overlay={<Tooltip>Tính lương cho 1 nhân viên</Tooltip>}>
+                <Button variant="outline-success" className="w-100" onClick={() => setShowModal(true)}>
                   Tính lương cho 1 nhân viên
                 </Button>
               </OverlayTrigger>
             </div>
             <div className="col-md-4 mb-2">
-              <OverlayTrigger
-                placement="top"
-                overlay={<Tooltip>Tính lương toàn bộ nhân viên </Tooltip>}
-              >
+              <OverlayTrigger placement="top" overlay={<Tooltip>Tính lương toàn bộ nhân viên</Tooltip>}>
                 <Button
                   variant="outline-warning"
                   className="w-100"
@@ -280,16 +269,15 @@ const QuanLyLuong = () => {
                   Tính lương tất cả nhân viên
                 </Button>
               </OverlayTrigger>
-
             </div>
             <div className="col-md-2 mb-2 d-flex justify-content-md-end justify-content-center">
               <Button variant="outline-success" className="w-100 w-md-auto" onClick={exportToExcel}>
                 Xuất Excel
               </Button>
             </div>
-
           </div>
 
+          {/* Bảng dữ liệu lương */}
           <div className="table-responsive">
             <table className="table table-bordered table-hover">
               <thead className="table-dark">
@@ -298,9 +286,12 @@ const QuanLyLuong = () => {
                   <th>Tháng</th>
                   <th>Số ngày công</th>
                   <th>Lương cơ bản</th>
+                  <th>Thuế TNCN</th>
+                  <th>BHXH</th>
                   <th>Phụ cấp</th>
                   <th>Khấu trừ</th>
                   <th>Tổng lương</th>
+                  <th>Thực nhận</th>
                   <th>Hành động</th>
                 </tr>
               </thead>
@@ -310,117 +301,102 @@ const QuanLyLuong = () => {
                   return (
                     <tr key={luong.id}>
                       <td>{nv?.ho_ten || "Không rõ"}</td>
-                      <td>{luong.thang}</td>
+                      <td>{`${luong.thang}/${luong.nam}`}</td>
                       <td>{luong.so_ngay_cong}</td>
                       <td>{formatCurrency(luong.luong_co_ban)}</td>
+                      <td>{formatCurrency(luong.thue_thu_nhap_ca_nhan)}</td>
+                      <td>{formatCurrency(luong.bao_hiem)}</td>
                       <td>{formatCurrency(luong.phu_cap)}</td>
                       <td>{formatCurrency(luong.khau_tru)}</td>
                       <td>{formatCurrency(luong.tong_luong)}</td>
+                      <td>{formatCurrency(luong.luong_thuc_nhan)}</td>
                       <td>
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={<Tooltip>Xoá dòng lương này</Tooltip>}
-                        >
-                          <button
-                            className="btn btn-sm btn-danger"
+                        <OverlayTrigger placement="top" overlay={<Tooltip>Xoá dòng lương này</Tooltip>}>
+                          <Button
+                            variant="danger"
+                            size="sm"
                             onClick={() => handleDeleteLuong(luong.id)}
                           >
                             Xoá
-                          </button>
+                          </Button>
                         </OverlayTrigger>
-
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
+
             </table>
           </div>
 
-          {/* Pagination */}
-          <nav className="mt-3">
-            <ul className="pagination justify-content-center">
-              {[...Array(totalPages).keys()].map((i) => (
-                <li
-                  key={i}
-                  className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  <button className="page-link">{i + 1}</button>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          {/* Phân trang */}
+          <div className="d-flex justify-content-center mt-3">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <Button
+                key={i + 1}
+                variant={i + 1 === currentPage ? "primary" : "outline-primary"}
+                onClick={() => setCurrentPage(i + 1)}
+                className="mx-1"
+              >
+                {i + 1}
+              </Button>
+            ))}
+          </div>
 
           {/* Modal tính lương */}
           <Modal show={showModal} onHide={() => setShowModal(false)}>
             <Modal.Header closeButton>
-              <Modal.Title>
-                {isTinhTatCa ? "Tính lương tất cả nhân viên" : "Tính lương nhân viên"}
-              </Modal.Title>
+              <Modal.Title>Tính lương</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               {!isTinhTatCa && (
-                <div className="form-group mb-2">
-                  <label>Nhân viên</label>
-                  <select
-                    className="form-control"
-                    value={formData.nhan_vien_id}
-                    onChange={(e) => setFormData({ ...formData, nhan_vien_id: e.target.value })}
-                  >
-                    <option value="">-- Chọn --</option>
-                    {nhanVienList.map((nv) => (
-                      <option key={nv.id} value={nv.id}>
-                        {nv.ho_ten}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div className="form-group mb-2">
-                <label>Tháng</label>
                 <select
-                  className="form-control"
-                  value={formData.thang}
-                  onChange={(e) => setFormData({ ...formData, thang: e.target.value })}
+                  className="form-control mb-3"
+                  value={formData.nhan_vien_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nhan_vien_id: e.target.value })
+                  }
                 >
-                  <option value="">-- Chọn tháng --</option>
-                  {[...Array(12).keys()].map((i) => (
-                    <option key={i + 1} value={i + 1}>
-                      Tháng {i + 1}
+                  <option value="">Chọn nhân viên</option>
+                  {nhanVienList.map((nv) => (
+                    <option key={nv.id} value={nv.id}>
+                      {nv.ho_ten}
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="form-group mb-2">
-                <label>Năm</label>
+              )}
+              <div className="d-flex gap-2">
                 <input
                   type="number"
+                  placeholder="Tháng"
+                  className="form-control"
+                  value={formData.thang}
+                  onChange={(e) =>
+                    setFormData({ ...formData, thang: e.target.value })
+                  }
+                />
+                <input
+                  type="number"
+                  placeholder="Năm"
                   className="form-control"
                   value={formData.nam}
-                  onChange={(e) => setFormData({ ...formData, nam: e.target.value })}
-                  placeholder="VD: 2025"
+                  onChange={(e) =>
+                    setFormData({ ...formData, nam: e.target.value })
+                  }
                 />
               </div>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="secondary" onClick={() => setShowModal(false)}>
-                Huỷ
+                Đóng
               </Button>
-              <Button
-                variant="primary"
-                onClick={handleSubmitLuong}
-                disabled={!isTinhTatCa && !formData.nhan_vien_id}
-              >
+              <Button variant="primary" onClick={handleSubmitLuong}>
                 Tính lương
               </Button>
-
             </Modal.Footer>
           </Modal>
         </div>
       </div>
-
-
     </div>
   );
 };

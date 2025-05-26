@@ -53,12 +53,11 @@ def delete_cham_cong_service(id):
   # Đảm bảo bạn có hàm này
 
 def create_cham_cong_from_face_service(base64_image):
-    import os  # THIẾU!
+    import os
+    import numpy as np
 
-    # Bước 1: Load ảnh từ base64
     img = read_image_from_base64(base64_image)
 
-    # Bước 2: Lấy face encoding từ ảnh
     face_locations = face_recognition.face_locations(img)
     if len(face_locations) == 0:
         return {'message': 'Không phát hiện khuôn mặt nào'}, 400
@@ -67,54 +66,67 @@ def create_cham_cong_from_face_service(base64_image):
     if not encodings:
         return {'message': 'Không thể mã hoá khuôn mặt'}, 400
 
-    face_encoding = encodings[0]
+    input_encoding = encodings[0]
 
-    # Bước 3: So sánh với tất cả nhân viên
+    matched_nv = None
+    min_distance = float('inf')
+    threshold = 0.5
+
     all_nhan_vien = NhanVien.query.all()
     for nv in all_nhan_vien:
-        if nv.face_encoding and nv.compare_face_encoding(face_encoding):
-            vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-            now = datetime.now(vietnam_tz)
-            today = now.date()
+        if nv.face_encoding:
+            known_encoding = np.array(nv.face_encoding)
+            distance = np.linalg.norm(known_encoding - input_encoding)
+            if distance < min_distance and distance <= threshold:
+                min_distance = distance
+                matched_nv = nv
 
-            cham_cong_today = ChamCong.query.filter_by(nhan_vien_id=nv.id, ngay=today).first()
+    if matched_nv:
+        vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+        now = datetime.now(vietnam_tz)
+        today = now.date()
 
-            # Lưu ảnh
-            filename = f"{uuid.uuid4()}.jpg"
-            image_path = os.path.join("static", "checkin_images", filename)
-            os.makedirs(os.path.dirname(image_path), exist_ok=True)
-            cv2.imwrite(image_path, img)
+        cham_cong_today = ChamCong.query.filter_by(nhan_vien_id=matched_nv.id, ngay=today).first()
 
-            if not cham_cong_today:
-                # Chưa có chấm công hôm nay → Ghi nhận giờ vào
-                cham_cong = ChamCong(
-                    nhan_vien_id=nv.id,
-                    thoi_gian_vao=now,
-                    ngay=today,
-                    hinh_anh_vao=filename
-                )
-                # cham_cong.set_ngay_tu_thoi_gian_vao()  # Bỏ nếu chưa có
-                db.session.add(cham_cong)
-                db.session.commit()
-                return {
-                    'message': f'Chấm công *vào* thành công cho {nv.ho_ten}',
-                    'cham_cong': cham_cong.to_dict()
-                }, 200
+        filename = f"{uuid.uuid4()}.jpg"
+        image_path = os.path.join("static", "checkin_images", filename)
+        os.makedirs(os.path.dirname(image_path), exist_ok=True)
+        cv2.imwrite(image_path, img)
 
-            elif cham_cong_today.thoi_gian_ra is None:
-                # Đã có giờ vào, chưa có giờ ra → cập nhật giờ ra
-                cham_cong_today.thoi_gian_ra = now
-                cham_cong_today.hinh_anh_ra = filename
-                db.session.commit()
-                return {
-                    'message': f'Chấm công *ra* thành công cho {nv.ho_ten}',
-                    'cham_cong': cham_cong_today.to_dict()
-                }, 200
+        time_str = now.strftime("%H:%M %d-%m")
 
-            else:
-                return {
-                    'message': f'Đã chấm công đủ vào và ra cho hôm nay ({nv.ho_ten})'
-                }, 400
+        if not cham_cong_today:
+            cham_cong = ChamCong(
+                nhan_vien_id=matched_nv.id,
+                thoi_gian_vao=now,
+                ngay=today,
+                hinh_anh_vao=filename
+            )
+            db.session.add(cham_cong)
+            db.session.commit()
+            return {
+                'message': 'Chấm công <strong>vào</strong> thành công',
+                'name': matched_nv.ho_ten,
+                'time': time_str,
+                'cham_cong': cham_cong.to_dict()
+            }, 200
+
+        elif cham_cong_today.thoi_gian_ra is None:
+            cham_cong_today.thoi_gian_ra = now
+            cham_cong_today.hinh_anh_ra = filename
+            db.session.commit()
+            return {
+                'message': 'Chấm công <strong>ra</strong> thành công',
+                'name': matched_nv.ho_ten,
+                'time': time_str,
+                'cham_cong': cham_cong_today.to_dict()
+            }, 200
+
+        else:
+            return {
+                'message': f'Đã chấm công đủ vào và ra cho hôm nay cho',
+                'name': matched_nv.ho_ten,
+            }, 400
 
     return {'message': 'Không khớp khuôn mặt với bất kỳ nhân viên nào'}, 404
 

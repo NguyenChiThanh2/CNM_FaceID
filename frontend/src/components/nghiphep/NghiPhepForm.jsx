@@ -3,6 +3,8 @@ import axios from "axios";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { toast } from "react-toastify";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
   const [formData, setFormData] = useState({
@@ -192,19 +194,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
           />
         </div>
 
-        <div className="mb-3">
-          <label className="form-label">Trạng thái</label>
-          <select
-            className="form-select"
-            name="trang_thai"
-            value={formData.trang_thai}
-            onChange={handleChange}
-          >
-            <option value="Chờ duyệt">Chờ duyệt</option>
-            <option value="Đã duyệt">Đã duyệt</option>
-            <option value="Từ chối">Từ chối</option>
-          </select>
-        </div>
+        
 
         <button type="submit" className="btn btn-primary">
           {editingNghiPhep ? "Cập nhật" : "Thêm"}

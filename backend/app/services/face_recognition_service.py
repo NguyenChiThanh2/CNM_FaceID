@@ -32,7 +32,7 @@ def recognize_face_from_image_base64(image_base64):
             known_encoding = np.frombuffer(base64.b64decode(nhan_vien.face_encoding))
 
             # So sánh khuôn mặt
-            match = face_recognition.compare_faces([known_encoding], unknown_encoding, tolerance=0.6)
+            match = face_recognition.compare_faces([known_encoding], unknown_encoding, tolerance=0.5)
 
             if match[0]:
                 return nhan_vien  # Trả về nhân viên khớp

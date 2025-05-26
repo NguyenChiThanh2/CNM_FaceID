@@ -39,10 +39,17 @@ def login():
     access_token = create_access_token(identity={
         "id": user.id,
         "username": user.username,
-        "role": user.role_id  # Sử dụng role_id nếu bạn lưu vai trò ở đây
+        "ma_vai_tro": user.role.ma_vai_tro   # Sử dụng role_id nếu bạn lưu vai trò ở đây
     })
 
-    return jsonify(access_token=access_token, role=user.role_id)
+    return jsonify({
+    "access_token": access_token,
+    "role": {
+        "id": user.role.id,
+        "ma_vai_tro": user.role.ma_vai_tro
+    }
+})
+
 
 
 @user_bp.route('/logout', methods=['POST'])
