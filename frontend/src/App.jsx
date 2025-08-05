@@ -13,7 +13,7 @@ import QuanLyLuong from "./pages/modules/QuanLyLuong";
 import ChamCongList from "./pages/modules/ChamCongList";
 
 import ChamCongForm from './components/chamcong/ChamCongForm';
-import FaceRecognition from './components/chamcong/FaceRecognition';
+
 import FaceCheckIn from "./components/chamcong/FaceCheckIn";
 import DanhSachNhanVien from "./components/phongban/DanhSachNhanVien";
 import QuanLyNguoiDung from "./pages/modules/QuanLyNguoiDung";
@@ -54,10 +54,10 @@ const AppLayout = () => {
           <Route path="/nhan-su/:id" element={<PrivateRoute><NhanSuDetail /></PrivateRoute>} />
           <Route path="/quan-ly-cham-cong" element={<PrivateRoute><ChamCongList /></PrivateRoute>} />
           <Route path="/tinh-luong" element={<PrivateRoute><QuanLyLuong /></PrivateRoute>} />
-          <Route path="/phong-ban/:id/nhan-vien" element={<PrivateRoute><DanhSachNhanVien /></PrivateRoute>} />
+          <Route path="/get-phong-ban-by-id/:id" element={<PrivateRoute><DanhSachNhanVien /></PrivateRoute>} />
           <Route path="/cham-cong-list" element={<PrivateRoute><ChamCongList /></PrivateRoute>} />
           <Route path="/cham-cong-form" element={<PrivateRoute><ChamCongForm /></PrivateRoute>} />
-          <Route path="/face-recognition" element={<PrivateRoute><FaceRecognition /></PrivateRoute>} />
+          
           <Route path="/quan-ly-nguoi-dung" element={<PrivateRoute><QuanLyNguoiDung /></PrivateRoute>} />
 
 

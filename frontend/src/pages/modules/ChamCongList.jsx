@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Button , Breadcrumb } from "react-bootstrap";
+import { Button, Breadcrumb } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 
 const ChamCongList = () => {
@@ -8,7 +8,7 @@ const ChamCongList = () => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [dsNhanVien, setDsNhanVien] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -55,9 +55,15 @@ const ChamCongList = () => {
     return item ? item.ho_ten : "Không rõ";
   };
 
-  const filteredList = chamCongList.filter((chamCong) =>
-    new Date(chamCong.ngay).toLocaleDateString().includes(searchKeyword.toLowerCase())
-  );
+  const filteredList = chamCongList.filter((chamCong) => {
+    const ngayStr = new Date(chamCong.ngay).toLocaleDateString();
+    const tenNhanVien = getTenNhanVien(chamCong.nhan_vien_id).toLowerCase();
+    return (
+      ngayStr.includes(searchKeyword.toLowerCase()) ||
+      tenNhanVien.includes(searchKeyword.toLowerCase())
+    );
+  });
+
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -107,7 +113,7 @@ const ChamCongList = () => {
 
               <tbody>
                 {currentItems.map((chamCong) => (
-                  <tr key={chamCong.id} onClick={() => handleRowClick(chamCong)} style={{ cursor: "pointer" }}>
+                  <tr key={chamCong.id} >
                     <td>{chamCong.id}</td>
                     <td>{getTenNhanVien(chamCong.nhan_vien_id)}</td>
                     <td>{new Date(chamCong.ngay).toLocaleDateString()}</td>

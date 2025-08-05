@@ -42,3 +42,6 @@ def delete_phong_ban(id):
         return jsonify({'message': 'Không tìm thấy phòng ban'}), 404
     return jsonify({'message': 'Xóa phòng ban thành công'})
 
+def get_nhan_vien_by_phong_ban_id(phong_ban_id):
+    ds_nhan_vien = get_nhan_vien_by_phong_ban_id_service(phong_ban_id)
+    return jsonify([nv.to_dict() for nv in ds_nhan_vien])

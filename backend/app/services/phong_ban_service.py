@@ -1,7 +1,7 @@
 # app/services/phong_ban_service.py
 from app import db
 from app.models.phong_ban_model import PhongBan
-
+from app.models.nhan_vien_model import NhanVien
 # Lấy tất cả phòng ban
 def get_all_phong_ban_service():
     return PhongBan.query.all()
@@ -47,3 +47,6 @@ def delete_phong_ban_service(ma_phong_ban):
     db.session.delete(pb)
     db.session.commit()
     return pb
+
+def get_nhan_vien_by_phong_ban_id_service(phong_ban_id):
+    return NhanVien.query.filter_by(phong_ban_id=phong_ban_id).all()

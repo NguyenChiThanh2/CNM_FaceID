@@ -50,7 +50,7 @@ const QuanLyPhongBan = () => {
   };
 
   const handleViewNhanVien = (phongBanId) => {
-    navigate(`/phong-ban/${phongBanId}/nhan-vien`);
+    navigate(`/get-phong-ban-by-id/${phongBanId}`);
   };
 
   const handleModalClose = () => {

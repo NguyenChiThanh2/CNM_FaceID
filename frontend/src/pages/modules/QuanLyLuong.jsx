@@ -1,13 +1,10 @@
-// src/components/QuanLyLuong.jsx
-
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Button, Modal } from "react-bootstrap";
+import { Button, Modal, OverlayTrigger, Tooltip, Breadcrumb, Row, Col } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { OverlayTrigger, Tooltip, Breadcrumb } from "react-bootstrap";
 import "react-toastify/dist/ReactToastify.css";
 
 const API_URL = "http://127.0.0.1:5000/api";
@@ -68,7 +65,6 @@ const QuanLyLuong = () => {
 
   const handleDeleteLuong = async (luongId) => {
     if (!window.confirm("Bạn có chắc chắn muốn xoá dòng lương này?")) return;
-
     try {
       await axios.delete(`${API_URL}/delete-luong/${luongId}`);
       toast.success("Xoá lương thành công!");
@@ -143,7 +139,7 @@ const QuanLyLuong = () => {
       const monthMatch =
         selectedMonthNumber && selectedYear
           ? luong.thang === parseInt(selectedMonthNumber) &&
-          luong.nam === parseInt(selectedYear)
+            luong.nam === parseInt(selectedYear)
           : true;
       return searchMatch && monthMatch;
     })
@@ -195,7 +191,7 @@ const QuanLyLuong = () => {
           <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
           <h2 className="mb-4 text-center">Quản lý lương</h2>
 
-          {/* Bộ lọc và thao tác */}
+          {/* Bộ lọc */}
           <div className="row mb-4">
             <div className="col-md-4 mb-2">
               <input
@@ -277,7 +273,7 @@ const QuanLyLuong = () => {
             </div>
           </div>
 
-          {/* Bảng dữ liệu lương */}
+          {/* Bảng lương */}
           <div className="table-responsive">
             <table className="table table-bordered table-hover">
               <thead className="table-dark">
@@ -287,7 +283,7 @@ const QuanLyLuong = () => {
                   <th>Số ngày công</th>
                   <th>Lương cơ bản</th>
                   <th>Thuế TNCN</th>
-                  <th>BHXH</th>
+                  <th>Bảo Hiểm</th>
                   <th>Phụ cấp</th>
                   <th>Khấu trừ</th>
                   <th>Tổng lương</th>
@@ -325,23 +321,33 @@ const QuanLyLuong = () => {
                   );
                 })}
               </tbody>
-
             </table>
           </div>
 
-          {/* Phân trang */}
-          <div className="d-flex justify-content-center mt-3">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <Button
-                key={i + 1}
-                variant={i + 1 === currentPage ? "primary" : "outline-primary"}
-                onClick={() => setCurrentPage(i + 1)}
-                className="mx-1"
-              >
-                {i + 1}
-              </Button>
-            ))}
-          </div>
+          {/* Phân trang giữ nguyên kiểu cũ */}
+          <Row className="justify-content-center mt-3">
+            <Col xs="auto" className="text-center">
+              <div className="d-flex align-items-center gap-3">
+                <Button
+                  variant="outline-secondary"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                >
+                  ← Trước
+                </Button>
+                <span className="fw-semibold">
+                  Trang {currentPage} / {totalPages || 1}
+                </span>
+                <Button
+                  variant="outline-secondary"
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                >
+                  Sau →
+                </Button>
+              </div>
+            </Col>
+          </Row>
 
           {/* Modal tính lương */}
           <Modal show={showModal} onHide={() => setShowModal(false)}>

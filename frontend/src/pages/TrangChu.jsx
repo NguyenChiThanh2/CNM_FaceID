@@ -59,33 +59,33 @@ const TrangChu = () => {
       <header className="d-flex justify-content-between align-items-center mb-4">
         <h1 className="text-light">🏢 Hệ thống Quản lý Nhân sự</h1>
         <div className="user-info">
-          <span className="text-white">Xin chào, {userInfo.username}</span>
-        </div>
-      </header>
-
-      <Container fluid>
-        <Row>
-          {visibleModules.map((module, index) => (
-            <Col key={index} xs={12} sm={6} md={4} lg={3} className="mb-4">
-              <Card
-                className="h-100 text-center shadow-sm border-0 rounded-4 bg-dark text-white"
-                style={{ cursor: "pointer", transition: "transform 0.3s ease" }}
-                onClick={() => navigate(module.path)}
-                onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-                onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
-              >
-                <Card.Body>
-                  <div className="icon mb-3" style={{ fontSize: "3rem", color: module.color }}>
-                    {module.icon}
-                  </div>
-                  <h5 className="fw-bold text-light">{module.title}</h5>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      </Container>
+          <span className="text-white "><b>Xin chào, {userInfo.username}</b></span> 
     </div>
+      </header >
+
+  <Container fluid>
+    <Row>
+      {visibleModules.map((module, index) => (
+        <Col key={index} xs={12} sm={6} md={4} lg={3} className="mb-4">
+          <Card
+            className="h-100 text-center shadow-sm border-0 rounded-4 bg-dark text-white"
+            style={{ cursor: "pointer", transition: "transform 0.3s ease" }}
+            onClick={() => navigate(module.path)}
+            onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+            onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          >
+            <Card.Body>
+              <div className="icon mb-3" style={{ fontSize: "3rem", color: module.color }}>
+                {module.icon}
+              </div>
+              <h5 className="fw-bold text-light">{module.title}</h5>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  </Container>
+    </div >
   );
 };
 

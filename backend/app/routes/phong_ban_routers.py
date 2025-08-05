@@ -33,3 +33,8 @@ def update_phong_ban_router(id):
 @phong_ban_bp.route('/delete-phong-ban/<int:ma_phong_ban>', methods=['DELETE'])
 def delete_phong_ban_router(ma_phong_ban):
     return delete_phong_ban(ma_phong_ban)
+
+
+@phong_ban_bp.route('/nhan-vien-by-phong-ban/<int:phong_ban_id>', methods=['GET'])
+def get_nhan_vien_by_phong_ban_router(phong_ban_id):
+    return get_nhan_vien_by_phong_ban_id(phong_ban_id)

@@ -4,7 +4,6 @@ import NghiPhepForm from "../../components/nghiphep/NghiPhepForm";
 import {
   Modal,
   Button,
-
   Table,
   Breadcrumb,
 } from "react-bootstrap";
@@ -21,12 +20,18 @@ const QuanLyNghiPhep = () => {
   const [showModal, setShowModal] = useState(false);
   const [nhanVienList, setNhanVienList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchNghiPhep();
     fetchNhanVien();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1); // reset page khi tìm kiếm hoặc lọc
+  }, [searchKeyword, filterTrangThai]);
 
   const fetchNghiPhep = async () => {
     setLoading(true);
@@ -113,7 +118,9 @@ const QuanLyNghiPhep = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date) ? date.toLocaleDateString("vi-VN") : "Ngày không hợp lệ";
+    return date instanceof Date && !isNaN(date)
+      ? date.toLocaleDateString("vi-VN")
+      : "Ngày không hợp lệ";
   };
 
   const nhanVienMap = nhanVienList.reduce((acc, nv) => {
@@ -124,10 +131,18 @@ const QuanLyNghiPhep = () => {
   const filteredList = nghiPhepList.filter((np) => {
     const searchMatch =
       np.ly_do.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      (nhanVienMap[np.nhan_vien_id] && nhanVienMap[np.nhan_vien_id].includes(searchKeyword.toLowerCase()));
-    const statusMatch = filterTrangThai ? np.trang_thai === filterTrangThai : true;
+      (nhanVienMap[np.nhan_vien_id] &&
+        nhanVienMap[np.nhan_vien_id].includes(searchKeyword.toLowerCase()));
+    const statusMatch = filterTrangThai
+      ? np.trang_thai === filterTrangThai
+      : true;
     return searchMatch && statusMatch;
   });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
   return (
     <div className="container min-vh-100">
@@ -137,17 +152,18 @@ const QuanLyNghiPhep = () => {
             <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
             <Breadcrumb.Item active>Quản lý nghỉ phép</Breadcrumb.Item>
           </Breadcrumb>
+
           <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
+
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h2 className="text-center flex-grow-1">Quản lý đơn nghỉ phép</h2>
           </div>
-
 
           <div className="row mb-3">
             <div className="col-md-6 mb-2">
               <input
                 type="text"
-                className="form-control "
+                className="form-control"
                 placeholder="🔍 Tìm theo tên nhân viên hoặc lý do..."
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
@@ -192,8 +208,8 @@ const QuanLyNghiPhep = () => {
                   <tr>
                     <td colSpan="7" className="text-center">Đang tải dữ liệu...</td>
                   </tr>
-                ) : filteredList.length > 0 ? (
-                  filteredList.map((nghiPhep) => (
+                ) : currentItems.length > 0 ? (
+                  currentItems.map((nghiPhep) => (
                     <tr key={nghiPhep.id}>
                       <td>{nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
                       <td>{formatDate(nghiPhep.tu_ngay)}</td>
@@ -215,21 +231,13 @@ const QuanLyNghiPhep = () => {
                       <td>
                         {nghiPhep.trang_thai === "Chờ duyệt" && (
                           <>
-                            <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>
-                              ✔ Duyệt
-                            </button>
-                            <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>
-                              ✖ Từ chối
-                            </button>
-                            <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>
-                              🗑 Hủy
-                            </button>
+                            <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>✔ Duyệt</button>
+                            <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>✖ Từ chối</button>
+                            <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
                           </>
                         )}
                         {["Chờ duyệt", "Từ chối"].includes(nghiPhep.trang_thai) && (
-                          <button className="btn btn-sm btn-outline-warning" onClick={() => handleEdit(nghiPhep)}>
-                            ✏️ Sửa
-                          </button>
+                          <button className="btn btn-sm btn-outline-warning" onClick={() => handleEdit(nghiPhep)}>✏️ Sửa</button>
                         )}
                       </td>
                     </tr>
@@ -245,8 +253,31 @@ const QuanLyNghiPhep = () => {
             </Table>
           </div>
 
+          {/* Phân trang */}
+          {totalPages > 1 && (
+            <div className="d-flex justify-content-center align-items-center mt-3 gap-2">
+              <Button
+                variant="outline-secondary"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                ← Trang Trước
+              </Button>
+              <span>
+                Trang {currentPage}/{totalPages}
+              </span>
+              <Button
+                variant="outline-secondary"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Trang Sau →
+              </Button>
+            </div>
+          )}
 
-          {/* Modal thêm/sửa đơn nghỉ phép */}
+
+          {/* Modal thêm/sửa */}
           <Modal show={showModal} onHide={handleModalClose} size="lg">
             <Modal.Header closeButton>
               <Modal.Title>
@@ -266,8 +297,9 @@ const QuanLyNghiPhep = () => {
               </Button>
             </Modal.Footer>
           </Modal>
-        </div></div></div>
-
+        </div>
+      </div>
+    </div>
   );
 };
 

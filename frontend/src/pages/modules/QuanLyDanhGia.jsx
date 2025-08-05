@@ -7,18 +7,24 @@ import {
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-
+import jsPDF from "jspdf";
 
 const QuanLyDanhGia = () => {
     const [danhGias, setDanhGias] = useState([]);
     const [selectedDG, setSelectedDG] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [search, setSearch] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
     const navigate = useNavigate();
 
     useEffect(() => {
         fetchDanhGias();
     }, []);
+
+    useEffect(() => {
+        setCurrentPage(1); // Reset page when search changes
+    }, [search]);
 
     const fetchDanhGias = async () => {
         try {
@@ -74,8 +80,15 @@ const QuanLyDanhGia = () => {
     };
 
     const filteredDanhGias = danhGias.filter((dg) =>
-        dg.nhan_vien_id?.toString().toLowerCase().includes(search.toLowerCase())
+        dg.nhan_vien?.ho_ten?.toLowerCase().includes(search.toLowerCase())
     );
+
+
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredDanhGias.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredDanhGias.length / itemsPerPage);
+    const pages = [...Array(totalPages).keys()].map((x) => x + 1);
 
     const handleExportExcel = () => {
         const exportData = filteredDanhGias.map((dg) => ({
@@ -140,17 +153,16 @@ const QuanLyDanhGia = () => {
                             <input
                                 type="text"
                                 className="form-control"
-                                placeholder="Tìm theo ID nhân viên..."
+                                placeholder="Tìm theo tên nhân viên..."
                                 onChange={(e) => setSearch(e.target.value)}
                             />
+
                         </Col>
                         <Col className="text-end">
                             <Button variant="outline-success" className="me-2" onClick={handleExportExcel}>Xuất Excel</Button>
-
                             <Button variant="outline-primary" onClick={handleCreate}>+ Thêm đánh giá</Button>
                         </Col>
                     </Row>
-
 
                     <Table bordered hover className="bg-white shadow-sm">
                         <thead className="table-dark text-center">
@@ -167,28 +179,49 @@ const QuanLyDanhGia = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredDanhGias.map((dg) => (
+                            {currentItems.map((dg) => (
                                 <tr key={dg.id} className={`text-center ${getRowClass(dg)}`}>
                                     <td>{dg.id}</td>
-                                    <td>{dg.nhan_vien.ho_ten}</td>
-                                    <td>{dg.nguoi_danh_gia.ho_ten}</td>
+                                    <td>{dg.nhan_vien?.ho_ten}</td>
+                                    <td>{dg.nguoi_danh_gia?.ho_ten}</td>
                                     <td>{dg.diem_ky_nang}</td>
                                     <td>{dg.diem_thai_do}</td>
                                     <td>{dg.diem_hieu_suat}</td>
                                     <td>{((dg.diem_ky_nang + dg.diem_thai_do + dg.diem_hieu_suat) / 3).toFixed(1)}</td>
                                     <td>{dg.thoi_gian}</td>
                                     <td>
-                                        <Button variant="outline-warning" size="sm" onClick={() => handleEdit(dg)}>
-                                            Sửa
-                                        </Button>{" "}
-                                        <Button variant="outline-danger" size="sm" onClick={() => handleDelete(dg.id)}>
-                                            Xóa
-                                        </Button>
+                                        <Button variant="outline-warning" size="sm" onClick={() => handleEdit(dg)}>Sửa</Button>{" "}
+                                        <Button variant="outline-danger" size="sm" onClick={() => handleDelete(dg.id)}>Xóa</Button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </Table>
+
+                    {/* Phân trang */}
+                    <Row className="justify-content-center mt-3">
+                        <Col xs="auto" className="text-center">
+                            <div className="d-flex align-items-center gap-3">
+                                <Button
+                                    variant="outline-secondary"
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(currentPage - 1)}
+                                >
+                                    ← Trước
+                                </Button>
+                                <span className="fw-semibold">
+                                    Trang {currentPage} / {totalPages || 1}
+                                </span>
+                                <Button
+                                    variant="outline-secondary"
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    onClick={() => setCurrentPage(currentPage + 1)}
+                                >
+                                    Sau →
+                                </Button>
+                            </div>
+                        </Col>
+                    </Row>
 
 
                     <Modal show={showModal} onHide={() => setShowModal(false)} centered>

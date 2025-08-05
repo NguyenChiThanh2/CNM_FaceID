@@ -255,10 +255,10 @@ const QuanLyNhanSu = () => {
                         onClick={(e) => { e.stopPropagation(); handleEdit(nv); }}>
                         ✏️ Sửa
                       </Button>
-                      <Button variant="outline-danger" size="sm"
+                      {/* <Button variant="outline-danger" size="sm"
                         onClick={(e) => { e.stopPropagation(); handleDelete(nv.id); }}>
                         🗑️ Xóa
-                      </Button>
+                      </Button> */}
                     </td>
                   </tr>
                 ))}

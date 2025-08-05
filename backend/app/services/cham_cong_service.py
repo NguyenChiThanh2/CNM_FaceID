@@ -70,7 +70,7 @@ def create_cham_cong_from_face_service(base64_image):
 
     matched_nv = None
     min_distance = float('inf')
-    threshold = 0.5
+    threshold = 0.4
 
     all_nhan_vien = NhanVien.query.all()
     for nv in all_nhan_vien:
