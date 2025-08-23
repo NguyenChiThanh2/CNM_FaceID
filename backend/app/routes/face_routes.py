@@ -8,7 +8,7 @@ from app.utils.file_utils import read_image_from_base64
 
 face_bp = Blueprint("face_bp", __name__)
 SECRET = os.getenv("FACE_JWT_SECRET", "dev-secret")
-THRESH = 0.5
+THRESH = 0.45
 
 def best_match(input_encoding, all_nv, thresh=THRESH):
     matched, min_d = None, float("inf")
