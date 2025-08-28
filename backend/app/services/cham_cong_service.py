@@ -13,7 +13,7 @@ from app.utils.file_utils import read_image_from_base64
 import os
 
 def get_all_cham_cong_service():
-    return ChamCong.query.all()
+    return ChamCong.query.order_by(ChamCong.ngay.desc()).all()
 
 def get_cham_cong_by_id_service(id):
     return ChamCong.query.get(id)
