@@ -44,20 +44,53 @@
 # check_in = datetime.strptime("8:00:00", "%H:%M:%S")
 # check_out = datetime.strptime("14:30:00", "%H:%M:%S")
 # print(tinh_so_cong_cho_1_ngay(check_in, check_out)) 
-
-from flask import Flask, jsonify, request
-from datetime import date, timedelta
-import calendar
-
-
-def tinh_ngay_cong(thang, nam):
-    so_ngay = calendar.monthrange(nam, thang)[1]
-    ngay_cong = 0
-    for day in range(1, so_ngay + 1):
-        d = date(nam, thang, day)
-        if d.weekday() < 5:  # 0=Monday ... 4=Friday
-            ngay_cong += 1
-    return ngay_cong
+# -------------------------------------------------------------------------------
+# from flask import Flask, jsonify, request
+# from datetime import date, timedelta
+# import calendar
 
 
-print(tinh_ngay_cong(7, 2025))  
+# def tinh_ngay_cong(thang, nam):
+#     so_ngay = calendar.monthrange(nam, thang)[1]
+#     ngay_cong = 0
+#     for day in range(1, so_ngay + 1):
+#         d = date(nam, thang, day)
+#         if d.weekday() < 5:  # 0=Monday ... 4=Friday
+#             ngay_cong += 1
+#     return ngay_cong
+
+
+# print(tinh_ngay_cong(7, 2025))  
+
+
+from datetime import datetime, time
+
+def tinh_tre_som(thoigianvao: datetime, thoigianra: datetime):
+    # Mốc giờ chuẩn
+    gio_vao_chuan = time(8, 0)   # 08:01
+    gio_ra_chuan = time(17, 0)   # 17:00
+
+    # ---- TÍNH ĐI TRỄ ----
+    tre_phut = 0
+    if thoigianvao.time() > gio_vao_chuan:
+        diff = datetime.combine(thoigianvao.date(), thoigianvao.time()) - \
+               datetime.combine(thoigianvao.date(), gio_vao_chuan)
+        tre_phut = int(diff.total_seconds() // 60)
+
+    # ---- TÍNH VỀ SỚM ----
+    som_phut = 0
+    if thoigianra.time() < gio_ra_chuan:
+        diff = datetime.combine(thoigianra.date(), gio_ra_chuan) - \
+               datetime.combine(thoigianra.date(), thoigianra.time())
+        som_phut = int(diff.total_seconds() // 60)
+
+    return tre_phut, som_phut
+
+
+# ==========================
+# Ví dụ sử dụng:
+vao = datetime.strptime("2025-08-23 07:10:00", "%Y-%m-%d %H:%M:%S")
+ra = datetime.strptime("2025-08-23 16:45:00", "%Y-%m-%d %H:%M:%S")
+
+tre, som = tinh_tre_som(vao, ra)
+print(f"Đi trễ: {tre} phút, Về sớm: {som} phút")
