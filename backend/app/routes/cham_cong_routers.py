@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask import request
 import base64
 import cv2
 import numpy as np
@@ -9,7 +10,9 @@ from app.controllers.cham_cong_controller import (
     get_all_cham_cong,
     get_cham_cong_by_id,
     update_cham_cong,
-    delete_cham_cong
+    delete_cham_cong,
+    get_chamcong_1nhanvien_theothang_controller,
+    get_tinhsocong_1nhanvien_theothang_controller
 )
 from app.services.cham_cong_service import create_cham_cong_from_face_service
 
@@ -47,3 +50,21 @@ def create_cham_cong_from_face():
     return jsonify(result), status_code
 
 
+# Route: GET by ID theo tháng năm
+@cham_cong_bp.route('/chamcong_1nhanvien_theothang/<int:id>', methods=['GET'])
+def get_chamcong_1nhanvien_theothang(id):
+    
+    thang = request.args.get("thang",type=int)
+    nam = request.args.get("nam", type=int)
+    if not thang or not nam:
+        return jsonify({'message': 'Thiếu tham số tháng hoặc năm'}), 400
+    return get_chamcong_1nhanvien_theothang_controller(id, thang, nam)
+
+# Route: GET by ID theo tháng năm
+@cham_cong_bp.route('/tinh-so-cong/<int:id>', methods=['GET'])
+def get_tinhsocong_1nhanvien_theothang(id):
+    thang = request.args.get("thang",type=int)
+    nam = request.args.get("nam", type=int)
+    if not thang or not nam:
+        return jsonify({'message': 'Thiếu tham số tháng hoặc năm'}), 400
+    return get_tinhsocong_1nhanvien_theothang_controller(id, thang, nam)

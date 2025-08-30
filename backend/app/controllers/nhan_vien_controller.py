@@ -196,3 +196,17 @@ def handle_uploaded_image(file_path):
         logger.error(f"Lỗi khi xử lý ảnh: {str(e)}")
         return None, f"Lỗi khi xử lý ảnh: {str(e)}"
 
+
+
+
+
+
+
+def search_nhan_vien_theoten_controller(q):
+    q = request.args.get('q', '')
+    if not q:
+        return jsonify({'message': 'Tham số tìm kiếm trống'}), 400
+    nhan_vien_list = nhan_vien_service.search_nhan_vien_theoten_service(q)
+    if not nhan_vien_list:
+        return jsonify({'message': 'Không tìm thấy nhân viên'}), 404
+    return jsonify([nv.to_dict() for nv in nhan_vien_list]), 200

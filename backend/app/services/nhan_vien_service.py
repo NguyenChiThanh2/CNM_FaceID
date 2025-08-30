@@ -1,6 +1,7 @@
 from app.models import  NhanVien
 from sqlalchemy.exc import SQLAlchemyError
 from app import db
+from sqlalchemy import func
 
 def get_all_nhan_vien_service():
     return NhanVien.query.all()
@@ -51,3 +52,7 @@ def delete_nhan_vien_service(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         return {'error': str(e)}
+    
+def search_nhan_vien_theoten_service(q):
+    return NhanVien.query.filter(
+    func.lower(NhanVien.ho_ten).like(f"%{q.lower()}%")).all()

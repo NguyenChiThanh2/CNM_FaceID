@@ -4,6 +4,10 @@ import { Button, Breadcrumb } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 
 const ChamCongList = () => {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
   const [chamCongList, setChamCongList] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [dsNhanVien, setDsNhanVien] = useState([]);
@@ -15,6 +19,30 @@ const ChamCongList = () => {
     fetchChamCong();
     fetchNhanVien();
   }, []);
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (query.trim() !== "") {
+        fetchData(query);
+      } else {
+        setResults([]); // clear nếu input rỗng
+      }
+    }, 0); // chờ 400ms sau khi gõ mới gọi API
+
+    return () => clearTimeout(delayDebounce); // clear timeout khi gõ tiếp
+  }, [query]);
+
+  const fetchData = async (q) => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`http://127.0.0.1:5000/api/search_nhanvien_theoten?q=${q}`);
+      setResults(res.data);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchChamCong = async () => {
     try {
@@ -57,7 +85,7 @@ const ChamCongList = () => {
 
   const filteredList = chamCongList.filter((chamCong) => {
     const ngayStr = new Date(chamCong.ngay).toLocaleDateString();
-    const tenNhanVien = getTenNhanVien(chamCong.nhan_vien_id).toLowerCase();
+    const tenNhanVien = getTenNhanVien(chamCong.ho_ten).toLowerCase();
     return (
       ngayStr.includes(searchKeyword.toLowerCase()) ||
       tenNhanVien.includes(searchKeyword.toLowerCase())
@@ -72,7 +100,12 @@ const ChamCongList = () => {
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
+  const handleRowClick_tennv = (nv) => {
+    navigate(`/cham-cong-nhan-vien/${nv.id}`); 
+  };
+ 
   return (
+    
     <div className="container min-vh-100">
       <div className="row">
         <div className="col-12 mt-5">
@@ -84,6 +117,26 @@ const ChamCongList = () => {
           <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
 
           <h2 className="mb-4 text-center">Quản lý chấm công</h2>
+
+          <div className="">
+            <div className="mb-1 d-flex justify-content-between">
+              <input
+                type="text"
+
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Nhập tên nhân viên..."
+                className="form-control"
+              />
+            </div>
+            <div className="list-group w-auto mb-4">
+              {results.map((nv) => (
+                <button type="button" className="list-group-item list-group-item-action" key={nv.id} onClick={() => handleRowClick_tennv(nv)} >
+                  {nv.ho_ten}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="mb-4 d-flex justify-content-between">
             <input

@@ -5,7 +5,9 @@ from app.services.cham_cong_service import (
     get_cham_cong_by_nhan_vien_id_service,
     update_cham_cong_service,
     delete_cham_cong_service,
-    create_cham_cong_from_face_service
+    create_cham_cong_from_face_service,
+    get_chamcong_1nhanvien_theothang_service,
+    get_tinhsocong_1nhanvien_theothang_service
 )
 
 # Lấy tất cả chấm công
@@ -46,3 +48,18 @@ def delete_cham_cong(id):
     else:
         return jsonify({'message': 'Không tìm thấy chấm công'}), 404
 
+# Lấy chấm công theo ID theo tháng năm
+def get_chamcong_1nhanvien_theothang_controller(id, thang, nam):
+    cham_cong = get_chamcong_1nhanvien_theothang_service(id, thang, nam)
+    if cham_cong:
+        return jsonify([cham_cong.to_dict() for cham_cong in cham_cong]), 200
+    else:
+        return jsonify({'message': 'Không tìm thấy chấm công'}), 404
+    
+# Lấy chấm công theo ID theo tháng năm
+def get_tinhsocong_1nhanvien_theothang_controller(id, thang, nam):
+    tinh_so_cong =get_tinhsocong_1nhanvien_theothang_service(id, thang, nam)
+    if tinh_so_cong:
+        return jsonify({'message': 'Cập nhật thành công'}), 200
+    else:
+        return jsonify({'message': 'Cạp nhật thất bại'}), 404

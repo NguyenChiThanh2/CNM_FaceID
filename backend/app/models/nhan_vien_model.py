@@ -29,6 +29,7 @@ class NhanVien(db.Model):
     dao_taos = db.relationship('DaoTaoNhanVien', back_populates='nhan_vien', lazy=True)
     phuc_lois = db.relationship('NhanVienPhucLoi', back_populates='nhan_vien', lazy=True)
     hopdong_nv = db.relationship("HopDongLaoDong", back_populates="hopdong_nv", lazy=True)
+    bang_luong_nhan_vien = db.relationship('BangLuong', back_populates='bang_luong_nhan_vien', lazy=True)
 
     # Các đánh giá nhận và tạo (2 quan hệ khác nhau đến cùng một bảng)
     danh_gias_nhan = db.relationship(

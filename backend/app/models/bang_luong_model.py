@@ -1,0 +1,31 @@
+from app import db
+from sqlalchemy import extract, func
+
+class BangLuong(db.Model):
+    __tablename__ = 'bang_luong'
+
+    id = db.Column(db.Integer, primary_key=True)
+    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False)
+    thang = db.Column(db.Integer, nullable=False)
+    nam = db.Column(db.Integer, nullable=False)
+    so_ngay_cong = db.Column(db.Integer, default=0)
+    tong_gio_tang_ca = db.Column(db.Float, default=0.0)
+    tong_khau_tru = db.Column(db.Float, default=0.0) 
+    tong_phu_cap = db.Column(db.Float, default=0.0)
+    tong_luong = db.Column(db.Float, default=0.0)
+
+    bang_luong_nhan_vien = db.relationship('NhanVien', back_populates='bang_luong_nhan_vien', lazy=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "nhan_vien_id": self.nhan_vien_id,
+            "thang": self.thang,
+            "nam": self.nam,
+            "so_ngay_cong": self.so_ngay_cong,
+            "tong_gio_tang_ca": self.tong_gio_tang_ca,
+            "tong_khau_tru": self.tong_khau_tru,
+            "tong_phu_cap": self.tong_phu_cap,
+            "tong_luong": self.tong_luong,
+        }
+    

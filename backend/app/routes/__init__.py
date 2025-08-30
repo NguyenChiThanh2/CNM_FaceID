@@ -12,8 +12,11 @@ from .nhan_vien_routes import nhan_vien_bp
 from .dao_tao_routers import dao_tao_bp
 from .loai_nghi_phep import loai_nghi_phep_bp
 from .face_routes import face_bp
+from .bang_luong_routers import bangluong_bp
+
 def register_routes(app):
     
+    app.register_blueprint(bangluong_bp, url_prefix='/api')
     app.register_blueprint(user_bp, url_prefix='/api')  
     app.register_blueprint(role_bp, url_prefix='/api')  
     app.register_blueprint(phuc_loi_bp, url_prefix='/api')

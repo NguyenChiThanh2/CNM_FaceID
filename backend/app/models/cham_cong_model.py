@@ -12,6 +12,7 @@ class ChamCong(db.Model):
     ngay = db.Column(db.Date)  # Ngày chấm công
     hinh_anh_vao = db.Column(db.String(255), nullable=True)  # Hình ảnh chấm công vào
     hinh_anh_ra = db.Column(db.String(255), nullable=True)  # Hình ảnh chấm công ra
+    so_cong = db.Column(db.Float, default=0.0)  # Số công tính theo ngày (0.5, 1.0)
 
     cham_cong_nv = db.relationship('NhanVien', back_populates='cham_cong_nv', lazy=True)
 
@@ -36,6 +37,7 @@ class ChamCong(db.Model):
             'ngay': self.ngay.strftime('%Y-%m-%d') if self.ngay else None,
             'hinh_anh_vao': self.hinh_anh_vao,
             'hinh_anh_ra': self.hinh_anh_ra,
+            'so_cong': self.so_cong,
         }
 
 
