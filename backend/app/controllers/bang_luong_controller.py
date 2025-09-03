@@ -7,3 +7,9 @@ from app.services.bang_luong_service import *
 #         return jsonify([bl.to_dict() for bl in bang_luongs]),200
 #     else:
 #         return jsonify({'message': 'Không có dữ liệu bảng lương'}), 404
+def get_all_luong():
+    luongs = get_bang_luong_service()
+    if luongs:
+        return jsonify([luong.to_dict() for luong in luongs])
+    else:
+        return jsonify({'message': 'Không có dữ liệu lương'}), 404

@@ -182,7 +182,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         nhan_vien_id=nhanvien_id,
         thang=thang,
         nam=nam,
-        ngay_cong_chuan = so_cong_chuan_thang,
+        ngay_cong_chuan = int(so_cong_chuan_thang),
         so_ngay_cong=tong_ngay_cong,
         tong_gio_tang_ca=tong_gio_tang_ca,
         tong_khau_tru=khau_tru,
@@ -191,7 +191,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         bhtn=bao_hiem_that_nghiep,
         bhyt=bao_hiem_y_te,
         thue_tncn=thue_tncn,
-        tong_luong=luong_thuc_linh,
+        tong_luong=tong_luong,
+        thuc_nhan=luong_thuc_linh,
     )
     db.session.add(bangluong)
     db.session.commit()

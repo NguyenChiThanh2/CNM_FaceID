@@ -47,7 +47,8 @@ const QuanLyLuong = () => {
 
   const fetchLuong = async () => {
     try {
-      const response = await axios.get(`${API_URL}/get-all-luong`);
+      // const response = await axios.get(`${API_URL}/get-all-luong`);
+      const response = await axios.get(`${API_URL}/get-all-bang-luong`);
       setLuongList(response.data);
     } catch (error) {
       toast.error("Không thể tải dữ liệu lương!");
@@ -105,13 +106,18 @@ const QuanLyLuong = () => {
       }
 
       try {
-        const response = await axios.post(`${API_URL}/tinh-luong`, {
+        // const response = await axios.post(`${API_URL}/tinh-luong`, {
+        //   nhan_vien_id: parseInt(nhan_vien_id),
+        //   thang: parseInt(thang),
+        //   nam: parseInt(nam),
+        // });
+        const response = await axios.post(`${API_URL}/get-tinh-luong-1nv`, {
           nhan_vien_id: parseInt(nhan_vien_id),
           thang: parseInt(thang),
           nam: parseInt(nam),
         });
 
-        if (response.data.luong) {
+        if (response.data) {
           toast.success("Tính lương thành công!");
           setShowModal(false);
           fetchLuong();
@@ -157,13 +163,17 @@ const QuanLyLuong = () => {
       return {
         "Nhân viên": nv?.ho_ten || "Không rõ",
         "Tháng": `${luong.thang}/${luong.nam}`,
+        "Ngày công chuẩn": luong.ngay_cong_chuan,
         "Số ngày công": luong.so_ngay_cong,
-        "Lương cơ bản": luong.luong_co_ban,
-        "Phụ cấp": luong.phu_cap,
-        "Khấu trừ": luong.khau_tru,
-        "Bảo hiểm xã hội": luong.bao_hiem,
-        "Thuế thu nhập cá nhân": luong.thue_thu_nhap_ca_nhan,
+        "Giờ tăng ca": luong.tong_gio_tang_ca,
+        "Phụ cấp": luong.tong_phu_cap,
+        "Khấu trừ": luong.tong_khau_tru,
+        "Bảo hiểm xã hội": luong.bhxh,
+        "Bảo hiểm thất nghiệp": luong.bhtn,
+        "Bảo hiểm y tế": luong.bhyt,
+        "Thuế thu nhập cá nhân": luong.thue_tncn,
         "Tổng lương": luong.tong_luong,
+        "Thực nhận": luong.thuc_nhan,
       };
     });
 
@@ -280,16 +290,19 @@ const QuanLyLuong = () => {
                 <tr>
                   <th>Nhân viên</th>
                   <th>Tháng</th>
+                  <th>Ngày công chuẩn</th>
                   <th>Số ngày công</th>
-                  <th>Lương cơ bản</th>
-                  <th>Thuế TNCN</th>
-                  <th>Bảo Hiểm</th>
+                  <th>Giờ tăng ca</th>
                   <th>Phụ cấp</th>
                   <th>Khấu trừ</th>
+                  <th>BHXH</th>
+                  <th>BHTN</th>
+                  <th>BHYT</th>
+                  <th>Thuế TNCN</th>
                   <th>Tổng lương</th>
                   <th>Thực nhận</th>
                   <th>Hành động</th>
-                </tr>
+                 </tr>
               </thead>
               <tbody>
                 {paginatedList.map((luong) => {
@@ -298,14 +311,17 @@ const QuanLyLuong = () => {
                     <tr key={luong.id}>
                       <td>{nv?.ho_ten || "Không rõ"}</td>
                       <td>{`${luong.thang}/${luong.nam}`}</td>
+                      <td>{luong.ngay_cong_chuan}</td>
                       <td>{luong.so_ngay_cong}</td>
-                      <td>{formatCurrency(luong.luong_co_ban)}</td>
-                      <td>{formatCurrency(luong.thue_thu_nhap_ca_nhan)}</td>
-                      <td>{formatCurrency(luong.bao_hiem)}</td>
-                      <td>{formatCurrency(luong.phu_cap)}</td>
-                      <td>{formatCurrency(luong.khau_tru)}</td>
+                      <td>{luong.tong_gio_tang_ca}</td>
+                      <td class="text-success">{formatCurrency(luong.tong_phu_cap)}</td>
+                      <td class="text-danger">{formatCurrency(luong.tong_khau_tru)}</td>
+                      <td class="text-warning">{formatCurrency(luong.bhxh)}</td>
+                      <td class="text-warning">{formatCurrency(luong.bhtn)}</td>
+                      <td class="text-warning">{formatCurrency(luong.bhyt)}</td>
+                      <td class="text-danger">{formatCurrency(luong.thue_tncn)}</td>
                       <td>{formatCurrency(luong.tong_luong)}</td>
-                      <td>{formatCurrency(luong.luong_thuc_nhan)}</td>
+                      <td>{formatCurrency(luong.thuc_nhan)}</td>
                       <td>
                         <OverlayTrigger placement="top" overlay={<Tooltip>Xoá dòng lương này</Tooltip>}>
                           <Button

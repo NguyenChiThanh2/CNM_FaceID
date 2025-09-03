@@ -19,6 +19,7 @@ class BangLuong(db.Model):
     bhyt = db.Column(db.Float, default=0.0)
     thue_tncn = db.Column(db.Float, default=0.0)
     tong_luong = db.Column(db.Float, default=0.0)
+    thuc_nhan = db.Column(db.Float, default=0.0)
 
     bang_luong_nhan_vien = db.relationship('NhanVien', back_populates='bang_luong_nhan_vien', lazy=True)
 
@@ -38,5 +39,6 @@ class BangLuong(db.Model):
             "bhyt": self.bhyt,
             "thue_tncn": self.thue_tncn,
             "tong_luong": self.tong_luong,
+            "thuc_nhan": self.thuc_nhan,
         }
     

@@ -2,6 +2,7 @@ import face_recognition
 import numpy as np
 from app.models.nhan_vien_model import NhanVien
 from app.models.cham_cong_model import ChamCong
+from app.models.giay_phep_model import GiayPhep
 from app import db
 from datetime import datetime, time
 from decimal import Decimal
@@ -186,3 +187,26 @@ def get_tinhsocong_1nhanvien_theothang_service(nhan_vien_id, thang, nam):
             cc.so_cong = so_cong_moi  # cập nhật lại cột so_cong
         db.session.commit()
         return True
+    
+def get_tinhsocong_theogiayphep_service(id):
+    cham_cong = ChamCong.query.get(id)
+    giay_phep = GiayPhep.query.filter(GiayPhep.cham_cong_id == id, GiayPhep.trang_thai == "Đã duyệt").first()
+
+    if not cham_cong or not giay_phep:
+        return {"error": "Không tìm thấy bản ghi chấm công hoặc giấy phép"}, 404
+    
+    if giay_phep.so_gio == 8:
+        cham_cong.so_cong = Decimal("1.0")
+        message = "Cập nhật 1 ngày công"
+    elif giay_phep.so_gio == 4:
+        cham_cong.so_cong = Decimal("0.5")
+        message = "Cập nhật nửa ngày công"
+    else:
+        return {"error": "Giấy phép không hợp lệ"}, 400
+
+    try:
+        db.session.commit()
+        return {"success": message}, 200
+    except Exception as e:
+        db.session.rollback()
+        return {"error": str(e)}, 500

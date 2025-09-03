@@ -7,7 +7,8 @@ from app.services.cham_cong_service import (
     delete_cham_cong_service,
     create_cham_cong_from_face_service,
     get_chamcong_1nhanvien_theothang_service,
-    get_tinhsocong_1nhanvien_theothang_service
+    get_tinhsocong_1nhanvien_theothang_service,
+    get_tinhsocong_theogiayphep_service
 )
 
 # Lấy tất cả chấm công
@@ -63,3 +64,21 @@ def get_tinhsocong_1nhanvien_theothang_controller(id, thang, nam):
         return jsonify({'message': 'Cập nhật thành công'}), 200
     else:
         return jsonify({'message': 'Cạp nhật thất bại'}), 404
+    
+    
+def get_tinhsocong_theogiayphep_controller(id):
+    data, status_code = get_tinhsocong_theogiayphep_service(id)
+    if status_code == 200:
+        return jsonify({
+            'message': 'Cập nhật thành công',
+            'body': data
+        }), 200
+    else:
+        return jsonify({
+            'message': 'Cập nhật thất bại',
+            'body': data
+        }), status_code
+    # if tinh_so_cong:
+    #     return jsonify({'message': 'Cập nhật thành công', 'body': tinh_so_cong}), 200
+    # else:
+    #     return jsonify({'message': 'Cập nhật thất bại', 'body': tinh_so_cong}), 404

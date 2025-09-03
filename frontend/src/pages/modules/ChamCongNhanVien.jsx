@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { Button, Modal, OverlayTrigger, Tooltip, Form, Spinner, Row, Col  } from "react-bootstrap";
 import { useParams } from "react-router-dom";
+import axios from "axios";
 
 const ChamCongNhanVien = () => {
   const { id } = useParams(); // lấy id nhân viên từ URL
@@ -13,7 +15,10 @@ const ChamCongNhanVien = () => {
   const [loading, setLoading] = useState(true);
   const [nhanVien, setNhanVien] = useState(null);
   const [modalMessage, setModalMessage] = useState(""); // thông báo modal
-  const [showModal, setShowModal] = useState(false); // trạng thái modal
+  
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState([]); // dữ liệu form
+  const [showModalTB, setShowModalTB] = useState(false); // trạng thái modal
 
   useEffect(() => {
     fetchChamCong(thang, nam);
@@ -39,7 +44,24 @@ const ChamCongNhanVien = () => {
       setLoading(false);
     }
   };
-
+  
+  const laygiaypheptheochamcong = async (cc) => {
+    setShowModal(true);
+    try {
+       const laygiayphep = await axios.get(
+        `http://localhost:5000/api/get_giay_phep_quen_chamcong/${cc}`
+      );
+      setFormData(laygiayphep.data); // set dữ liệu lấy về vào form
+    } catch (error) {
+      console.error("Lỗi khi cập nhật giấy phép:", error);
+      setModalMessage("❌ Có lỗi khi cập nhật giấy phép");
+      setShowModal(true);
+    }
+    finally {
+      setLoading(false);
+    }
+  };
+ 
   // Hàm gọi API tính số ngày công
   const tinhSoCong = async (thang, nam) => {
     try {
@@ -49,10 +71,10 @@ const ChamCongNhanVien = () => {
         `http://localhost:5000/api/tinh-so-cong/${id}?thang=${thang}&nam=${nam}`
       );
       const data = await res.json();
-      alert(data.message || "✅ Đã tính số công thành công!");
+      // alert(data.message || "✅ Đã tính số công thành công!");
       // Set thông báo từ API (hoặc mặc định)
-      // setModalMessage(data.message || "✅ Đã tính số công thành công!");
-      // setShowModal(true);
+      setModalMessage("✅ " + data.message);
+      setShowModalTB(true);
 
       // Sau khi tính số công, fetch lại dữ liệu chấm công
       const chamCongRes = await fetch(
@@ -68,10 +90,41 @@ const ChamCongNhanVien = () => {
       setLoading(false);
     }
   };
+  const tinhsocong_theogiayphep = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+       const response = await axios.put(
+        `http://127.0.0.1:5000/api/tinhsocong_theogiayphep`, formData
+      );
+       if (response.status === 200) {
+        setModalMessage("✅ Cập nhật giấy phép và số công thành công!");
+        setShowModalTB(true);
+        setShowModal(false);
+        fetchChamCong(thang, nam); // refresh dữ liệu
+      }
+    } catch (error) {
+      console.error("Lỗi khi cập nhật:", error);
+      setModalMessage("❌" + error.response.data.body.error);
+      setShowModalTB(true);
+    }finally {
+      setLoading(false);
+    }
+  };
 
-  if (!nhanVien) return <p>Đang tải thông tin nhân viên...</p>;
+  if (!nhanVien) return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <Spinner animation="border" variant="primary" role="status" />
+        <span className="ms-2">⏳ Đang tải thông tin nhân viên...</span>
+      </div>
+    );
 
-  if (loading) return <p className="p-4">Đang tải dữ liệu...</p>;
+  if (loading) return (
+       <div className="d-flex justify-content-center align-items-center vh-100">
+        <Spinner animation="border" variant="primary" role="status" />
+        <span className="ms-2">⏳ Đang tải dữ liệu...</span>
+      </div>
+    ); 
 
   return (
     <div className="container min-vh-100">
@@ -133,7 +186,7 @@ const ChamCongNhanVien = () => {
               ) : (
                 <div className="table-responsive">
                   <table className="table table-bordered table-hover w-100">
-                    <thead className="table-dark">
+                    <thead className="table-dark text-center">
                       <tr>
                         <th>ID</th>
                         <th>Nhân viên</th>
@@ -149,7 +202,7 @@ const ChamCongNhanVien = () => {
 
                     <tbody>
                       {chamCong.map((cc) => (
-                        <tr key={cc.id} className="text align-items-center hover:bg-gray-50 ">
+                        <tr key={cc.id} className="text-center align-middle hover:bg-gray-50 ">
                           <td>{cc.id}</td>
                           <td>{cc.nhan_vien_id}</td>
                           <td>{new Date(cc.ngay).toLocaleDateString()}</td>
@@ -181,6 +234,15 @@ const ChamCongNhanVien = () => {
                           </td>
                           <td>{cc.so_cong}</td>
                           <td>
+                            {!cc.thoi_gian_vao || !cc.thoi_gian_ra ? (
+                              <OverlayTrigger placement="top" overlay={<Tooltip>Sửa</Tooltip>}>
+                                <Button variant="btn btn-success" className="w-100" onClick={() => laygiaypheptheochamcong(cc.id)}>
+                                  Cập nhật giấy phép
+                                </Button>
+                              </OverlayTrigger>
+                              ) : (
+                              <span className="text-success"></span>
+                            )}
                             {/* <button
                             className="btn btn-sm btn-warning me-2"
                             onClick={(e) => { e.stopPropagation(); handleRowClick(chamCong); }}
@@ -206,22 +268,105 @@ const ChamCongNhanVien = () => {
           )}
         </div>
       </div>
-      {/* {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 transition-opacity duration-300">
-          <div className="bg-white p-6 rounded-2xl shadow-xl w-96 text-center animate-fade-in">
-            <h3 className="text-lg font-semibold mb-4">Thông báo</h3>
-            <p className="text-gray-700">{modalMessage}</p>
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={() => setShowModal(false)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )} */}
+      <Modal show={showModal} onHide={() => setShowModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Cập nhật giấy phép quên chấm công</Modal.Title>
+        </Modal.Header>
+         <Modal.Body>
+        {formData && formData.id ? (
+          <Form onSubmit={tinhsocong_theogiayphep}>
+            <Form.Control
+              type="hidden"
+              name="cham_cong_id"
+              value={formData.cham_cong_id}
+            />
+            <Row>
+              <Col>
+                <Form.Group>
+                  <Form.Label>Mã giấy phép</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.id}
+                    // onChange={(e) =>
+                    //   setFormData({ ...formData, thoi_gian_vao: e.target.value })
+                    // }
+                  disabled readonly />
+                </Form.Group>
+              </Col>
+              <Col>
+                <Form.Group>
+                  <Form.Label>Loại giấy phép</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.loai_giay_phep}
+                    // onChange={(e) =>
+                    //   setFormData({ ...formData, thoi_gian_ra: e.target.value })
+                    // }
+                  disabled readonly />
+                </Form.Group>
+              </Col>
+            </Row>
+            <Row>
+              <Col>
+                <Form.Group>
+                  <Form.Label>Trạng thái</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.trang_thai}
+                    // onChange={(e) =>
+                    //   setFormData({ ...formData, thoi_gian_vao: e.target.value })
+                    // }
+                  disabled readonly />
+                </Form.Group>
+              </Col>
+              <Col>
+                <Form.Group>
+                  <Form.Label>Ngày duyệt</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.ngay_duyet}
+                    // onChange={(e) =>
+                    //   setFormData({ ...formData, thoi_gian_ra: e.target.value })
+                    // }
+                  disabled readonly />
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            {formData.trang_thai === "Đã duyệt" ? (
+              <Button type="submit" variant="primary" className="mt-3">
+                Áp dụng
+              </Button>
+              ) : (
+              <p className="text-danger text-center pt-4">Giấy phép chưa được duyệt không thể áp dụng</p>
+              )}
+          </Form>
+        ) : (
+          <p className="text-danger text-center pt-3">Giấy phép không tồn tại</p>
+        )}
+        </Modal.Body>
+        {/* <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>
+            Đóng
+          </Button>
+        </Modal.Footer> */}
+      </Modal>
+
+      {/* Modal thông báo */}
+       <Modal show={showModalTB} onHide={() => setShowModalTB(false)} centered>
+        {/* <Modal.Header >
+          <Modal.Title>Thông báo</Modal.Title>
+        </Modal.Header> */}
+        <Modal.Body>
+            {/* <h3 className="text-lg font-semibold mb-4">Thông báo</h3> */}
+            <h4 className="text-lg font-semibold mb-4 mt-4 text-center">{modalMessage}</h4>
+        </Modal.Body>
+        {/* <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModalTB(false)}>
+            Đóng
+          </Button>
+        </Modal.Footer> */}
+      </Modal>
     </div>
   );
 };

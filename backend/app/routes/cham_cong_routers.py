@@ -12,7 +12,8 @@ from app.controllers.cham_cong_controller import (
     update_cham_cong,
     delete_cham_cong,
     get_chamcong_1nhanvien_theothang_controller,
-    get_tinhsocong_1nhanvien_theothang_controller
+    get_tinhsocong_1nhanvien_theothang_controller,
+    get_tinhsocong_theogiayphep_controller
 )
 from app.services.cham_cong_service import create_cham_cong_from_face_service
 
@@ -68,3 +69,11 @@ def get_tinhsocong_1nhanvien_theothang(id):
     if not thang or not nam:
         return jsonify({'message': 'Thiếu tham số tháng hoặc năm'}), 400
     return get_tinhsocong_1nhanvien_theothang_controller(id, thang, nam)
+
+@cham_cong_bp.route('/tinhsocong_theogiayphep', methods=['PUT'])
+def get_tinhsocong_theogiayphep_router(): 
+    data = request.get_json()  # lấy body JSON
+    cham_cong_id = data.get("cham_cong_id")
+    if not cham_cong_id:
+        return jsonify({'error': 'Thiếu thông tin bắt buộc'}), 400
+    return get_tinhsocong_theogiayphep_controller(cham_cong_id)
