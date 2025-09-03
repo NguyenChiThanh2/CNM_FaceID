@@ -15,6 +15,7 @@ class ChamCong(db.Model):
     so_cong = db.Column(db.Float, default=0.0)  # Số công tính theo ngày (0.5, 1.0)
 
     cham_cong_nv = db.relationship('NhanVien', back_populates='cham_cong_nv', lazy=True)
+    giayphep_cc = db.relationship("GiayPhep", back_populates="giayphep_cc", lazy=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

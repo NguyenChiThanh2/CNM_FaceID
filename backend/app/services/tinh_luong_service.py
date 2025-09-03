@@ -8,7 +8,7 @@ from app.models.cham_cong_model import ChamCong
 from app.models.hopdong_laodong_model import HopDongLaoDong
 from app.models.quyche_congty_model import QuyCheCongTy
 from app.models.bang_luong_model import BangLuong
-# from models.giay_phep_model import PheDuyetTangCa
+from app.models.giay_phep_model import GiayPhep
 from app import db
 
 # class TinhLuongService:
@@ -131,18 +131,19 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         tong_luong += cong * luong_ngay
 
         # ======= TĂNG CA =======
-        # tangca = (
-        #     self.db.query(PheDuyetTangCa)
-        #     .filter(PheDuyetTangCa.chamcong_id == cc.id, PheDuyetTangCa.duoc_phe_duyet == True)
-        #     .first()
-        # )
-        # if tangca:
-        #     gio_tang_ca = (tangca.thoi_gian_ket_thuc - tangca.thoi_gian_bat_dau).seconds / 3600
-        #     tong_gio_tang_ca += gio_tang_ca
-        #     if is_holiday:
-        #         tong_luong += gio_tang_ca * policy.he_so_luong_ngay_le * (luong_ngay / 8)
-        #     else:
-        #         tong_luong += gio_tang_ca * policy.he_so_luong_tang_ca * (luong_ngay / 8)
+        tangca = (
+            GiayPhep.query
+            .filter(GiayPhep.cham_cong_id == cc.id, GiayPhep.trang_thai == "Đã duyệt", GiayPhep.loai_giay_phep == "Tăng ca")
+            .first()
+        )
+        if tangca:
+            # gio_tang_ca = (tangca.thoi_gian_ket_thuc - tangca.thoi_gian_bat_dau).seconds / 3600
+            gio_tang_ca = tangca.so_gio
+            tong_gio_tang_ca += gio_tang_ca
+            # if is_holiday:
+            #     tong_luong += gio_tang_ca * policy.he_so_luong_ngay_le * (luong_ngay / 8)
+            # else:
+            tong_luong += gio_tang_ca * policy.tang_ca_heso * (luong_ngay / 8)
 
         # ======= KHẤU TRỪ ĐI TRỄ =======
         ditre, vesom = tinh_tre_som(cc.thoi_gian_vao, cc.thoi_gian_ra)
