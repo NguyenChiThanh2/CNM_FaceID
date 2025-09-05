@@ -34,9 +34,10 @@ class GiayPhep(db.Model):
         return {
             'id': self.id,
             'nhan_vien_id': self.nhan_vien_id,
+            'ho_ten': self.giayphep_nv.ho_ten if self.giayphep_nv else None,
             'cham_cong_id': self.cham_cong_id,
-            'ngay_bat_dau': self.ngay_bat_dau.strftime('%d-%m-%Y') if self.ngay_bat_dau else None,
-            'ngay_ket_thuc': self.ngay_ket_thuc.strftime('%d-%m-%Y') if self.ngay_ket_thuc else None,
+            'ngay_bat_dau': self.ngay_bat_dau.isoformat(),
+            'ngay_ket_thuc': self.ngay_ket_thuc.isoformat(),
             'loai_giay_phep': self.loai_giay_phep if self.loai_giay_phep else None,
             'ly_do': self.ly_do,
             'so_gio': self.so_gio,

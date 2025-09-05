@@ -46,7 +46,10 @@ const ChamCongNhanVien = () => {
   };
   
   const laygiaypheptheochamcong = async (cc) => {
+    setLoading(true);
+    setFormData([]);// reset form
     setShowModal(true);
+     
     try {
        const laygiayphep = await axios.get(
         `http://localhost:5000/api/get_giay_phep_quen_chamcong/${cc}`
