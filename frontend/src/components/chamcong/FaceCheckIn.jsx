@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 const API_BASE = "http://127.0.0.1:5000";
 const RECOGNIZE_EVERY = 800; // ms
-const STABLE_MS = 2000;      // ms
+const STABLE_MS = 1500;      // ms
 const COOLDOWN_MS = 10000;   // ms
 
 // Ngưỡng ảnh
@@ -99,9 +99,20 @@ export default function FaceCheckin() {
     const v = videoRef.current, c = canvasRef.current;
     if (!v || !c || !v.videoWidth) return null;
     c.width = v.videoWidth; c.height = v.videoHeight;
-    const ctx = c.getContext("2d");
+    const ctx = c.getContext("2d", { willReadFrequently: true });
     ctx.drawImage(v, 0, 0, c.width, c.height);
     return c.toDataURL("image/jpeg", quality);
+  }
+  // Gom 6–8 frames trong ~1.2s để BE kiểm tra liveness thụ động
+  async function collectFrames(durationMs = 2500, stepMs = 120, quality = 0.76) {
+    const frames = [];
+    const start = performance.now();
+    while (performance.now() - start < durationMs) {
+      const dataURL = snapBase64(quality);
+      if (dataURL) frames.push(dataURL);
+      await new Promise((r) => setTimeout(r, stepMs));
+    }
+    return frames; // ~20 frames
   }
 
   // Đo độ nét ảnh: Variance of Laplacian (approx)
@@ -131,7 +142,7 @@ export default function FaceCheckin() {
     const v = videoRef.current, c = canvasRef.current;
     if (!v || !c || !v.videoWidth) return null;
     c.width = v.videoWidth; c.height = v.videoHeight;
-    const ctx = c.getContext("2d");
+    const ctx = c.getContext("2d", { willReadFrequently: true });
     ctx.drawImage(v, 0, 0, c.width, c.height);
     return ctx.getImageData(0, 0, c.width, c.height);
   }
@@ -155,15 +166,17 @@ export default function FaceCheckin() {
     }
   }
 
-  async function apiCheckinWithToken(token) {
-    const dataURL = snapBase64(0.92);
-    if (!dataURL) { dlog("No dataURL for checkin"); return { ok: false, data: null }; }
+  async function apiCheckinWithToken(token, frames) {
+    // Nếu có frames thì gửi frames; không thì fallback 1 ảnh như cũ
+    const payload = (frames && frames.length)
+      ? { frames, preview_token: token }
+      : { image_base64: snapBase64(0.92), preview_token: token };
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE}/api/face-checkin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image_base64: dataURL, preview_token: token }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       dlog("checkin:", res.status, data);
@@ -263,7 +276,9 @@ export default function FaceCheckin() {
             dlog("sharp=", Math.round(sharp), "threshold=", BLUR_THRESHOLD);
 
             if (sharp >= BLUR_THRESHOLD) {
-              const result = await apiCheckinWithToken(tokenNow);
+              // Gom 6–8 frames (~1.2s) để BE làm liveness thụ động
+              const frames = await collectFrames(2500, 120, 0.76);
+              const result = await apiCheckinWithToken(tokenNow, frames);
               if (result.ok) {
                 const message = result.data?.message || "Thành công";
                 const nvName =
@@ -326,6 +341,27 @@ export default function FaceCheckin() {
   // ===== Lifecycle =====
   useEffect(() => {
     let stream = null;
+    const playOnceRef = { current: false }; // chặn gọi play() nhiều lần
+
+    const tryPlay = (video) => {
+      if (!video || playOnceRef.current) return;
+      playOnceRef.current = true;
+      // playsInline + muted giúp autoplay ổn trên iOS/Chrome
+      video.playsInline = true;
+      video.muted = true;
+      syncOverlaySize();
+      video.play().then(() => {
+        setReady(true);
+        dlog("camera ready");
+      }).catch((err) => {
+        // AbortError do load mới -> bỏ qua, cho phép oncanplay gọi lại
+        if (err?.name === "AbortError") {
+          playOnceRef.current = false; // cho phép thử lại khi canplay
+        } else {
+          console.warn("video.play() error:", err);
+        }
+      });
+    };
 
     (async () => {
       try {
@@ -333,12 +369,23 @@ export default function FaceCheckin() {
           video: { facingMode: "user", width: 640, height: 480 },
           audio: false,
         });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-          setReady(true);
-          videoRef.current.onloadedmetadata = () => syncOverlaySize();
-          dlog("camera ready");
+        const video = videoRef.current;
+        if (video) {
+          // Gắn handlers TRƯỚC khi gán srcObject để không bỏ lỡ sự kiện
+          const onLoadedMeta = () => tryPlay(video);
+          const onCanPlay = () => tryPlay(video);
+          video.addEventListener("loadedmetadata", onLoadedMeta);
+          video.addEventListener("canplay", onCanPlay);
+
+          video.srcObject = stream;
+          // Nếu HMR hoặc readyState đã sẵn sàng, thử play ngay
+          if (video.readyState >= 2) tryPlay(video);
+
+          // cleanup handlers khi unmount
+          return () => {
+            video.removeEventListener("loadedmetadata", onLoadedMeta);
+            video.removeEventListener("canplay", onCanPlay);
+          };
         }
       } catch (err) {
         console.error(err);
@@ -351,7 +398,7 @@ export default function FaceCheckin() {
       if (document.hidden) {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
-      } else if (!rafRef.current) {
+      } else if (!rafRef.current && ready) {
         rafRef.current = requestAnimationFrame(loop);
       }
     };
@@ -363,12 +410,11 @@ export default function FaceCheckin() {
       document.removeEventListener("visibilitychange", onVis);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
-      }
+      if (stream) stream.getTracks().forEach(t => t.stop());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   useEffect(() => {
     if (ready && !rafRef.current) {

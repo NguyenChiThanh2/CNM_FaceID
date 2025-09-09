@@ -1,6 +1,6 @@
-# routes/face_routes.py
+
 from flask import Blueprint, request, jsonify
-import os, jwt, hashlib, numpy as np, pytz
+import os, jwt, hashlib, numpy as np
 from datetime import datetime, timedelta
 import face_recognition
 from app.models.nhan_vien_model import NhanVien
@@ -8,7 +8,7 @@ from app.utils.file_utils import read_image_from_base64
 
 face_bp = Blueprint("face_bp", __name__)
 SECRET = os.getenv("FACE_JWT_SECRET", "dev-secret")
-THRESH = 0.45
+THRESH = float(os.getenv("FACE_MATCH_THRESH", "0.4"))
 
 def best_match(input_encoding, all_nv, thresh=THRESH):
     matched, min_d = None, float("inf")
@@ -42,7 +42,8 @@ def recognize():
 
     enc_sha = hashlib.sha256(encs[0].tobytes()).hexdigest()
     token = jwt.encode(
-        {"sub":"preview","nv_id":nv.id,"enc_sha":enc_sha,"exp": datetime.utcnow()+timedelta(seconds=10)},
+        {"sub": "preview", "nv_id": nv.id, "enc_sha": enc_sha, "typ": "preview",
+         "exp": datetime.utcnow() + timedelta(seconds=20)},
         SECRET, algorithm="HS256"
     )
     return jsonify(ok=True, nhan_vien={"id": nv.id, "ho_ten": nv.ho_ten}, preview_token=token, distance=dist), 200

@@ -82,3 +82,7 @@ def get_tinhsocong_theogiayphep_controller(id):
     #     return jsonify({'message': 'Cập nhật thành công', 'body': tinh_so_cong}), 200
     # else:
     #     return jsonify({'message': 'Cập nhật thất bại', 'body': tinh_so_cong}), 404
+
+
+
+
