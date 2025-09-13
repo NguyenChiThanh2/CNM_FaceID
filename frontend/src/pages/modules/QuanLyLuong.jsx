@@ -284,22 +284,28 @@ const QuanLyLuong = () => {
           </div>
 
           {/* Bảng lương */}
-          <div className="table-responsive">
-            <table className="table table-bordered table-hover">
-              <thead className="table-dark">
+          <div className="table-responsive" style={{
+                                                    maxHeight: "70vh", // Giới hạn chiều cao
+                                                    overflowX: "auto", // Scroll ngang
+                                                    overflowY: "auto",
+                                                    whiteSpace: "nowrap", // Giữ cột nằm ngang
+                                                  }}
+          >
+            <table className="table table-bordered table-hover align-middle">
+              <thead className="table-dark" style={{ position: "sticky", top: 0, zIndex: 2 }}>
                 <tr>
                   <th>Nhân viên</th>
                   <th>Tháng</th>
-                  <th>Ngày công chuẩn</th>
+                  <th>Số công chuẩn</th>
                   <th>Số ngày công</th>
                   <th>Giờ tăng ca</th>
                   <th>Phụ cấp</th>
+                  <th>Tổng lương</th>
                   <th>Khấu trừ</th>
                   <th>BHXH</th>
                   <th>BHTN</th>
                   <th>BHYT</th>
                   <th>Thuế TNCN</th>
-                  <th>Tổng lương</th>
                   <th>Thực nhận</th>
                   <th>Hành động</th>
                  </tr>
@@ -315,12 +321,13 @@ const QuanLyLuong = () => {
                       <td>{luong.so_ngay_cong}</td>
                       <td>{luong.tong_gio_tang_ca}</td>
                       <td class="text-success">{formatCurrency(luong.tong_phu_cap)}</td>
+                      <td>{formatCurrency(luong.tong_luong)}</td>
                       <td class="text-danger">{formatCurrency(luong.tong_khau_tru)}</td>
                       <td class="text-warning">{formatCurrency(luong.bhxh)}</td>
                       <td class="text-warning">{formatCurrency(luong.bhtn)}</td>
                       <td class="text-warning">{formatCurrency(luong.bhyt)}</td>
                       <td class="text-danger">{formatCurrency(luong.thue_tncn)}</td>
-                      <td>{formatCurrency(luong.tong_luong)}</td>
+                      
                       <td>{formatCurrency(luong.thuc_nhan)}</td>
                       <td>
                         <OverlayTrigger placement="top" overlay={<Tooltip>Xoá dòng lương này</Tooltip>}>

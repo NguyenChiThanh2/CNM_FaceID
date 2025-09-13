@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Form, Button, Row, Col, Modal } from "react-bootstrap";
+import { Form, Button, Row, Col, Modal,Spinner } from "react-bootstrap";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -21,6 +21,8 @@ const GiayPhepForm = ({ onAdded, editingGiayPhep, setEditingGiayPhep }) => {
   const [modalMessage, setModalMessage] = useState("");
   const [showModalTB, setShowModalTB] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [ErrorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (editingGiayPhep) {
@@ -37,18 +39,29 @@ const GiayPhepForm = ({ onAdded, editingGiayPhep, setEditingGiayPhep }) => {
     e.preventDefault();
     console.log("📤 Data gửi đi:", formData);
     try {
+      setLoading(true);
       if (editingGiayPhep) {
-        await axios.put(
-          `${API_URL}/update-giay-phep/${editingGiayPhep.id}`,
+        const response = await axios.put(
+          `${API_URL}/edit-giay-phep/${editingGiayPhep.id}`,
           formData
         );
-        toast.success("Cập nhật giấy phép thành công!");
+        if (response.status === 200) {
+          onAdded();
+          setEditingGiayPhep(null);
+          setLoading(false);
+          toast.success("Cập nhật giấy phép thành công!");
+        } else {
+          setErrorMessage("Lỗi cập nhật nghỉ phép: " + response.data.error);
+          toast.error("Cập nhật đơn nghỉ phép thất bại!");
+        }
       } else {
         await axios.post(`${API_URL}/add-giay-phep`, formData);
+        setLoading(false);
         toast.success("Thêm giấy phép thành công!");
       }
       onAdded();
     } catch (error) {
+      setLoading(false);
       console.error("Lỗi khi lưu giấy phép:", error);
       toast.error("Có lỗi xảy ra khi lưu giấy phép!");
     }
@@ -85,10 +98,16 @@ const GiayPhepForm = ({ onAdded, editingGiayPhep, setEditingGiayPhep }) => {
       setChecking(false);
     }
   };
-
+  if (loading) return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+      <Spinner animation="border" variant="primary" role="status" />
+      <span className="ms-2">⏳ Đang tải dữ liệu...</span>
+    </div>
+  ); 
   return (
     <div>
       <Form onSubmit={handleSubmit}>
+        <Row>{ErrorMessage && <div className="alert alert-danger">{ErrorMessage}</div>}</Row>
         <Row>
           <Col md={12}>
             <Form.Group>
@@ -223,7 +242,7 @@ const GiayPhepForm = ({ onAdded, editingGiayPhep, setEditingGiayPhep }) => {
           </Form.Group>
         )}
 
-        <Button type="submit" variant="primary" className="mt-4">
+        <Button type="submit" variant="primary" className="mt-4" disabled={loading}>
           {editingGiayPhep ? "Cập nhật" : "Thêm mới"}
         </Button>
       </Form>

@@ -19,7 +19,27 @@ def get_all_luong_router(cham_cong_id):
 
 
 
-# Tạo nghỉ phép mới
 @giayphep_bp.route('/add-giay-phep', methods=['POST'])
 def create_giay_phep_router():
     return create_giay_phep_controller()
+
+@giayphep_bp.route('/edit-giay-phep/<int:id>', methods=['PUT'])
+def update_giay_phep_router(id):
+    return update_giay_phep_controller(id)
+
+
+@giayphep_bp.route('/approve-giay-phep/<int:id>', methods=['PUT'])
+def approve_giay_phep_router(id):
+    return approve_giay_phep_controller(id) 
+
+@giayphep_bp.route('/reject-giay-phep/<int:id>', methods=['PUT'])
+def reject_giay_phep_router(id):
+    return reject_giay_phep_controller(id) 
+
+@giayphep_bp.route('/cancel-giay-phep/<int:id>', methods=['DELETE'])
+def cancle_giay_phep_router(id):
+    return cancle_giay_phep_controller(id) 
+
+# @giayphep_bp.route('/delete-giay-phep/<int:id>', methods=['DELETE'])
+# def delete_giay_phep_router(id):
+#     return delete_giay_phep_controller(id)

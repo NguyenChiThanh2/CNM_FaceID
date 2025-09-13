@@ -35,9 +35,10 @@ const QuanLyGiayPhep = () => {
       setGiayPhepList(response.data);
     } catch (error) {
       console.error("Lỗi khi gọi API giấy phép:", error);
-      toast.error("Có lỗi xảy ra khi tải danh sách giấy phép!");
+      toast.error("Không có giấy phép nào được tìm thấy!");
     } finally {
       setLoading(false);
+      
     }
   };
 
@@ -64,7 +65,7 @@ const QuanLyGiayPhep = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc muốn hủy giấy phép này không?")) {
       try {
-        await axios.put(`${API_URL}/cancel-giay-phep/${id}`);
+        await axios.delete(`${API_URL}/cancel-giay-phep/${id}`);
         fetchGiayPhep();
         toast.success("Đã hủy giấy phép thành công!");
       } catch (error) {
@@ -204,7 +205,7 @@ const QuanLyGiayPhep = () => {
                   <th>Từ ngày</th>
                   <th>Đến ngày</th>
                   <th>Loại giấy phép</th>
-                  <th>Số giờ / Ngày công</th>
+                  <th>Số giờ / Tính lại ngày công</th>
                   <th>Lý do</th>
                   <th>Trạng thái</th>
                   <th>Hành động</th>
@@ -266,22 +267,28 @@ const QuanLyGiayPhep = () => {
                             >
                               🗑 Hủy
                             </button>
-                          </>
-                        )}
-                        {["Chưa duyệt", "Từ chối"].includes(gp.trang_thai) && (
-                          <button
+                            <button
                             className="btn btn-sm btn-outline-warning"
                             onClick={() => handleEdit(gp)}
-                          >
-                            ✏️ Sửa
-                          </button>
+                            >
+                              ✏️ Sửa
+                            </button>
+                          </>
+                        )}
+                        {["Từ chối"].includes(gp.trang_thai) && (
+                          <button
+                              className="btn btn-sm btn-outline-danger me-1"
+                              onClick={() => handleDelete(gp.id)}
+                            >
+                              🗑 Hủy
+                            </button>
                         )}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="text-center text-muted">
+                    <td colSpan="9" className="text-center text-muted">
                       Không có giấy phép nào phù hợp
                     </td>
                   </tr>

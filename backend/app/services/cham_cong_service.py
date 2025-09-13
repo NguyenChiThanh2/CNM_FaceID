@@ -49,7 +49,9 @@ def get_all_cham_cong_service():
     return ChamCong.query.order_by(ChamCong.ngay.desc()).all()
 
 def get_cham_cong_by_id_service(id):
-    return ChamCong.query.get(id)
+    chamcong = ChamCong.query.get(id)
+    return chamcong
+
 
 def get_cham_cong_by_nhan_vien_id_service(nhan_vien_id):
     return ChamCong.query.filter_by(nhan_vien_id=nhan_vien_id).all()

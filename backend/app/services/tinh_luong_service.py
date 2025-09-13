@@ -9,6 +9,8 @@ from app.models.hopdong_laodong_model import HopDongLaoDong
 from app.models.quyche_congty_model import QuyCheCongTy
 from app.models.bang_luong_model import BangLuong
 from app.models.giay_phep_model import GiayPhep
+from app.models.nguoi_phu_thuoc_model import NguoiPhuThuoc
+from .nguoi_phu_thuoc_service import kiemtra_nguoiphuthuoc
 from app import db
 
 # class TinhLuongService:
@@ -94,6 +96,8 @@ def tinh_thue_tncn(thu_nhap, so_nguoi_phu_thuoc=0):
 
     return thue
 
+
+
 def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     """Tính lương cho 1 nhân viên trong 1 tháng"""
     # lấy toàn bộ chấm công trong tháng
@@ -114,6 +118,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     phu_cap = 0.0
 
     for cc in chamcongs:
+        if not cc.thoi_gian_vao or not cc.thoi_gian_ra:
+            continue  # bỏ qua ngày không có chấm công
         policy = get_chinhsach(nhanvien_id, cc.thoi_gian_vao.date())
 
         # ======= NGÀY LỄ =======
@@ -171,8 +177,12 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
 
     # Lương sau khi trừ bảo hiểm
     luong_tinh_thue = tong_luong - tong_bao_hiem 
+    
+    # Số người phụ thuộc
+    so_nguoi_phu_thuoc = kiemtra_nguoiphuthuoc(nhanvien_id, thang, nam)
+    # print ("Số người phụ thuộc: ", so_nguoi_phu_thuoc, " nhân viên id: ", nhanvien_id, " tháng: ", thang, " năm: ", nam)
     # Tính thuế TNCN
-    thue_tncn = tinh_thue_tncn(luong_tinh_thue, so_nguoi_phu_thuoc=0)
+    thue_tncn = tinh_thue_tncn(luong_tinh_thue, so_nguoi_phu_thuoc)
     
     # ======= LƯƠNG THỰC LĨNH =======
     luong_thuc_linh = tong_luong - tong_bao_hiem - thue_tncn - khau_tru 
