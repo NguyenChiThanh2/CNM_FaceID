@@ -1,6 +1,5 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
-
 import TrangChu from "./pages/TrangChu";
 import QuanLyNhanSu from "./pages/modules/QuanLyNhanSu";
 import QuanlyNghiPhep from "./pages/modules/QuanLyNghiPhep";
@@ -11,10 +10,8 @@ import NhanSuDetail from "./pages/modules/NhanSuDetail";
 import ChamCong from "./pages/modules/ChamCong";
 import QuanLyLuong from "./pages/modules/QuanLyLuong";
 import ChamCongList from "./pages/modules/ChamCongList";
-
 import ChamCongForm from './components/chamcong/ChamCongForm';
-
-import FaceCheckIn from "./components/chamcong/FaceCheckIn";
+import FaceCheckIn from "./pages/modules/FaceCheckIn";
 import DanhSachNhanVien from "./components/phongban/DanhSachNhanVien";
 import QuanLyNguoiDung from "./pages/modules/QuanLyNguoiDung";
 import QuanLyDanhGia from "./pages/modules/QuanLyDanhGia";
@@ -26,13 +23,10 @@ import './App.css';
 import Sidebar from "./components/sidebar/sidebar";
 import NotFound from "./pages/NotFound";
 import { Navigate } from "react-router-dom";
-
+import PublicIPGuard from "./pages/PublicIPGuard";
 const AppLayout = () => {
   const location = useLocation();
-
-  // Những đường dẫn KHÔNG hiển thị Sidebar
   const hideNavbarPaths = ["/dang-nhap", "/404", "/cham-cong-face"];
-
   const isNavbarVisible = !hideNavbarPaths.includes(location.pathname);
 
   return (
@@ -42,7 +36,16 @@ const AppLayout = () => {
       <div style={{ marginLeft: isNavbarVisible ? "250px" : "0", width: "100%" }}>
         <Routes>
           <Route path="/dang-nhap" element={<DangNhap />} />
-          <Route path="/cham-cong-face" element={<FaceCheckIn />} />
+          {/* chặn truy cập vào trang chamcong khi ở khác mạng công ty */}
+          <Route
+            path="/cham-cong-face"
+            element={
+              <PublicIPGuard>
+                <FaceCheckIn />
+              </PublicIPGuard>
+            }
+          />
+
           <Route path="/" element={<PrivateRoute><TrangChu /></PrivateRoute>} />
           <Route path="/nhan-su" element={<PrivateRoute><QuanLyNhanSu /></PrivateRoute>} />
           <Route path="/nghi-phep" element={<PrivateRoute><QuanlyNghiPhep /></PrivateRoute>} />
@@ -57,11 +60,7 @@ const AppLayout = () => {
           <Route path="/get-phong-ban-by-id/:id" element={<PrivateRoute><DanhSachNhanVien /></PrivateRoute>} />
           <Route path="/cham-cong-list" element={<PrivateRoute><ChamCongList /></PrivateRoute>} />
           <Route path="/cham-cong-form" element={<PrivateRoute><ChamCongForm /></PrivateRoute>} />
-          
           <Route path="/quan-ly-nguoi-dung" element={<PrivateRoute><QuanLyNguoiDung /></PrivateRoute>} />
-
-
-          {/* Trang 404 */}
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" />} />
         </Routes>
@@ -69,6 +68,7 @@ const AppLayout = () => {
     </div>
   );
 };
+
 
 function App() {
   return (
@@ -81,4 +81,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; 
