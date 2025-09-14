@@ -1,6 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import { Button, Modal, OverlayTrigger, Tooltip, Breadcrumb, Row, Col } from "react-bootstrap";
+import {
+  Table,
+  Button,
+  Modal,
+  OverlayTrigger,
+  Tooltip,
+  Breadcrumb,
+  Row,
+  Col,
+} from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import * as XLSX from "xlsx";
@@ -19,6 +28,7 @@ const QuanLyLuong = () => {
   const [isTinhTatCa, setIsTinhTatCa] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  // const hasFetched = useRef(false);
 
   const [formData, setFormData] = useState({
     nhan_vien_id: "",
@@ -29,6 +39,8 @@ const QuanLyLuong = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // if (hasFetched.current) return; // Nếu đã gọi rồi -> bỏ qua
+    // hasFetched.current = true;
     fetchLuong();
     fetchNhanVien();
   }, []);
@@ -162,7 +174,7 @@ const QuanLyLuong = () => {
       const nv = nhanVienList.find((nv) => nv.id === luong.nhan_vien_id);
       return {
         "Nhân viên": nv?.ho_ten || "Không rõ",
-        "Tháng": `${luong.thang}/${luong.nam}`,
+        Tháng: `${luong.thang}/${luong.nam}`,
         "Ngày công chuẩn": luong.ngay_cong_chuan,
         "Số ngày công": luong.so_ngay_cong,
         "Giờ tăng ca": luong.tong_gio_tang_ca,
@@ -195,12 +207,15 @@ const QuanLyLuong = () => {
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
+            <Breadcrumb.Item onClick={() => navigate("/")}>
+              Trang chủ
+            </Breadcrumb.Item>
             <Breadcrumb.Item active>Quản lý lương</Breadcrumb.Item>
           </Breadcrumb>
-          <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
+          <Button variant="secondary" onClick={() => navigate("/")}>
+            ← Trang chủ
+          </Button>
           <h2 className="mb-4 text-center">Quản lý lương</h2>
-
           {/* Bộ lọc */}
           <div className="row mb-4">
             <div className="col-md-4 mb-2">
@@ -256,14 +271,24 @@ const QuanLyLuong = () => {
               </select>
             </div>
             <div className="col-md-4 mb-2">
-              <OverlayTrigger placement="top" overlay={<Tooltip>Tính lương cho 1 nhân viên</Tooltip>}>
-                <Button variant="outline-success" className="w-100" onClick={() => setShowModal(true)}>
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip>Tính lương cho 1 nhân viên</Tooltip>}
+              >
+                <Button
+                  variant="outline-success"
+                  className="w-100"
+                  onClick={() => setShowModal(true)}
+                >
                   Tính lương cho 1 nhân viên
                 </Button>
               </OverlayTrigger>
             </div>
             <div className="col-md-4 mb-2">
-              <OverlayTrigger placement="top" overlay={<Tooltip>Tính lương toàn bộ nhân viên</Tooltip>}>
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip>Tính lương toàn bộ nhân viên</Tooltip>}
+              >
                 <Button
                   variant="outline-warning"
                   className="w-100"
@@ -277,60 +302,152 @@ const QuanLyLuong = () => {
               </OverlayTrigger>
             </div>
             <div className="col-md-2 mb-2 d-flex justify-content-md-end justify-content-center">
-              <Button variant="outline-success" className="w-100 w-md-auto" onClick={exportToExcel}>
+              <Button
+                variant="outline-success"
+                className="w-100 w-md-auto"
+                onClick={exportToExcel}
+              >
                 Xuất Excel
               </Button>
             </div>
           </div>
-
           {/* Bảng lương */}
-          <div className="table-responsive" style={{
-                                                    maxHeight: "70vh", // Giới hạn chiều cao
-                                                    overflowX: "auto", // Scroll ngang
-                                                    overflowY: "auto",
-                                                    whiteSpace: "nowrap", // Giữ cột nằm ngang
-                                                  }}
+       
+          <div
+            style={{
+              maxHeight: "75vh",
+              overflowX: "auto",
+              overflowY: "auto",
+              whiteSpace: "nowrap",
+              position: "relative", // Để các cột sticky hoạt động đúng
+            }}
           >
-            <table className="table table-bordered table-hover align-middle">
-              <thead className="table-dark" style={{ position: "sticky", top: 0, zIndex: 2 }}>
+            <Table striped bordered hover responsive className="align-middle">
+
+              <thead
+                className="table-dark"
+                style={{ position: "sticky", top: 0, zIndex: 3 }}
+              >
                 <tr>
-                  <th>Nhân viên</th>
-                  <th>Tháng</th>
-                  <th>Số công chuẩn</th>
+                  <th
+                    style={{
+                      position: "sticky",
+                      left: 0,
+                      zIndex: 4,
+                    }}
+                  >
+                    Nhân viên
+                  </th>
+                  <th
+                    style={{
+                      position: "sticky",
+                      left: "150px",
+                      zIndex: 4,
+                    }}
+                  >
+                    Tháng
+                  </th>
+                  <th>Ngày công chuẩn</th>
                   <th>Số ngày công</th>
                   <th>Giờ tăng ca</th>
-                  <th>Phụ cấp</th>
+                  <th>Tiền tăng ca</th>
+                  
+                  <th>Phụ cấp ăn trưa</th>
+                  <th>Phụ cấp xăng, xe</th>
+                  <th>Phụ cấp độc hại</th>
+                  <th>Phụ cấp trách nhiệm</th>
+                  <th>Phụ cấp chức vụ</th>
+                  <th>Phụ cấp thâm niên</th>
+                  <th>Phụ cấp khác</th>
+                  <th>Tổng phụ cấp</th>
+
                   <th>Tổng lương</th>
-                  <th>Khấu trừ</th>
+
+                  <th>Trừ đi trễ, về sớm</th>
+                  <th>Trừ nghỉ không phép</th>
+                  <th>Trừ vi phạm</th>
+                  <th>Trừ tạm ứng</th>
+                  <th>Trừ khác</th>
+                  <th>Tổng khấu trừ</th>
+
                   <th>BHXH</th>
                   <th>BHTN</th>
                   <th>BHYT</th>
                   <th>Thuế TNCN</th>
                   <th>Thực nhận</th>
                   <th>Hành động</th>
-                 </tr>
+                </tr>
               </thead>
               <tbody>
                 {paginatedList.map((luong) => {
-                  const nv = nhanVienList.find((nv) => nv.id === luong.nhan_vien_id);
+                  const nv = nhanVienList.find(
+                    (nv) => nv.id === luong.nhan_vien_id
+                  );
                   return (
                     <tr key={luong.id}>
-                      <td>{nv?.ho_ten || "Không rõ"}</td>
-                      <td>{`${luong.thang}/${luong.nam}`}</td>
+                      <td
+                        style={{
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 2,
+                          minWidth: "150px", // đảm bảo width cố định
+                        }}
+                      >
+                        {nv?.ho_ten || "Không rõ"}
+                      </td>
+                      <td
+                        style={{
+                          position: "sticky",
+                          left: "150px",
+                          zIndex: 2,
+                          minWidth: "100px",
+                        }}
+                      >
+                        {`${luong.thang}/${luong.nam}`}
+                      </td>
                       <td>{luong.ngay_cong_chuan}</td>
                       <td>{luong.so_ngay_cong}</td>
                       <td>{luong.tong_gio_tang_ca}</td>
-                      <td class="text-success">{formatCurrency(luong.tong_phu_cap)}</td>
+                      <td className="text-success">
+                        {formatCurrency(luong.tong_tien_tang_ca)}
+                      </td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td className="text-success">
+                        {formatCurrency(luong.tong_phu_cap)}
+                      </td>
                       <td>{formatCurrency(luong.tong_luong)}</td>
-                      <td class="text-danger">{formatCurrency(luong.tong_khau_tru)}</td>
-                      <td class="text-warning">{formatCurrency(luong.bhxh)}</td>
-                      <td class="text-warning">{formatCurrency(luong.bhtn)}</td>
-                      <td class="text-warning">{formatCurrency(luong.bhyt)}</td>
-                      <td class="text-danger">{formatCurrency(luong.thue_tncn)}</td>
-                      
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td className="text-danger">
+                        {formatCurrency(luong.tong_khau_tru)}
+                      </td>
+                      <td className="text-warning">
+                        {formatCurrency(luong.bhxh)}
+                      </td>
+                      <td className="text-warning">
+                        {formatCurrency(luong.bhtn)}
+                      </td>
+                      <td className="text-warning">
+                        {formatCurrency(luong.bhyt)}
+                      </td>
+                      <td className="text-danger">
+                        {formatCurrency(luong.thue_tncn)}
+                      </td>
                       <td>{formatCurrency(luong.thuc_nhan)}</td>
                       <td>
-                        <OverlayTrigger placement="top" overlay={<Tooltip>Xoá dòng lương này</Tooltip>}>
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={<Tooltip>Xoá dòng lương này</Tooltip>}
+                        >
                           <Button
                             variant="danger"
                             size="sm"
@@ -344,9 +461,8 @@ const QuanLyLuong = () => {
                   );
                 })}
               </tbody>
-            </table>
+            </Table>
           </div>
-
           {/* Phân trang giữ nguyên kiểu cũ */}
           <Row className="justify-content-center mt-3">
             <Col xs="auto" className="text-center">
@@ -371,7 +487,6 @@ const QuanLyLuong = () => {
               </div>
             </Col>
           </Row>
-
           {/* Modal tính lương */}
           <Modal show={showModal} onHide={() => setShowModal(false)}>
             <Modal.Header closeButton>

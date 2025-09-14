@@ -17,8 +17,12 @@ class QuyCheCongTy(db.Model):
     luong_cuoi_tuan_heso = db.Column(db.Float, nullable=False, default=1.5)
 
     phu_cap_an_trua = db.Column(db.Float, nullable=False, default=0.0)
+    phu_cap_xang_xe = db.Column(db.Float, nullable=True, default=0.0)
+    
     phu_cap_doc_hai = db.Column(db.Float, nullable=False, default=0.0)
     phu_cap_trach_nhiem = db.Column(db.Float, nullable=False, default=0.0)
+    phu_cap_chuc_vu = db.Column(db.Float, nullable=True, default=0.0)
+    phu_cap_tham_nien = db.Column(db.Float, nullable=True, default=0.0)
 
     quy_dinh_khac = db.Column(db.JSON, nullable=True)  # lưu rule mở rộng
     trang_thai = db.Column(db.Boolean, default=True)

@@ -22,9 +22,13 @@ class HopDongLaoDong(db.Model):
     luong_ngay_le_heso = db.Column(db.Float, nullable=True)  # hệ số trả lương ngày lễ
     luong_cuoi_tuan_heso = db.Column(db.Float, nullable=True)  # hệ số trả lương cuối tuần
 
-    phu_cap_an_trua = db.Column(db.Float, nullable=True)  # phụ cấp ăn ca
-    phu_cap_doc_hai = db.Column(db.Float, nullable=True)
-    phu_cap_trach_nhiem = db.Column(db.Float, nullable=True)
+    phu_cap_an_trua = db.Column(db.Float, nullable=True, default=0.0)
+    phu_cap_xang_xe = db.Column(db.Float, nullable=True, default=0.0)
+    
+    phu_cap_doc_hai = db.Column(db.Float, nullable=True, default=0.0)
+    phu_cap_trach_nhiem = db.Column(db.Float, nullable=True, default=0.0)
+    phu_cap_chuc_vu = db.Column(db.Float, nullable=True, default=0.0)
+    phu_cap_tham_nien = db.Column(db.Float, nullable=True, default=0.0)
 
     dieu_khoan_khac = db.Column(db.JSON, nullable=True)  # cho phép lưu rule đặc biệt (JSON)
     trang_thai = db.Column(db.Boolean, default=True)
