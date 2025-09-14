@@ -9,7 +9,7 @@ from app.services.bang_luong_service import *
 #         return jsonify({'message': 'Không có dữ liệu bảng lương'}), 404
 def get_all_luong():
     luongs = get_bang_luong_service()
-    if luongs:
-        return jsonify([luong.to_dict() for luong in luongs])
+    if luongs and len(luongs) > 0:
+        return jsonify(luongs), 200
     else:
         return jsonify({'message': 'Không có dữ liệu lương'}), 404

@@ -53,9 +53,11 @@ from .face_routes import face_bp
 from .bang_luong_routers import bangluong_bp
 from .tinh_luong_routers import tinhluong_bp
 from .giay_phep_routers import giayphep_bp
+from .chi_tiet_luong_routers import chitietluong_bp
 
 def register_routes(app):
     
+    app.register_blueprint(chitietluong_bp, url_prefix='/api')
     app.register_blueprint(giayphep_bp, url_prefix='/api')
     app.register_blueprint(tinhluong_bp, url_prefix='/api')
     app.register_blueprint(bangluong_bp, url_prefix='/api')

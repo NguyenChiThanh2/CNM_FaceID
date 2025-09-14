@@ -121,6 +121,10 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     
     khau_tru = 0.0
     ditre_vesom = 0.0
+    nghi_khong_phep = 0.0
+    vi_pham = 0.0
+    tam_ung = 0.0
+    tru_khac = 0.0
     
     phu_cap = 0.0
     phucap_an_trua = 0.0
@@ -130,6 +134,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     phucap_trach_nhiem = 0.0
     phucap_chuc_vu = 0.0
     phucap_tham_nien = 0.0
+    
+    
 
     for cc in chamcongs:
         if not cc.thoi_gian_vao or not cc.thoi_gian_ra:
@@ -249,8 +255,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         
          # 2️⃣ Tạo list chi tiết lương (chỉ thêm nếu có dữ liệu)
         chi_tiet_list = []
-        
-        
+
         # ======= KHẤU TRỪ  =======
         if ditre_vesom and ditre_vesom > 0:
             chi_tiet_list.append(
@@ -259,6 +264,42 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     nhom=NhomChiTietLuong.KHAU_TRU,
                     loai="DI_TRE_VE_SOM",
                     so_tien=ditre_vesom
+                )
+            )
+        if nghi_khong_phep and nghi_khong_phep > 0:
+            chi_tiet_list.append(
+                ChiTietLuong(
+                    bang_luong_id=bangluong.id,
+                    nhom=NhomChiTietLuong.KHAU_TRU,
+                    loai="NGHI_KHONG_PHEP",
+                    so_tien=nghi_khong_phep
+                )
+            )
+        if vi_pham and vi_pham > 0:
+            chi_tiet_list.append(
+                ChiTietLuong(
+                    bang_luong_id=bangluong.id,
+                    nhom=NhomChiTietLuong.KHAU_TRU,
+                    loai="VI_PHAM_NOI_QUY",
+                    so_tien=vi_pham
+                )
+            )
+        if tam_ung and tam_ung > 0:
+            chi_tiet_list.append(
+                ChiTietLuong(
+                    bang_luong_id=bangluong.id,
+                    nhom=NhomChiTietLuong.KHAU_TRU,
+                    loai="TAM_UNG",
+                    so_tien=tam_ung
+                )
+            )
+        if tru_khac and tru_khac > 0:
+            chi_tiet_list.append(
+                ChiTietLuong(
+                    bang_luong_id=bangluong.id,
+                    nhom=NhomChiTietLuong.KHAU_TRU,
+                    loai="TRU_KHAC",
+                    so_tien=tru_khac
                 )
             )
 
@@ -320,6 +361,15 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 )
             )
 
+        # if phucap_tham_nien and phucap_tham_nien > 0: PHỤ CẤP KHÁC
+        #     chi_tiet_list.append(
+        #         ChiTietLuong(
+        #             bang_luong_id=bangluong.id,
+        #             nhom=NhomChiTietLuong.PHU_CAP,
+        #             loai="THAM_NIEN",
+        #             so_tien=phucap_tham_nien
+        #         )
+        #     )
         
         # ======= THƯỞNG  =======
         # if phucap_trach_nhiem and phucap_trach_nhiem > 0:

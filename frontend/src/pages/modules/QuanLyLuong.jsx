@@ -383,6 +383,20 @@ const QuanLyLuong = () => {
                   const nv = nhanVienList.find(
                     (nv) => nv.id === luong.nhan_vien_id
                   );
+                  const anUong = luong.chi_tiet_luong?.find(ct => ct.loai === "AN_UONG");
+                  const xangXe = luong.chi_tiet_luong?.find(ct => ct.loai === "XANG_XE");
+                  const docHai = luong.chi_tiet_luong?.find(ct => ct.loai === "DOC_HAI");
+                  const trachNhiem = luong.chi_tiet_luong?.find(ct => ct.loai === "TRACH_NHIEM");
+                  const chucVu = luong.chi_tiet_luong?.find(ct => ct.loai === "CHUC_VU");
+                  const thamNien = luong.chi_tiet_luong?.find(ct => ct.loai === "THAM_NIEN");
+                  const phucapkhac = luong.chi_tiet_luong?.find(ct => ct.loai === "PHU_CAP_KHAC");
+
+                  const diTreVeSom = luong.chi_tiet_luong?.find(ct => ct.loai === "DI_TRE_VE_SOM");
+                  const nghiKhongPhep = luong.chi_tiet_luong?.find(ct => ct.loai === "NGHI_KHONG_PHEP");
+                  const viPhamNoiQuy = luong.chi_tiet_luong?.find(ct => ct.loai === "VI_PHAM_NOI_QUY");
+                  const tamUng = luong.chi_tiet_luong?.find(ct => ct.loai === "TAM_UNG");
+                  const truKhac = luong.chi_tiet_luong?.find(ct => ct.loai === "TRU_KHAC");
+
                   return (
                     <tr key={luong.id}>
                       <td
@@ -408,27 +422,53 @@ const QuanLyLuong = () => {
                       <td>{luong.ngay_cong_chuan}</td>
                       <td>{luong.so_ngay_cong}</td>
                       <td>{luong.tong_gio_tang_ca}</td>
-                      <td className="text-success">
+                      <td className="text-success bg-success-subtle">
                         {formatCurrency(luong.tong_tien_tang_ca)}
                       </td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td className="text-success">
-                        {formatCurrency(luong.tong_phu_cap)}
+                      
+                      <td className="text-success bg-success-subtle">
+                        {anUong ? formatCurrency(anUong.so_tien) :  formatCurrency(0)}
                       </td>
-                      <td>{formatCurrency(luong.tong_luong)}</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td className="text-danger">
-                        {formatCurrency(luong.tong_khau_tru)}
+                      <td className="text-success bg-success-subtle">
+                        {xangXe ? formatCurrency(xangXe.so_tien) :  formatCurrency(0)}
+                      </td>
+                      <td className="text-success bg-success-subtle">
+                        {docHai ? formatCurrency(docHai.so_tien) : formatCurrency(0)}
+                      </td>
+                      <td className="text-success bg-success-subtle">
+                        {trachNhiem ? formatCurrency(trachNhiem.so_tien) : formatCurrency(0)}
+                      </td>
+                      <td className="text-success bg-success-subtle">
+                        {chucVu ? formatCurrency(chucVu.so_tien) : formatCurrency(0)}
+                      </td>
+                      <td className="text-success bg-success-subtle">
+                        {thamNien ? formatCurrency(thamNien.so_tien) :  formatCurrency(0)}
+                      </td>
+                      <td className="text-success bg-success-subtle">
+                        {phucapkhac ? formatCurrency(phucapkhac.so_tien) :  formatCurrency(0)}
+                      </td>
+                      
+                      <td className="text-success bg-success bg-opacity-50">
+                        <b>{formatCurrency(luong.tong_phu_cap)}</b>
+                      </td>
+                      <td><b>{formatCurrency(luong.tong_luong)}</b></td>
+                      <td className="text-danger bg-danger-subtle">
+                        {diTreVeSom ? formatCurrency(diTreVeSom.so_tien) :  formatCurrency(0)}
+                      </td>
+                      <td className="text-danger bg-danger-subtle">
+                        {nghiKhongPhep ? formatCurrency(nghiKhongPhep.so_tien) :  formatCurrency(0)}
+                      </td>
+                      <td className="text-danger bg-danger-subtle">
+                        {viPhamNoiQuy ? formatCurrency(viPhamNoiQuy.so_tien) :  formatCurrency(0)}
+                      </td>
+                      <td className="text-danger bg-danger-subtle">
+                        {tamUng ? formatCurrency(tamUng.so_tien) :  formatCurrency(0)}
+                      </td>
+                      <td className="text-danger bg-danger-subtle">
+                        {truKhac ? formatCurrency(truKhac.so_tien) :  formatCurrency(0)}
+                      </td>
+                      <td className="text-danger bg-danger bg-opacity-50 ">
+                        <b>{formatCurrency(luong.tong_khau_tru)}</b>
                       </td>
                       <td className="text-warning">
                         {formatCurrency(luong.bhxh)}
@@ -442,7 +482,7 @@ const QuanLyLuong = () => {
                       <td className="text-danger">
                         {formatCurrency(luong.thue_tncn)}
                       </td>
-                      <td>{formatCurrency(luong.thuc_nhan)}</td>
+                      <td className="bg-primary bg-opacity-25"><b>{formatCurrency(luong.thuc_nhan)}</b></td>
                       <td>
                         <OverlayTrigger
                           placement="top"

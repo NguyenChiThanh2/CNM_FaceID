@@ -26,12 +26,12 @@ class ChiTietLuong(db.Model):
 
     def to_dict(self):
         return {
-            "id": self.id,
-            "bang_luong_id": self.bang_luong_id,
-            "nhom": self.nhom,
+            # "id": self.id,
+            # "bang_luong_id": self.bang_luong_id,
+            "nhom": self.nhom.value if self.nhom else None,
             "loai": self.loai,
             "so_tien": self.so_tien,
-            "ghi_chu": self.ghi_chu,
-            "created_at": self.created_at,
+            # "ghi_chu": self.ghi_chu,
+            # "created_at": self.created_at.isoformat() if self.created_at else None
         }
     

@@ -43,5 +43,6 @@ class BangLuong(db.Model):
             "thue_tncn": self.thue_tncn,
             "tong_luong": self.tong_luong,
             "thuc_nhan": self.thuc_nhan,
+            "chi_tiet_luong": [ct.to_dict() for ct in self.chi_tiet_luong_bang_luong]
         }
     
