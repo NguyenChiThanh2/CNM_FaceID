@@ -1,8 +1,8 @@
 from datetime import timedelta, date, datetime, time
-import calendar
+from calendar import monthrange, calendar
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import extract, func
+from sqlalchemy import extract, func, or_
 # from models.nhan_vien_model import NhanVien
 from app.models.cham_cong_model import ChamCong
 from app.models.hopdong_laodong_model import HopDongLaoDong
@@ -11,6 +11,7 @@ from app.models.bang_luong_model import BangLuong
 from app.models.giay_phep_model import GiayPhep
 from .nguoi_phu_thuoc_service import kiemtra_nguoiphuthuoc
 from app.models.chi_tiet_luong_model import ChiTietLuong, NhomChiTietLuong
+from app.models.nghi_phep_model import NghiPhep
 from app import db
 
 # class TinhLuongService:
@@ -36,7 +37,7 @@ def get_chinhsach(nhanvien_id: int, ngay: date):
         return QuyCheCongTy.query.first()  # chính sách mặc định
 
 def tinh_ngay_cong(thang, nam):
-    so_ngay = calendar.monthrange(nam, thang)[1]
+    so_ngay = monthrange(nam, thang)[1]
     ngay_cong = 0
     for day in range(1, so_ngay + 1):
         d = date(nam, thang, day)
@@ -45,24 +46,34 @@ def tinh_ngay_cong(thang, nam):
     return ngay_cong
 
 def tinh_tre_som(thoigianvao: datetime, thoigianra: datetime):
+    
+    if thoigianvao is None:
+        thoigianvao = 0
+    if thoigianra is None:
+        thoigianra = 0
     # Mốc giờ chuẩn
-    gio_vao_chuan = time(8, 0)   # 08:01
+    gio_vao_chuan = time(8, 0)   # 08:00
     gio_ra_chuan = time(17, 0)   # 17:00
-
-    # ---- TÍNH ĐI TRỄ ----
     tre_phut = 0
-    if thoigianvao.time() > gio_vao_chuan:
-        diff = datetime.combine(thoigianvao.date(), thoigianvao.time()) - \
-               datetime.combine(thoigianvao.date(), gio_vao_chuan)
-        tre_phut = int(diff.total_seconds() // 60)
-
-    # ---- TÍNH VỀ SỚM ----
     som_phut = 0
-    if thoigianra.time() < gio_ra_chuan:
-        diff = datetime.combine(thoigianra.date(), gio_ra_chuan) - \
-               datetime.combine(thoigianra.date(), thoigianra.time())
-        som_phut = int(diff.total_seconds() // 60)
-
+    # ---- TÍNH ĐI TRỄ ----
+    try:
+        
+        if thoigianvao.time() > gio_vao_chuan:
+            diff = datetime.combine(thoigianvao.date(), thoigianvao.time()) - \
+                datetime.combine(thoigianvao.date(), gio_vao_chuan)
+            tre_phut = int(diff.total_seconds() // 60)
+    except Exception as e:
+        print(f"Lỗi tính đi trễ: {e}")
+    # ---- TÍNH VỀ SỚM ----
+    try:
+        if thoigianra.time() < gio_ra_chuan:
+            diff = datetime.combine(thoigianra.date(), gio_ra_chuan) - \
+                datetime.combine(thoigianra.date(), thoigianra.time())
+            som_phut = int(diff.total_seconds() // 60)
+    except Exception as e:
+        print(f"Lỗi tính về sớm: {e}")
+        
     return tre_phut, som_phut
 
 # ======= TÍNH THUẾ TNCN =======
@@ -96,6 +107,59 @@ def tinh_thue_tncn(thu_nhap, so_nguoi_phu_thuoc=0):
 
     return thue
 
+# ======= TÍNH NGÀY NGHỈ PHÉP NĂM =======
+def tinh_ngay_nghi_phep_nam(nhanvien_id: int,thang: int, nam: int):
+    # Xác định ngày đầu & cuối tháng
+    ngay_dau_thang = date(nam, thang, 1)
+    ngay_cuoi_thang = date(nam, thang, monthrange(nam, thang)[1])
+
+    # Query lấy tất cả nghỉ phép có giao với tháng
+    ngaynghiphep = NghiPhep.query.filter(
+        NghiPhep.nhan_vien_id == nhanvien_id,
+        NghiPhep.trang_thai == "Đã duyệt",
+        # Điều kiện có giao khoảng thời gian
+        or_(
+            # bắt đầu trong tháng
+            (NghiPhep.tu_ngay <= ngay_cuoi_thang) & (NghiPhep.den_ngay >= ngay_dau_thang)
+        )
+    ).all()
+
+    # tong_so_ngay_nghi = 0
+    danh_sach_ngay = []
+
+    for np in ngaynghiphep:
+        # Xác định khoảng giao với tháng
+        # start = max(np.tu_ngay, ngay_dau_thang)
+        # end = min(np.den_ngay, ngay_cuoi_thang)
+        start = max(np.tu_ngay.date(), ngay_dau_thang)  # ép về date
+        end = min(np.den_ngay.date(), ngay_cuoi_thang)  
+        # if start <= end:
+        #     so_ngay = (end - start).days + 1
+        #     tong_so_ngay_nghi += so_ngay
+        # Duyệt từng ngày trong khoảng và thêm vào danh sách
+        current = start
+        while current <= end:
+            danh_sach_ngay.append(current.day)  # chỉ lấy số ngày (1..31)
+            current += timedelta(days=1)
+     # Loại bỏ trùng lặp (nếu có) và sắp xếp tăng dần
+    danh_sach_ngay = sorted(list(set(danh_sach_ngay)))
+            
+    return danh_sach_ngay
+    # hopdong = (
+    #     HopDongLaoDong.query
+    #     .filter(
+    #         HopDongLaoDong.nhan_vien_id == nhanvien_id,
+    #         extract('year', HopDongLaoDong.ngay_bat_dau) <= nam,
+    #         (HopDongLaoDong.ngay_ket_thuc == None) | (extract('year', HopDongLaoDong.ngay_ket_thuc) >= nam),
+    #     )
+    #     .first()
+    # )
+
+    # if hopdong and hopdong.ngay_nghi_phep_nam is not None:
+    #     return hopdong.ngay_nghi_phep_nam
+    # else:
+    #     quyche = QuyCheCongTy.query.first()
+    #     return quyche.ngay_nghi_phep_nam if quyche and quyche.ngay_nghi_phep_nam is not None else 12  # mặc định 12 ngày
 
 # TÍNH LƯƠNG------------------------------------------------------------------------------------------------
 def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
@@ -110,9 +174,21 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         )
         .all()
     )
-
-    tong_luong = 0.0
+    ds_ngay_nghi_phep = tinh_ngay_nghi_phep_nam(nhanvien_id, thang, nam)
+    
+    cong = 0.0
     tong_ngay_cong = 0.0
+    if ds_ngay_nghi_phep and len(ds_ngay_nghi_phep) > 0:
+        # cong = len(ds_ngay_nghi_phep)  # cộng trước số ngày nghỉ phép
+        tong_ngay_cong = len(ds_ngay_nghi_phep)
+        
+    tong_luong = 0.0
+    
+    kt = True
+    # kt1 = True
+    temp_tnc = 0.0
+    tong_ngay_cong_thuc = 0.0
+    
     
     tong_gio_tang_ca = 0.0
     tong_tien_tang_ca = 0.0
@@ -136,26 +212,44 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     phucap_tham_nien = 0.0
     
     
-
+    
     for cc in chamcongs:
-        if not cc.thoi_gian_vao or not cc.thoi_gian_ra:
-            continue  # bỏ qua ngày không có chấm công
+        if cc.thoi_gian_vao.date().day in ds_ngay_nghi_phep:
+            # if kt1:
+            #     kt1 = False
+            #     tong_ngay_cong_thuc = tong_ngay_cong - 1
+            if temp_tnc == tong_ngay_cong:
+                tong_ngay_cong_thuc = tong_ngay_cong - 1
+            kt = False
+            tong_ngay_cong -= 1  # trừ lại ngày công đã cộng ở trên
+            temp_tnc = tong_ngay_cong
+        if kt:
+            tong_ngay_cong_thuc += cc.so_cong
+            # print("1", tong_ngay_cong_thuc)
+            kt = True
+        if kt is False:
+            tong_ngay_cong_thuc += cc.so_cong 
+        
+        
+            
         policy = get_chinhsach(nhanvien_id, cc.thoi_gian_vao.date())
-
+        
         # ======= NGÀY LỄ =======
         # is_holiday = False
         # if hasattr(policy, "ngay_le_quoc_gia") and cc.thoi_gian_vao.date() in policy.ngay_le_quoc_gia:
         #     is_holiday = True
 
         # ======= TÍNH CÔNG =======
+        
         cong = cc.so_cong  # đã tính từ logic chấm công (0.5 hoặc 1)
         tong_ngay_cong += cong
-
+        # tong_ngay_cong_thuc += cong
+        print("Công tính:", tong_ngay_cong, "Công thực", tong_ngay_cong_thuc, "cong", cong, "Ngày", cc.thoi_gian_vao.date(), "ngày nghỉ phép", ds_ngay_nghi_phep)
         # ======= LƯƠNG NGÀY THƯỜNG =======
         so_cong_chuan_thang = tinh_ngay_cong(thang, nam)
         luong_ngay = policy.muc_luong_co_ban / so_cong_chuan_thang  
         tong_luong += cong * luong_ngay
-
+        
         # ======= TĂNG CA =======
         tangca = (
             GiayPhep.query
@@ -181,7 +275,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             # khau_tru += vesom * policy.ve_som_phat
             ditre_vesom += vesom * policy.ve_som_phat
         
-
+        # print(f"Ngày {cc.thoi_gian_vao.date()}: Đi trễ {ditre} phút, Về sớm {vesom} phút")
         # ======= PHỤ CẤP NẾU CÓ =======
         if policy.phu_cap_an_trua:
             phucap_an_trua += policy.phu_cap_an_trua
@@ -227,7 +321,9 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     
     # ======= KHẤU TRỪ KHÁC =======
     khau_tru += ditre_vesom
-    
+    if tong_ngay_cong < so_cong_chuan_thang:
+        ngaynghi = so_cong_chuan_thang - tong_ngay_cong
+        nghi_khong_phep += ngaynghi * luong_ngay
     # ======= LƯƠNG THỰC LĨNH =======
     luong_thuc_linh = tong_luong - tong_bao_hiem - thue_tncn - khau_tru + tien_tang_ca_mien_thue
     
@@ -238,7 +334,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             thang=thang,
             nam=nam,
             ngay_cong_chuan = int(so_cong_chuan_thang),
-            so_ngay_cong=tong_ngay_cong,
+            so_ngay_cong=tong_ngay_cong_thuc,
+            nghi_phep=len(ds_ngay_nghi_phep),
             tong_gio_tang_ca=tong_gio_tang_ca,
             tong_tien_tang_ca=tong_tien_tang_ca,
             tong_khau_tru=khau_tru,

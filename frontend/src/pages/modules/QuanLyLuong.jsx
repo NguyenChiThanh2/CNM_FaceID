@@ -9,7 +9,7 @@ import {
   Breadcrumb,
   Row,
   Col,
-  Popover,
+  Popover, Spinner
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -29,6 +29,7 @@ const QuanLyLuong = () => {
   const [isTinhTatCa, setIsTinhTatCa] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [loading, setLoading] = useState(true);
   // const hasFetched = useRef(false);
 
   const [formData, setFormData] = useState({
@@ -60,9 +61,11 @@ const QuanLyLuong = () => {
 
   const fetchLuong = async () => {
     try {
+      setLoading(true);
       // const response = await axios.get(`${API_URL}/get-all-luong`);
       const response = await axios.get(`${API_URL}/get-all-bang-luong`);
       setLuongList(response.data);
+      setLoading(false);
     } catch (error) {
       toast.error("Không thể tải dữ liệu lương!");
     }
@@ -119,6 +122,7 @@ const QuanLyLuong = () => {
       }
 
       try {
+        setLoading(true);
         // const response = await axios.post(`${API_URL}/tinh-luong`, {
         //   nhan_vien_id: parseInt(nhan_vien_id),
         //   thang: parseInt(thang),
@@ -133,11 +137,14 @@ const QuanLyLuong = () => {
         if (response.data) {
           toast.success("Tính lương thành công!");
           setShowModal(false);
+          setLoading(false);
           fetchLuong();
         } else {
+          setLoading(false);
           toast.error("Không thể tính lương.");
         }
       } catch (error) {
+        setLoading(false);
         toast.error("Lỗi khi tính lương!");
       }
     }
@@ -201,6 +208,13 @@ const QuanLyLuong = () => {
     saveAs(blob, "bang_luong.xlsx");
     toast.success("Xuất file Excel thành công!");
   };
+
+  if (loading) return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+      <Spinner animation="border" variant="primary" role="status" />
+      <span className="ms-2">⏳ Đang tải dữ liệu...</span>
+    </div>
+  ); 
 
   return (
     <div className="container min-vh-100">
@@ -349,6 +363,8 @@ const QuanLyLuong = () => {
                   </th>
                   <th>Ngày công chuẩn</th>
                   <th>Số ngày công</th>
+                  <th>Ngày phép</th>
+                  <th>Trừ nghỉ không phép</th>
                   <th>Giờ tăng ca</th>
                   <th>Tiền tăng ca</th>
 
@@ -364,7 +380,7 @@ const QuanLyLuong = () => {
                   <th>Tổng lương</th>
 
                   <th>Trừ đi trễ, về sớm</th>
-                  <th>Trừ nghỉ không phép</th>
+                  
                   <th>Trừ vi phạm</th>
                   <th>Trừ tạm ứng</th>
                   <th>Trừ khác</th>
@@ -445,6 +461,12 @@ const QuanLyLuong = () => {
                       </td>
                       <td>{luong.ngay_cong_chuan}</td>
                       <td>{luong.so_ngay_cong}</td>
+                      <td align="center">{luong.nghi_phep > 0 ? luong.nghi_phep : " "}</td>
+                      <td className="text-danger bg-danger-subtle">
+                        {nghiKhongPhep
+                          ? formatCurrency(nghiKhongPhep.so_tien)
+                          : formatCurrency(0)}
+                      </td>
                       <td>{luong.tong_gio_tang_ca}</td>
                       <td className="text-success bg-success-subtle">
                         {formatCurrency(luong.tong_tien_tang_ca)}
@@ -514,11 +536,7 @@ const QuanLyLuong = () => {
                           ? formatCurrency(diTreVeSom.so_tien)
                           : formatCurrency(0)}
                       </td>
-                      <td className="text-danger bg-danger-subtle">
-                        {nghiKhongPhep
-                          ? formatCurrency(nghiKhongPhep.so_tien)
-                          : formatCurrency(0)}
-                      </td>
+                      
                       <td className="text-danger bg-danger-subtle">
                         {viPhamNoiQuy
                           ? formatCurrency(viPhamNoiQuy.so_tien)
