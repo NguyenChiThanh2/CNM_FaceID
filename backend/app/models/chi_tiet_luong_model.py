@@ -31,7 +31,7 @@ class ChiTietLuong(db.Model):
             "nhom": self.nhom.value if self.nhom else None,
             "loai": self.loai,
             "so_tien": self.so_tien,
-            # "ghi_chu": self.ghi_chu,
+            "ghi_chu": self.ghi_chu,
             # "created_at": self.created_at.isoformat() if self.created_at else None
         }
     
