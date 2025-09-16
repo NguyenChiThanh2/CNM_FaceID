@@ -11,6 +11,8 @@ class BangLuong(db.Model):
     ngay_cong_chuan = db.Column(db.Integer, default=0)
     so_ngay_cong = db.Column(db.Integer, default=0)
     nghi_phep = db.Column(db.Integer, default=0)
+    tong_ngay_lam_le = db.Column(db.Float, default=0.0)
+    tong_tien_lam_le = db.Column(db.Float, default=0.0)
     tong_gio_tang_ca = db.Column(db.Float, default=0.0)
     tong_tien_tang_ca = db.Column(db.Float, default=0.0)
     tong_khau_tru = db.Column(db.Float, default=0.0) 
@@ -35,6 +37,9 @@ class BangLuong(db.Model):
             "ngay_cong_chuan": self.ngay_cong_chuan,
             "so_ngay_cong": self.so_ngay_cong,
             "nghi_phep": self.nghi_phep,
+            "tong_ngay_lam_le": self.tong_ngay_lam_le,
+            "tong_tien_lam_le": self.tong_tien_lam_le,
+            
             "tong_gio_tang_ca": self.tong_gio_tang_ca,
             "tong_tien_tang_ca": self.tong_tien_tang_ca,
             "tong_khau_tru": self.tong_khau_tru,

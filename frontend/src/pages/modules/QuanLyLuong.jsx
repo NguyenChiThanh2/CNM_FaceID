@@ -133,18 +133,15 @@ const QuanLyLuong = () => {
           thang: parseInt(thang),
           nam: parseInt(nam),
         });
-
+        setLoading(false);
         if (response.data) {
           toast.success("Tính lương thành công!");
           setShowModal(false);
-          setLoading(false);
           fetchLuong();
         } else {
-          setLoading(false);
           toast.error("Không thể tính lương.");
         }
       } catch (error) {
-        setLoading(false);
         toast.error("Lỗi khi tính lương!");
       }
     }
@@ -210,7 +207,8 @@ const QuanLyLuong = () => {
   };
 
   if (loading) return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
+    <div className="d-flex justify-content-center align-items-center vh-100">
+      <ToastContainer />
       <Spinner animation="border" variant="primary" role="status" />
       <span className="ms-2">⏳ Đang tải dữ liệu...</span>
     </div>
@@ -365,6 +363,8 @@ const QuanLyLuong = () => {
                   <th>Số ngày công</th>
                   <th>Ngày phép</th>
                   <th>Trừ nghỉ không phép</th>
+                  <th>Ngày làm lễ</th>
+                  <th>Tiền làm lễ</th>
                   <th>Giờ tăng ca</th>
                   <th>Tiền tăng ca</th>
 
@@ -466,6 +466,10 @@ const QuanLyLuong = () => {
                         {nghiKhongPhep
                           ? formatCurrency(nghiKhongPhep.so_tien)
                           : formatCurrency(0)}
+                      </td>
+                      <td>{luong.tong_ngay_lam_le}</td>
+                      <td className="text-success bg-success-subtle">
+                        {formatCurrency(luong.tong_tien_lam_le)}
                       </td>
                       <td>{luong.tong_gio_tang_ca}</td>
                       <td className="text-success bg-success-subtle">

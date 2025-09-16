@@ -12,12 +12,33 @@ from app.models.giay_phep_model import GiayPhep
 from .nguoi_phu_thuoc_service import kiemtra_nguoiphuthuoc
 from app.models.chi_tiet_luong_model import ChiTietLuong, NhomChiTietLuong
 from app.models.nghi_phep_model import NghiPhep
+from app.models.ngay_nghi_le_model import NgayNghiLe
 from app import db
 
 # class TinhLuongService:
 
 # def __init__(self, db: Session):
 #     self.db = db
+
+def lay_ngay_le_trong_thang(thang: int, nam: int):
+    ngay_dau = date(nam, thang, 1)
+    ngay_cuoi = date(nam, thang, monthrange(nam, thang)[1])
+
+    ds_ngay_le = []
+    ngay_nghi_le = NgayNghiLe.query.filter(
+        NgayNghiLe.den_ngay >= ngay_dau,
+        NgayNghiLe.tu_ngay <= ngay_cuoi
+    ).all()
+
+    for n in ngay_nghi_le:
+        start = max(n.tu_ngay, ngay_dau)
+        end = min(n.den_ngay, ngay_cuoi)
+        current = start
+        while current <= end:
+            ds_ngay_le.append(current.day)
+            current += timedelta(days=1)
+
+    return ds_ngay_le
 
 def get_chinhsach(nhanvien_id: int, ngay: date):
     """Lấy chính sách áp dụng (quy chế công ty hoặc override bằng hợp đồng)"""
@@ -39,9 +60,10 @@ def get_chinhsach(nhanvien_id: int, ngay: date):
 def tinh_ngay_cong(thang, nam):
     so_ngay = monthrange(nam, thang)[1]
     ngay_cong = 0
+    ngay_le_list = lay_ngay_le_trong_thang(thang, nam)
     for day in range(1, so_ngay + 1):
         d = date(nam, thang, day)
-        if d.weekday() < 5:  # 0=Monday ... 4=Friday
+        if d.weekday() < 5 and (d.day not in ngay_le_list):  # 0=Monday ... 4=Friday
             ngay_cong += 1
     return ngay_cong
 
@@ -161,6 +183,8 @@ def tinh_ngay_nghi_phep_nam(nhanvien_id: int,thang: int, nam: int):
     #     quyche = QuyCheCongTy.query.first()
     #     return quyche.ngay_nghi_phep_nam if quyche and quyche.ngay_nghi_phep_nam is not None else 12  # mặc định 12 ngày
 
+
+
 # TÍNH LƯƠNG------------------------------------------------------------------------------------------------
 def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     """Tính lương cho 1 nhân viên trong 1 tháng"""
@@ -175,6 +199,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         .all()
     )
     ds_ngay_nghi_phep = tinh_ngay_nghi_phep_nam(nhanvien_id, thang, nam)
+    ds_ngay_le = lay_ngay_le_trong_thang(thang, nam)
+    so_cong_chuan_thang = tinh_ngay_cong(thang, nam)
     
     cong = 0.0
     tong_ngay_cong = 0.0
@@ -184,8 +210,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         
     tong_luong = 0.0
     
+ 
     kt = True
-    # kt1 = True
     temp_tnc = 0.0
     tong_ngay_cong_thuc = 0.0
     
@@ -194,6 +220,12 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     tong_tien_tang_ca = 0.0
     tien_tang_ca_tinh_thue = 0.0
     tien_tang_ca_mien_thue = 0.0
+    
+    luong_le = 0.0
+    tong_luong_le = 0.0
+    so_ngay_lam_le = 0.0
+    tien_luong_le_mien_thue = 0.0
+    tien_luong_le_tinh_thue = 0.0
     
     khau_tru = 0.0
     ditre_vesom = 0.0
@@ -215,9 +247,6 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     
     for cc in chamcongs:
         if cc.thoi_gian_vao.date().day in ds_ngay_nghi_phep:
-            # if kt1:
-            #     kt1 = False
-            #     tong_ngay_cong_thuc = tong_ngay_cong - 1
             if temp_tnc == tong_ngay_cong:
                 tong_ngay_cong_thuc = tong_ngay_cong - 1
             kt = False
@@ -235,20 +264,26 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         policy = get_chinhsach(nhanvien_id, cc.thoi_gian_vao.date())
         
         # ======= NGÀY LỄ =======
-        # is_holiday = False
-        # if hasattr(policy, "ngay_le_quoc_gia") and cc.thoi_gian_vao.date() in policy.ngay_le_quoc_gia:
-        #     is_holiday = True
+        is_holiday = False
+        if ds_ngay_le and cc.thoi_gian_vao.date().day in ds_ngay_le:
+            is_holiday = True
 
         # ======= TÍNH CÔNG =======
         
         cong = cc.so_cong  # đã tính từ logic chấm công (0.5 hoặc 1)
         tong_ngay_cong += cong
         # tong_ngay_cong_thuc += cong
-        print("Công tính:", tong_ngay_cong, "Công thực", tong_ngay_cong_thuc, "cong", cong, "Ngày", cc.thoi_gian_vao.date(), "ngày nghỉ phép", ds_ngay_nghi_phep)
+        # print("Công tính:", tong_ngay_cong, "Công thực", tong_ngay_cong_thuc, "cong", cong, "Ngày", cc.thoi_gian_vao.date(), "ngày nghỉ phép", ds_ngay_nghi_phep)
+        # print("Ngày lễ trong tháng:", ds_ngay_le)
         # ======= LƯƠNG NGÀY THƯỜNG =======
-        so_cong_chuan_thang = tinh_ngay_cong(thang, nam)
+        # so_cong_chuan_thang = tinh_ngay_cong(thang, nam)
         luong_ngay = policy.muc_luong_co_ban / so_cong_chuan_thang  
-        tong_luong += cong * luong_ngay
+        if is_holiday:
+            so_ngay_lam_le += cong
+            luong_le = policy.luong_ngay_le_heso * luong_ngay
+            tong_luong_le += cong * luong_le
+        else:
+            tong_luong += cong * luong_ngay
         
         # ======= TĂNG CA =======
         tangca = (
@@ -257,14 +292,18 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             .first()
         )
         if tangca:
-            # gio_tang_ca = (tangca.thoi_gian_ket_thuc - tangca.thoi_gian_bat_dau).seconds / 3600
             gio_tang_ca = tangca.so_gio
             tong_gio_tang_ca += gio_tang_ca
-            # if is_holiday:
-            #     tong_luong += gio_tang_ca * policy.he_so_luong_ngay_le * (luong_ngay / 8)
-            # else:
-            tien_tang_ca = policy.tang_ca_heso * (luong_ngay / 8)
-            tong_tien_tang_ca += gio_tang_ca * tien_tang_ca
+            if is_holiday:
+                tien_tang_ca = policy.luong_ngay_le_heso * (luong_ngay / 8)
+                tong_tien_tang_ca += gio_tang_ca * tien_tang_ca
+            else:
+                tien_tang_ca = policy.tang_ca_heso * (luong_ngay / 8)
+                tong_tien_tang_ca += gio_tang_ca * tien_tang_ca
+        
+        # if is_holiday and holiday is False:
+        #     tien_tang_ca = policy.luong_ngay_le_heso * (luong_ngay / 8)
+        #     tong_tien_tang_ca += gio_tang_ca * tien_tang_ca
 
         # ======= KHẤU TRỪ ĐI TRỄ =======
         ditre, vesom = tinh_tre_som(cc.thoi_gian_vao, cc.thoi_gian_ra)
@@ -299,6 +338,11 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         tien_tang_ca_mien_thue = tang_ca_mien_thue * tong_gio_tang_ca
         tien_tang_ca_tinh_thue = luong_gio * tong_gio_tang_ca
     
+    if luong_le > 0 and tong_luong_le > 0:
+        luong_le_mien_thue = luong_le - luong_ngay
+        tien_luong_le_mien_thue = so_ngay_lam_le * luong_le_mien_thue
+        tien_luong_le_tinh_thue = so_ngay_lam_le * luong_ngay
+    
     # ======= TÍNH BẢO HIỂM =======
     phu_cap = phucap_doc_hai + phucap_trach_nhiem + phucap_chuc_vu + phucap_tham_nien + phucap_an_trua + phucap_xang_xe
     
@@ -310,8 +354,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     bao_hiem_that_nghiep = tong_luong * 0.01
     tong_bao_hiem = bao_hiem_xa_hoi + bao_hiem_y_te + bao_hiem_that_nghiep
 
-    # Lương sau khi trừ bảo hiểm + tăng ca tính thuế + phụ cấp không đóng bảo hiểm
-    luong_tinh_thue = tong_luong - tong_bao_hiem + tien_tang_ca_tinh_thue + (phucap_an_trua + phucap_xang_xe)
+    # Lương sau khi trừ bảo hiểm + tăng ca tính thuế + phụ cấp không đóng bảo hiểm + lương lễ tính thuế
+    luong_tinh_thue = tong_luong - tong_bao_hiem + tien_tang_ca_tinh_thue + (phucap_an_trua + phucap_xang_xe) + tien_luong_le_tinh_thue
     
     # Số người phụ thuộc
     so_nguoi_phu_thuoc = kiemtra_nguoiphuthuoc(nhanvien_id, thang, nam)
@@ -325,7 +369,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         ngaynghi = so_cong_chuan_thang - tong_ngay_cong
         nghi_khong_phep += ngaynghi * luong_ngay
     # ======= LƯƠNG THỰC LĨNH =======
-    luong_thuc_linh = tong_luong - tong_bao_hiem - thue_tncn - khau_tru + tien_tang_ca_mien_thue
+    luong_thuc_linh = tong_luong - tong_bao_hiem - thue_tncn - khau_tru + tien_tang_ca_mien_thue + tien_luong_le_mien_thue
     
     try:
         # Lưu vào bảng BangLuong
@@ -336,6 +380,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             ngay_cong_chuan = int(so_cong_chuan_thang),
             so_ngay_cong=tong_ngay_cong_thuc,
             nghi_phep=len(ds_ngay_nghi_phep),
+            tong_ngay_lam_le= so_ngay_lam_le,
+            tong_tien_lam_le= tong_luong_le,
             tong_gio_tang_ca=tong_gio_tang_ca,
             tong_tien_tang_ca=tong_tien_tang_ca,
             tong_khau_tru=khau_tru,
