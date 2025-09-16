@@ -282,8 +282,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             so_ngay_lam_le += cong
             luong_le = policy.luong_ngay_le_heso * luong_ngay
             tong_luong_le += cong * luong_le
-        else:
-            tong_luong += cong * luong_ngay
+        
+        tong_luong += cong * luong_ngay
         
         # ======= TĂNG CA =======
         tangca = (
@@ -297,9 +297,11 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             if is_holiday:
                 tien_tang_ca = policy.luong_ngay_le_heso * (luong_ngay / 8)
                 tong_tien_tang_ca += gio_tang_ca * tien_tang_ca
+                tong_luong += gio_tang_ca * (luong_ngay / 8)
             else:
                 tien_tang_ca = policy.tang_ca_heso * (luong_ngay / 8)
                 tong_tien_tang_ca += gio_tang_ca * tien_tang_ca
+                tong_luong += gio_tang_ca * (luong_ngay / 8)
         
         # if is_holiday and holiday is False:
         #     tien_tang_ca = policy.luong_ngay_le_heso * (luong_ngay / 8)
@@ -339,6 +341,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
         tien_tang_ca_tinh_thue = luong_gio * tong_gio_tang_ca
     
     if luong_le > 0 and tong_luong_le > 0:
+        # tong_luong -= tong_luong_le  # trừ lại lương lễ đã cộng vào tổng lương
         luong_le_mien_thue = luong_le - luong_ngay
         tien_luong_le_mien_thue = so_ngay_lam_le * luong_le_mien_thue
         tien_luong_le_tinh_thue = so_ngay_lam_le * luong_ngay
@@ -347,7 +350,11 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     phu_cap = phucap_doc_hai + phucap_trach_nhiem + phucap_chuc_vu + phucap_tham_nien + phucap_an_trua + phucap_xang_xe
     
     # Lương trước khi trừ bảo hiểm cộng các khoản phụ cấp tính bảo hiểm
-    tong_luong += phucap_doc_hai + phucap_trach_nhiem + phucap_chuc_vu + phucap_tham_nien
+    tong_luong += phucap_doc_hai + phucap_trach_nhiem + phucap_chuc_vu + phucap_tham_nien 
+    if luong_le > 0 and tong_luong_le > 0:
+        tong_luong -= tien_luong_le_tinh_thue  # trừ lại phần lương lễ không đóng bảo hiểm đã cộng vào tổng lương
+    if locals().get("tien_tang_ca") and tien_tang_ca > 0:
+        tong_luong -= tien_tang_ca_tinh_thue  # trừ lại phần tăng ca không đóng bảo hiểm đã cộng vào tổng lương
     
     bao_hiem_xa_hoi = tong_luong * 0.08
     bao_hiem_y_te = tong_luong * 0.015
@@ -355,7 +362,11 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     tong_bao_hiem = bao_hiem_xa_hoi + bao_hiem_y_te + bao_hiem_that_nghiep
 
     # Lương sau khi trừ bảo hiểm + tăng ca tính thuế + phụ cấp không đóng bảo hiểm + lương lễ tính thuế
-    luong_tinh_thue = tong_luong - tong_bao_hiem + tien_tang_ca_tinh_thue + (phucap_an_trua + phucap_xang_xe) + tien_luong_le_tinh_thue
+    if luong_le > 0 and tong_luong_le > 0:
+        tong_luong += tien_luong_le_tinh_thue  # cộng lại phần lương lễ tính thuế đã trừ ở trên
+    if locals().get("tien_tang_ca") and tien_tang_ca > 0:
+        tong_luong += tien_tang_ca_tinh_thue  # cộng lại phần tăng ca tính thuế đã trừ ở trên
+    luong_tinh_thue = tong_luong - tong_bao_hiem + (phucap_an_trua + phucap_xang_xe)
     
     # Số người phụ thuộc
     so_nguoi_phu_thuoc = kiemtra_nguoiphuthuoc(nhanvien_id, thang, nam)
