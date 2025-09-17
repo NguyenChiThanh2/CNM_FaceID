@@ -4,12 +4,16 @@ import cv2
 import jwt
 import pytz
 import face_recognition
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time, date
 import cv2, numpy as np, math
 from app import db
 from app.models.nhan_vien_model import NhanVien
 from app.models.cham_cong_model import ChamCong
 from app.utils.file_utils import read_image_from_base64
+from app.models.giay_phep_model import GiayPhep
+from decimal import Decimal
+from sqlalchemy import extract
+from typing import Optional
 
 # ====== Cấu hình ======
 FACE_JWT_SECRET = os.getenv("FACE_JWT_SECRET", "dev-secret")
@@ -42,10 +46,12 @@ DEBUG_LIVENESS         = os.getenv("DEBUG_LIVENESS", "0") == "1"
 
 # ====== CRUD cơ bản ======
 def get_all_cham_cong_service():
-    return ChamCong.query.all()
+    return ChamCong.query.order_by(ChamCong.ngay.desc()).all()
 
 def get_cham_cong_by_id_service(id):
-    return ChamCong.query.get(id)
+    chamcong = ChamCong.query.get(id)
+    return chamcong
+
 
 def get_cham_cong_by_nhan_vien_id_service(nhan_vien_id):
     return ChamCong.query.filter_by(nhan_vien_id=nhan_vien_id).all()
@@ -486,3 +492,79 @@ def create_cham_cong_from_face_service(base64_image):
         db.session.commit()
         return {"ok": True, "message": "Chấm công <strong>ra</strong> thành công", "name": nv.ho_ten, "time": time_str, "cham_cong": cc.to_dict()}, 200
     return {"ok": False, "message": "Đã chấm công đủ vào và ra cho hôm nay", "name": nv.ho_ten}, 400
+
+# -----------------------------------------------------------------------------------
+def get_chamcong_1nhanvien_theothang_service(nhan_vien_id, thang, nam):
+    return ChamCong.query.filter(
+    ChamCong.nhan_vien_id == nhan_vien_id,
+    extract('month', ChamCong.ngay) == thang,
+    extract('year', ChamCong.ngay) == nam).all()
+    
+    
+def tinh_so_cong_cho_1_ngay(check_in: Optional[datetime], check_out: Optional[datetime]) -> Decimal:
+    if not check_in or not check_out:
+        return Decimal("0")
+# theo thời gian việt nam
+    in_t = check_in.time()
+    out_t = check_out.time()
+
+    # tính giờ làm việc trong ngày
+    total_hours = Decimal("0")
+    # ca sáng 08:00-12:00
+    a_start, a_end = time(8, 0), time(12, 0)
+    # ca chiều 13:00-17:00
+    b_start, b_end = time(13, 0), time(17, 0)
+
+
+    def overlap_hours(s: time, e: time, ws: time, we: time) -> Decimal:
+        start = max(datetime.combine(date.min, s), datetime.combine(date.min, ws))
+        end = min(datetime.combine(date.min, e), datetime.combine(date.min, we))
+        delta = (end - start).total_seconds() / 3600
+        return Decimal(str(max(delta, 0)))
+
+
+    total_hours += overlap_hours(in_t, out_t, a_start, a_end)
+    total_hours += overlap_hours(in_t, out_t, b_start, b_end)
+
+
+    # 8 hours -> 1 công; 4 hours -> 0.5 công; trễ 30 phút không tính công ca sáng; về sớm 30 phút không tính công ca chiều
+    if total_hours >= Decimal("7.5"):
+        return Decimal("1.00")
+    if total_hours >= Decimal("3.5"):
+        return Decimal("0.50")
+    return Decimal("0.00")
+    
+        
+def get_tinhsocong_1nhanvien_theothang_service(nhan_vien_id, thang, nam):
+    dschamcong = ChamCong.query.filter(ChamCong.nhan_vien_id == nhan_vien_id,extract('month', ChamCong.ngay) == thang,extract('year', ChamCong.ngay) == nam).all()
+    if not dschamcong:
+        return None
+    else:
+        for cc in dschamcong:
+            so_cong_moi = tinh_so_cong_cho_1_ngay(cc.thoi_gian_vao, cc.thoi_gian_ra)
+            cc.so_cong = so_cong_moi  # cập nhật lại cột so_cong
+        db.session.commit()
+        return True
+    
+def get_tinhsocong_theogiayphep_service(id):
+    cham_cong = ChamCong.query.get(id)
+    giay_phep = GiayPhep.query.filter(GiayPhep.cham_cong_id == id, GiayPhep.trang_thai == "Đã duyệt").first()
+
+    if not cham_cong or not giay_phep:
+        return {"error": "Không tìm thấy bản ghi chấm công hoặc giấy phép"}, 404
+    
+    if giay_phep.so_gio == 8:
+        cham_cong.so_cong = Decimal("1.0")
+        message = "Cập nhật 1 ngày công"
+    elif giay_phep.so_gio == 4:
+        cham_cong.so_cong = Decimal("0.5")
+        message = "Cập nhật nửa ngày công"
+    else:
+        return {"error": "Giấy phép không hợp lệ"}, 400
+
+    try:
+        db.session.commit()
+        return {"success": message}, 200
+    except Exception as e:
+        db.session.rollback()
+        return {"error": str(e)}, 500

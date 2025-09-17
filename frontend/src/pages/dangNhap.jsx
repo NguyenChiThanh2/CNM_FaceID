@@ -14,6 +14,10 @@ const DangNhap = () => {
       toast.error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu");
       return;
     }
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+      toast.error("Tên đăng nhập không hợp lệ!");
+      return;
+    }
 
     try {
       const response = await axios.post("http://localhost:5000/api/login", {
@@ -28,9 +32,16 @@ const DangNhap = () => {
         role,
         token: access_token
       }));
-
       toast.success(`Đăng nhập thành công với vai trò: ${role.ma_vai_tro}`);
       navigate("/");
+      // const { access_token, role } = response.data;
+
+      // // Không lưu vào localStorage
+      // document.cookie = `access_token=${access_token}; Secure; SameSite=Strict; path=/`;
+      // localStorage.setItem("role", JSON.stringify(role)); // có thể lưu vai trò, không nhạy cảm
+
+      // toast.success(`Đăng nhập thành công với vai trò: ${role.ma_vai_tro}`);
+      // navigate("/");
     } catch (error) {
       toast.error("Tên đăng nhập hoặc mật khẩu không đúng!");
     }

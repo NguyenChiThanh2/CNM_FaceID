@@ -28,6 +28,9 @@ class NhanVien(db.Model):
     luong_nv = db.relationship('Luong', back_populates='luong_nv', lazy=True)
     dao_taos = db.relationship('DaoTaoNhanVien', back_populates='nhan_vien', lazy=True)
     phuc_lois = db.relationship('NhanVienPhucLoi', back_populates='nhan_vien', lazy=True)
+    hopdong_nv = db.relationship("HopDongLaoDong", back_populates="hopdong_nv", lazy=True)
+    bang_luong_nhan_vien = db.relationship('BangLuong', back_populates='bang_luong_nhan_vien', lazy=True)
+    NguoiPhuThuoc_nv = db.relationship("NguoiPhuThuoc", back_populates="NguoiPhuThuoc_nv", lazy=True)
 
     # Các đánh giá nhận và tạo (2 quan hệ khác nhau đến cùng một bảng)
     danh_gias_nhan = db.relationship(
@@ -43,6 +46,8 @@ class NhanVien(db.Model):
         back_populates='nguoi_danh_gia',
         lazy=True
     )
+    giayphep_nv = db.relationship("GiayPhep", foreign_keys='GiayPhep.nhan_vien_id', back_populates="giayphep_nv", lazy=True)
+    giayphep_nguoi_duyet = db.relationship("GiayPhep", foreign_keys='GiayPhep.nguoi_duyet_id', lazy=True)
 
     def __repr__(self):
         return f"<NhanVien {self.ho_ten}>"
