@@ -1,7 +1,7 @@
 // src/pages/PublicIPGuard.jsx
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import {} from "src/css/style.css";
+import Loading from '../../src/components/Loading';
 
 // Cho phép cấu hình qua .env (Vite) hoặc hard-code tạm
 const ALLOWED_PUBLIC_IPS = (import.meta.env.VITE_ALLOWED_PUBLIC_IPS || "")
@@ -50,9 +50,7 @@ export default function PublicIPGuard({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  if (state.checking) return <div style={{ padding: 24 }}>Đang kiểm tra mạng…</div>;
+  if (state.checking) return <div style={{ padding: 24 }}><Loading />Đang kiểm tra mạng…</div>;
   if (!state.allowed) return <Navigate to="/404" replace />;
   return children;
 }
-
-

@@ -39,7 +39,6 @@ class BangLuong(db.Model):
             "nghi_phep": self.nghi_phep,
             "tong_ngay_lam_le": self.tong_ngay_lam_le,
             "tong_tien_lam_le": self.tong_tien_lam_le,
-            
             "tong_gio_tang_ca": self.tong_gio_tang_ca,
             "tong_tien_tang_ca": self.tong_tien_tang_ca,
             "tong_khau_tru": self.tong_khau_tru,
