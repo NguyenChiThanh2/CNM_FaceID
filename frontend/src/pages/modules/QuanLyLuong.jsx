@@ -16,6 +16,7 @@ import { toast, ToastContainer } from "react-toastify";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import "react-toastify/dist/ReactToastify.css";
+import Loading from '../../../src/components/Loading';
 
 const API_URL = "http://127.0.0.1:5000/api";
 
@@ -207,11 +208,12 @@ const QuanLyLuong = () => {
   };
 
   if (loading) return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
+    <div>
       <ToastContainer />
-      <Spinner animation="border" variant="primary" role="status" />
-      <span className="ms-2">⏳ Đang tải dữ liệu...</span>
+      <Loading />
     </div>
+    
+      
   ); 
 
   return (

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button, Modal, OverlayTrigger, Tooltip, Form, Spinner, Row, Col  } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import Loading from '../../../src/components/Loading';
 
 const ChamCongNhanVien = () => {
   const { id } = useParams(); // lấy id nhân viên từ URL
@@ -116,17 +117,19 @@ const ChamCongNhanVien = () => {
   };
 
   if (!nhanVien) return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" variant="primary" role="status" />
-        <span className="ms-2">⏳ Đang tải thông tin nhân viên...</span>
-      </div>
+      <Loading />
+      // <div className="d-flex justify-content-center align-items-center vh-100">
+      //   <Spinner animation="border" variant="primary" role="status" />
+      //   <span className="ms-2">⏳ Đang tải thông tin nhân viên...</span>
+      // </div>
     );
 
   if (loading) return (
-       <div className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" variant="primary" role="status" />
-        <span className="ms-2">⏳ Đang tải dữ liệu...</span>
-      </div>
+      <Loading /> 
+      //  <div className="d-flex justify-content-center align-items-center vh-100">
+      //   <Spinner animation="border" variant="primary" role="status" />
+      //   <span className="ms-2">⏳ Đang tải dữ liệu...</span>
+      // </div>
     ); 
 
   return (

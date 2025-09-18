@@ -50,7 +50,7 @@ export default function PublicIPGuard({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  if (state.checking) return <div style={{ padding: 24 }}><Loading />Đang kiểm tra mạng…</div>;
+  if (state.checking) return <div><Loading /></div>;
   if (!state.allowed) return <Navigate to="/404" replace />;
   return children;
 }
