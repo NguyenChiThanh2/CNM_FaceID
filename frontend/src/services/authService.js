@@ -1,6 +1,5 @@
-import axiosInstance from "./axiosInstance";
+import  axiosInstance  from "./axiosInstance";
 
-
-export const loginApi = async (username, password) => {
-    return axiosInstance.post(`${API_BASE}/login`, { username, password });
+export const loginApi = (username, password) => {
+  return axiosInstance.post("/login", { username, password });
 };
