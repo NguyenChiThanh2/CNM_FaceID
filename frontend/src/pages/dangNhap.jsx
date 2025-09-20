@@ -1,13 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { FaUser, FaLock } from "react-icons/fa";
-
+import { loginApi } from "../services/authService";
 const DangNhap = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const saved = localStorage.getItem("user");
+    if (saved) {
+      navigate("/", { replace: true });
+    }
+  }, [navigate]);
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -16,20 +22,19 @@ const DangNhap = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/api/login", {
-        username,
-        password,
-      });
-
+      const response = await loginApi(username, password); // ✅ dùng service
       const { access_token, role } = response.data;
 
-      localStorage.setItem("user", JSON.stringify({
-        username,
-        role,
-        token: access_token
-      }));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          username,
+          role,
+          token: access_token,
+        })
+      );
 
-      toast.success(`Đăng nhập thành công với vai trò: ${role.ma_vai_tro}`);
+      toast.success(`Đăng nhập thành công với vai trò: ${role?.ma_vai_tro}`);
       navigate("/");
     } catch (error) {
       toast.error("Tên đăng nhập hoặc mật khẩu không đúng!");
@@ -40,7 +45,7 @@ const DangNhap = () => {
     <div
       className="d-flex align-items-center justify-content-center vh-100"
       style={{
-        background: "linear-gradient(135deg, #1c1f24 0%,rgb(54, 57, 61) 100%)"
+        background: "linear-gradient(135deg, #1c1f24 0%,rgb(54, 57, 61) 100%)",
       }}
     >
       <div
@@ -82,10 +87,16 @@ const DangNhap = () => {
           style={{
             background: "linear-gradient(90deg, #343a40 0%, #212529 100%)",
             color: "#fff",
-            transition: "background 0.3s ease"
+            transition: "background 0.3s ease",
           }}
-          onMouseEnter={e => e.currentTarget.style.background = "linear-gradient(90deg, #495057 0%, #343a40 100%)"}
-          onMouseLeave={e => e.currentTarget.style.background = "linear-gradient(90deg, #343a40 0%, #212529 100%)"}
+          onMouseEnter={(e) =>
+          (e.currentTarget.style.background =
+            "linear-gradient(90deg, #495057 0%, #343a40 100%)")
+          }
+          onMouseLeave={(e) =>
+          (e.currentTarget.style.background =
+            "linear-gradient(90deg, #343a40 0%, #212529 100%)")
+          }
           onClick={handleLogin}
         >
           Đăng nhập
