@@ -128,11 +128,11 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
 
       if (editingNhanSu) {
         await axios.put(`http://127.0.0.1:5000/api/edit-nhan-vien/${editingNhanSu.id}`, form);
-        setSuccessMessage("✅ Cập nhật nhân sự thành công!");
+        setSuccessMessage("Cập nhật nhân sự thành công!");
         setAlertType("success");
       } else {
         await axios.post("http://127.0.0.1:5000/api/add-nhan-vien", form);
-        toast.success("✅ Thêm mới nhân sự thành công!");
+        toast.success("Thêm mới nhân sự thành công!");
         setAlertType("success");
       }
 

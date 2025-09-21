@@ -1,9 +1,12 @@
+// src/pages/modules/QuanLyPhongBan.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
 import PhongBanForm from "../../components/phongban/PhongBanForm";
 import PhongBanList from "../../components/phongban/PhongBanList";
 import { Modal, Button, Breadcrumb, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+
 
 const QuanLyPhongBan = () => {
   const [phongBanList, setPhongBanList] = useState([]);
@@ -19,6 +22,7 @@ const QuanLyPhongBan = () => {
       setPhongBanList(res.data);
     } catch (err) {
       console.error("Lỗi khi tải phòng ban:", err);
+      toast.error("Không thể tải danh sách phòng ban!");
     } finally {
       setLoading(false);
     }
@@ -41,10 +45,14 @@ const QuanLyPhongBan = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc muốn xóa phòng ban này không?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/delete-phong-ban/${id}`);
+        await toast.promise(
+          axios.delete(`http://localhost:5000/api/delete-phong-ban/${id}`),
+          { pending: "Đang xóa phòng ban...", success: "Đã xóa phòng ban!", error: "Xóa phòng ban thất bại!" }
+        );
         fetchPhongBan();
       } catch (err) {
         console.error("Lỗi khi xóa:", err);
+        // lỗi đã được toast.promise hiển thị
       }
     }
   };
@@ -58,8 +66,13 @@ const QuanLyPhongBan = () => {
     setSelectedPhongBan(null);
   };
 
-  const handleFormSubmit = () => {
+  const handleFormSubmit = (message) => {
+    // gọi sau khi PhongBanForm lưu thành công
     fetchPhongBan();
+    toast.success(
+      message ||
+      (selectedPhongBan ? "Cập nhật phòng ban thành công!" : "Thêm phòng ban thành công!")
+    );
     handleModalClose();
   };
 
@@ -117,6 +130,7 @@ const QuanLyPhongBan = () => {
           </Modal>
         </div>
       </div>
+      <ToastContainer position="top-right" autoClose={2000} />
     </div>
   );
 };

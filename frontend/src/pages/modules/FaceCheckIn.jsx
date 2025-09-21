@@ -498,7 +498,7 @@ export default function FaceCheckin() {
               <div className="modal-header"><h5 className="modal-title">Thông báo</h5></div>
               <div className="modal-body" dangerouslySetInnerHTML={{ __html: modalHtml }} />
               <div className="modal-footer">
-                <button className="btn btn-primary" onClick={closeModal}>OK</button>
+      
               </div>
             </div>
           </div>

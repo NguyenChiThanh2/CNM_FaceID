@@ -57,7 +57,7 @@ const UserForm = ({ selected, onAdded, onClose, fetchUsers }) => {
       });
       if (!res.ok) throw new Error("Request failed");
       fetchUsers();
-      onAdded(selected ? "✅ Cập nhật người dùng thành công!" : "✅ Thêm người dùng thành công!");
+      onAdded(selected ? "Cập nhật người dùng thành công!" : "Thêm người dùng thành công!");
     } catch (err) {
       console.error("Lỗi submit:", err);
       onAdded("❌ Lỗi khi lưu người dùng!");
