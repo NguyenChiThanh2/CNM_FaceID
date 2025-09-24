@@ -141,9 +141,11 @@ const QuanLyLuong = () => {
           fetchLuong();
         } else {
           toast.error("Không thể tính lương.");
+          setLoading(false);
         }
       } catch (error) {
         toast.error("Lỗi khi tính lương!");
+        setLoading(false);
       }
     }
   };
@@ -355,7 +357,7 @@ const QuanLyLuong = () => {
                   <th
                     style={{
                       position: "sticky",
-                      left: "150px",
+                      left: "149px",
                       zIndex: 4,
                     }}
                   >
@@ -454,7 +456,7 @@ const QuanLyLuong = () => {
                       <td
                         style={{
                           position: "sticky",
-                          left: "150px",
+                          left: "149px",
                           zIndex: 2,
                           minWidth: "100px",
                         }}

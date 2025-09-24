@@ -31,6 +31,7 @@ class HopDongLaoDong(db.Model):
     phu_cap_tham_nien = db.Column(db.Float, nullable=True, default=0.0)
 
     dieu_khoan_khac = db.Column(db.JSON, nullable=True)  # cho phép lưu rule đặc biệt (JSON)
+    phep_nam = db.Column(db.Integer, nullable=True, default=0)
     trang_thai = db.Column(db.Boolean, default=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
