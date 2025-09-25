@@ -1,8 +1,12 @@
 from app import db
 from app.models.nghi_phep_model import NghiPhep
 from app.models.loai_nghi_phep_model import LoaiNghiPhep
+from app.models.hopdong_laodong_model import HopDongLaoDong
 from datetime import datetime
-
+import os
+from werkzeug.utils import secure_filename
+from datetime import datetime, date, timedelta
+from config import UPLOAD_FOLDER
 # Utility function to convert date string to datetime object
 def convert_to_datetime(date_string):
     try:
@@ -16,7 +20,7 @@ def validate_dates(tu_ngay, den_ngay):
         raise ValueError("Ngày bắt đầu phải trước ngày kết thúc")
 
 def get_all_nghi_phep_service():
-    return NghiPhep.query.all()
+    return NghiPhep.query.order_by(NghiPhep.id.desc()).all()
 
 def get_nghi_phep_by_id_service(id):
     return NghiPhep.query.get(id)
@@ -27,17 +31,81 @@ def get_nghi_phep_by_status_service(trang_thai):
 def get_nghi_phep_by_nhan_vien_id_service(nhan_vien_id):
     return NghiPhep.query.filter_by(nhan_vien_id=nhan_vien_id).all()
 
-def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay, ly_do, trang_thai):
+
+def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay, ly_do, trang_thai, 
+                                                                                                    file=None,  # thêm file upload
+                                                                                                    ngay_du_kien_sinh=None,
+                                                                                                    so_con=None,
+                                                                                                    phuong_phap_sinh=None):
+    # Kiểm tra loại nghỉ phép
     if not LoaiNghiPhep.query.get(loai_nghi_phep_id):
         raise ValueError("Loại nghỉ phép không tồn tại")
     
     tu_ngay = convert_to_datetime(tu_ngay)
     den_ngay = convert_to_datetime(den_ngay)
     validate_dates(tu_ngay, den_ngay)
-    
-    # Tính số ngày nghỉ
-    so_ngay_nghi = (den_ngay - tu_ngay).days + 1
 
+    # Tính số ngày nghỉ mới
+    so_ngay_nghi = (den_ngay - tu_ngay).days + 1
+    nam = tu_ngay.year
+    # ========== QUY ĐỊNH NGHỈ THAI SẢN ==========
+    if loai_nghi_phep_id == "3":  # ví dụ id=3 là nghỉ thai sản
+        if not ngay_du_kien_sinh:
+            raise ValueError("Phải nhập ngày dự kiến sinh hoặc nhận nuôi")
+        
+        ngay_du_kien_sinh = convert_to_datetime(ngay_du_kien_sinh).date()
+
+        # 1. Ngày dự kiến sinh phải trong tương lai
+        if ngay_du_kien_sinh < date.today():
+            raise ValueError("Ngày dự kiến sinh phải là ngày trong tương lai")
+
+        # 2. Thời gian nghỉ tối thiểu 6 tháng
+        min_nghi = timedelta(days=180)  # ~ 6 tháng
+        if (den_ngay - tu_ngay) < min_nghi:
+            raise ValueError("Thời gian nghỉ thai sản tối thiểu phải từ 6 tháng trở lên")
+
+        # 3. Nghỉ trước sinh không vượt quá 2 tháng
+        max_nghi_truoc = ngay_du_kien_sinh - timedelta(days=60)
+        if tu_ngay.date() < max_nghi_truoc:
+            raise ValueError("Thời gian nghỉ trước sinh không được vượt quá 2 tháng")
+
+        # 4. Sinh đa thai: cộng thêm 1 tháng cho mỗi bé từ bé thứ 2
+        # if so_con and so_con > 1:
+        #     extra_days = (so_con - 1) * 30
+        #     den_ngay = den_ngay + timedelta(days=extra_days)
+        #     so_ngay_nghi = (den_ngay - tu_ngay).days + 1
+
+    # ============================================
+
+    # Lấy hợp đồng lao động của nhân viên
+    hopdong = HopDongLaoDong.query.filter_by(nhan_vien_id=nhan_vien_id).first()
+    if not hopdong:
+        raise ValueError("Không tìm thấy hợp đồng lao động cho nhân viên này")
+
+    # Tính tổng số ngày nghỉ phép trong năm đã có
+    tong_nghi_trong_nam = db.session.query(db.func.sum(NghiPhep.so_ngay_nghi)) \
+        .filter(
+            NghiPhep.nhan_vien_id == nhan_vien_id,
+            NghiPhep.trang_thai == "Đã duyệt",
+            db.extract('year', NghiPhep.tu_ngay) == nam
+        ).scalar() or 0
+
+    # Tổng số ngày sau khi cộng thêm đơn mới
+    tong_nghi_du_kien = tong_nghi_trong_nam + so_ngay_nghi
+
+    if loai_nghi_phep_id == '1' and tong_nghi_du_kien > hopdong.phep_nam:
+        vuot_qua = tong_nghi_du_kien - hopdong.phep_nam
+        raise ValueError(f"Số ngày nghỉ phép vượt quá {vuot_qua} ngày so với phép năm")
+
+    # Xử lý file upload
+    filename = None
+    # ten_file_moi = None 
+    if file:
+        filename = secure_filename(file.filename)
+        ext = os.path.splitext(filename)[1]
+        ten_file_moi = f"nghiphep_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+        file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
+    # Tạo đơn nghỉ phép mới
     new_nghi_phep = NghiPhep(
         nhan_vien_id=nhan_vien_id,
         loai_nghi_phep_id=loai_nghi_phep_id,
@@ -45,45 +113,119 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
         den_ngay=den_ngay,
         ly_do=ly_do,
         trang_thai=trang_thai,
-        so_ngay_nghi=so_ngay_nghi
+        so_ngay_nghi=so_ngay_nghi,
+        
+        ngay_du_kien_sinh=ngay_du_kien_sinh,
+        so_con=so_con,
+        phuong_phap_sinh=phuong_phap_sinh,
+        can_cu_phap_ly_file=ten_file_moi
     )
     db.session.add(new_nghi_phep)
     db.session.commit()
     return new_nghi_phep
 
-def update_nghi_phep_service(id, loai_nghi_phep_id=None, tu_ngay=None, den_ngay=None, ly_do=None, trang_thai=None):
+def parse_date(date_str):
+    if not date_str:
+        return None
+    try:
+        # Trường hợp chỉ có yyyy-MM-dd
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        try:
+            # Trường hợp có thêm T00:00:00
+            return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
+        except ValueError:
+            raise ValueError(f"Định dạng ngày không hợp lệ: {date_str}")
+    
+def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay, ly_do, trang_thai, 
+                                                                                                file=None,  # thêm file upload
+                                                                                                ngay_du_kien_sinh=None,
+                                                                                                so_con=None,
+                                                                                                phuong_phap_sinh=None,
+                                                                                                file_status=None):
     nghi_phep = NghiPhep.query.get(id)
     if not nghi_phep:
-        raise ValueError("Nghỉ phép không tồn tại")
+        raise ValueError("Không tìm thấy đơn nghỉ phép")
     
-    if loai_nghi_phep_id and not LoaiNghiPhep.query.get(loai_nghi_phep_id):
-        raise ValueError("Loại nghỉ phép không tồn tại")
+    tu_ngay = parse_date(tu_ngay)
+    den_ngay = parse_date(den_ngay)
+    validate_dates(tu_ngay, den_ngay)
+    # Tính số ngày nghỉ mới
+    so_ngay_nghi = (den_ngay - tu_ngay).days + 1
+    nam = tu_ngay.year
     
-    if loai_nghi_phep_id:
-        nghi_phep.loai_nghi_phep_id = loai_nghi_phep_id
-    
-    if tu_ngay:
-        tu_ngay = convert_to_datetime(tu_ngay)
-        nghi_phep.tu_ngay = tu_ngay
+    # ========== QUY ĐỊNH NGHỈ THAI SẢN ==========
+    if loai_nghi_phep_id == "3":  # ví dụ id=3 là nghỉ thai sản
+        if not ngay_du_kien_sinh:
+            raise ValueError("Phải nhập ngày dự kiến sinh hoặc nhận nuôi")
         
-    if den_ngay:
-        den_ngay = convert_to_datetime(den_ngay)
-        nghi_phep.den_ngay = den_ngay
+        ngay_du_kien_sinh = parse_date(ngay_du_kien_sinh).date()
+
+        # 1. Ngày dự kiến sinh phải trong tương lai
+        if ngay_du_kien_sinh < date.today():
+            raise ValueError("Ngày dự kiến sinh phải là ngày trong tương lai")
+
+        # 2. Thời gian nghỉ tối thiểu 6 tháng
+        min_nghi = timedelta(days=180)  # ~ 6 tháng
+        if (den_ngay - tu_ngay) < min_nghi:
+            raise ValueError("Thời gian nghỉ thai sản tối thiểu phải từ 6 tháng trở lên")
+
+        # 3. Nghỉ trước sinh không vượt quá 2 tháng
+        max_nghi_truoc = ngay_du_kien_sinh - timedelta(days=60)
+        if tu_ngay.date() < max_nghi_truoc:
+            raise ValueError("Thời gian nghỉ trước sinh không được vượt quá 2 tháng")
+
+    # ============================================
+
+    # Lấy hợp đồng lao động của nhân viên
+    hopdong = HopDongLaoDong.query.filter_by(nhan_vien_id=nhan_vien_id).first()
+    if not hopdong:
+        raise ValueError("Không tìm thấy hợp đồng lao động cho nhân viên này")
+
+    # Tính tổng số ngày nghỉ phép trong năm đã có
+    tong_nghi_trong_nam = db.session.query(db.func.sum(NghiPhep.so_ngay_nghi)) \
+        .filter(
+            NghiPhep.nhan_vien_id == nhan_vien_id,
+            NghiPhep.trang_thai == "Đã duyệt",
+            db.extract('year', NghiPhep.tu_ngay) == nam
+        ).scalar() or 0
+
+    # Tổng số ngày sau khi cộng thêm đơn mới
+    tong_nghi_du_kien = tong_nghi_trong_nam + so_ngay_nghi
+
+    if loai_nghi_phep_id == '1' and tong_nghi_du_kien > hopdong.phep_nam:
+        vuot_qua = tong_nghi_du_kien - hopdong.phep_nam
+        raise ValueError(f"Số ngày nghỉ phép vượt quá {vuot_qua} ngày so với phép năm")
     
-    if tu_ngay and den_ngay:
-        validate_dates(tu_ngay, den_ngay)
+    # Update các trường cơ bản
+    nghi_phep.nhan_vien_id = nhan_vien_id
+    nghi_phep.loai_nghi_phep_id = loai_nghi_phep_id
+    nghi_phep.tu_ngay = tu_ngay
+    nghi_phep.den_ngay = den_ngay
+    nghi_phep.ly_do = ly_do
+    nghi_phep.trang_thai = trang_thai
+    nghi_phep.so_ngay_nghi = so_ngay_nghi
     
-    if ly_do:
-        nghi_phep.ly_do = ly_do
-    
-    if trang_thai:
-        if nghi_phep.trang_thai != "Chờ duyệt":
-            raise ValueError("Không thể cập nhật trạng thái khi đơn không ở trạng thái 'Chờ duyệt'")
-        nghi_phep.trang_thai = trang_thai
-    
-    # Cập nhật lại số ngày nghỉ
-    nghi_phep.so_ngay_nghi = (nghi_phep.den_ngay - nghi_phep.tu_ngay).days + 1
-    
+    nghi_phep.ngay_du_kien_sinh = ngay_du_kien_sinh
+    nghi_phep.so_con = so_con
+    nghi_phep.phuong_phap_sinh = phuong_phap_sinh
+
+    # Xử lý file
+    if file:  # Nếu có file mới
+        # Xoá file cũ
+        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file)):
+            os.remove(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file))
+
+        # Lưu file mới
+        filename = secure_filename(file.filename)
+        ext = os.path.splitext(filename)[1]
+        ten_file_moi = f"nghiphep_nv{nghi_phep.nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+        file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
+        nghi_phep.can_cu_phap_ly_file=ten_file_moi
+
+    elif file_status == "keep":
+        pass  # giữ nguyên file cũ
+
     db.session.commit()
     return nghi_phep
 

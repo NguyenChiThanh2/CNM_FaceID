@@ -575,7 +575,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 db.session.commit()
             
             all_bangluong = BangLuong.query.filter_by(nhan_vien_id=nhanvien_id).all()
-            if len(all_bangluong) < 12:
+            if len(all_bangluong) <= 12:
                 hdld = HopDongLaoDong.query.filter_by(nhan_vien_id=nhanvien_id).first()
                 if hdld:
                     hdld.phep_nam = len(all_bangluong)
