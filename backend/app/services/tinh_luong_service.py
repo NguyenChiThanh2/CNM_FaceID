@@ -1,0 +1,646 @@
+from datetime import timedelta, date, datetime, time
+from calendar import monthrange, calendar
+from typing import Optional
+from sqlalchemy.orm import Session
+from sqlalchemy import extract, func, or_
+from decimal import Decimal
+from typing import Optional
+# from models.nhan_vien_model import NhanVien
+from app.models.cham_cong_model import ChamCong
+from app.models.hopdong_laodong_model import HopDongLaoDong
+from app.models.quyche_congty_model import QuyCheCongTy
+from app.models.bang_luong_model import BangLuong
+from app.models.giay_phep_model import GiayPhep
+from .nguoi_phu_thuoc_service import kiemtra_nguoiphuthuoc
+from app.models.chi_tiet_luong_model import ChiTietLuong, NhomChiTietLuong
+from app.models.nghi_phep_model import NghiPhep
+from app.models.ngay_nghi_le_model import NgayNghiLe
+from app import db
+
+# class TinhLuongService:
+
+# def __init__(self, db: Session):
+#     self.db = db
+
+def lay_ngay_le_trong_thang(thang: int, nam: int):
+    ngay_dau = date(nam, thang, 1)
+    ngay_cuoi = date(nam, thang, monthrange(nam, thang)[1])
+
+    ds_ngay_le = []
+    ngay_nghi_le = NgayNghiLe.query.filter(
+        NgayNghiLe.den_ngay >= ngay_dau,
+        NgayNghiLe.tu_ngay <= ngay_cuoi
+    ).all()
+
+    for n in ngay_nghi_le:
+        start = max(n.tu_ngay, ngay_dau)
+        end = min(n.den_ngay, ngay_cuoi)
+        current = start
+        while current <= end:
+            ds_ngay_le.append(current.day)
+            current += timedelta(days=1)
+
+    return ds_ngay_le
+
+def get_chinhsach(nhanvien_id: int, ngay: date):
+    """Lấy chính sách áp dụng (quy chế công ty hoặc override bằng hợp đồng)"""
+    hopdong = (
+        HopDongLaoDong.query
+        .filter(
+            HopDongLaoDong.nhan_vien_id == nhanvien_id,
+            HopDongLaoDong.ngay_bat_dau <= ngay,
+            (HopDongLaoDong.ngay_ket_thuc == None) | (HopDongLaoDong.ngay_ket_thuc >= ngay),
+        )
+        .first()
+    )
+
+    if hopdong:
+        return hopdong
+    else:
+        return QuyCheCongTy.query.first()  # chính sách mặc định
+
+def tinh_ngay_cong(thang, nam):
+    so_ngay = monthrange(nam, thang)[1]
+    ngay_cong = 0
+    ngay_le_list = lay_ngay_le_trong_thang(thang, nam)
+    for day in range(1, so_ngay + 1):
+        d = date(nam, thang, day)
+        if d.weekday() < 5 and (d.day not in ngay_le_list):  # 0=Monday ... 4=Friday
+            ngay_cong += 1
+    return ngay_cong
+
+def tinh_tre_som(thoigianvao: datetime, thoigianra: datetime):
+    
+    if thoigianvao is None:
+        thoigianvao = 0
+    if thoigianra is None:
+        thoigianra = 0
+    # Mốc giờ chuẩn
+    gio_vao_chuan = time(8, 0)   # 08:00
+    gio_ra_chuan = time(17, 0)   # 17:00
+    tre_phut = 0
+    som_phut = 0
+    # ---- TÍNH ĐI TRỄ ----
+    try:
+        
+        if thoigianvao.time() > gio_vao_chuan:
+            diff = datetime.combine(thoigianvao.date(), thoigianvao.time()) - \
+                datetime.combine(thoigianvao.date(), gio_vao_chuan)
+            tre_phut = int(diff.total_seconds() // 60)
+    except Exception as e:
+        print(f"Lỗi tính đi trễ: {e}")
+    # ---- TÍNH VỀ SỚM ----
+    try:
+        if thoigianra.time() < gio_ra_chuan:
+            diff = datetime.combine(thoigianra.date(), gio_ra_chuan) - \
+                datetime.combine(thoigianra.date(), thoigianra.time())
+            som_phut = int(diff.total_seconds() // 60)
+    except Exception as e:
+        print(f"Lỗi tính về sớm: {e}")
+        
+    return tre_phut, som_phut
+
+# ======= TÍNH THUẾ TNCN =======
+def tinh_thue_tncn(thu_nhap, so_nguoi_phu_thuoc=0):
+    giam_tru_ban_than = 11000000
+    giam_tru_phu_thuoc = so_nguoi_phu_thuoc * 4400000
+    thu_nhap_chiu_thue = thu_nhap - giam_tru_ban_than - giam_tru_phu_thuoc
+
+    if thu_nhap_chiu_thue <= 0:
+        return 0
+
+    thue = 0
+    bac_thue = [
+        (5000000, 0.05),
+        (10000000, 0.10),
+        (18000000, 0.15),
+        (32000000, 0.20),
+        (52000000, 0.25),
+        (80000000, 0.30),
+        (float("inf"), 0.35),
+    ]
+
+    prev_limit = 0
+    for limit, rate in bac_thue:
+        if thu_nhap_chiu_thue > limit:
+            thue += (limit - prev_limit) * rate
+            prev_limit = limit
+        else:
+            thue += (thu_nhap_chiu_thue - prev_limit) * rate
+            break
+
+    return thue
+
+# ======= TÍNH NGÀY NGHỈ PHÉP NĂM =======
+def tinh_ngay_nghi_phep_nam(nhanvien_id: int,thang: int, nam: int):
+    # Xác định ngày đầu & cuối tháng
+    ngay_dau_thang = date(nam, thang, 1)
+    ngay_cuoi_thang = date(nam, thang, monthrange(nam, thang)[1])
+
+    # Query lấy tất cả nghỉ phép có giao với tháng
+    ngaynghiphep = NghiPhep.query.filter(
+        NghiPhep.nhan_vien_id == nhanvien_id,
+        NghiPhep.trang_thai == "Đã duyệt",
+        # Điều kiện có giao khoảng thời gian
+        or_(
+            # bắt đầu trong tháng
+            (NghiPhep.tu_ngay <= ngay_cuoi_thang) & (NghiPhep.den_ngay >= ngay_dau_thang)
+        )
+    ).all()
+
+    # tong_so_ngay_nghi = 0
+    danh_sach_ngay = []
+
+    for np in ngaynghiphep:
+        # Xác định khoảng giao với tháng
+        # start = max(np.tu_ngay, ngay_dau_thang)
+        # end = min(np.den_ngay, ngay_cuoi_thang)
+        start = max(np.tu_ngay.date(), ngay_dau_thang)  # ép về date
+        end = min(np.den_ngay.date(), ngay_cuoi_thang)  
+        # if start <= end:
+        #     so_ngay = (end - start).days + 1
+        #     tong_so_ngay_nghi += so_ngay
+        # Duyệt từng ngày trong khoảng và thêm vào danh sách
+        current = start
+        while current <= end:
+            danh_sach_ngay.append(current.day)  # chỉ lấy số ngày (1..31)
+            current += timedelta(days=1)
+     # Loại bỏ trùng lặp (nếu có) và sắp xếp tăng dần
+    danh_sach_ngay = sorted(list(set(danh_sach_ngay)))
+            
+    return danh_sach_ngay
+    # hopdong = (
+    #     HopDongLaoDong.query
+    #     .filter(
+    #         HopDongLaoDong.nhan_vien_id == nhanvien_id,
+    #         extract('year', HopDongLaoDong.ngay_bat_dau) <= nam,
+    #         (HopDongLaoDong.ngay_ket_thuc == None) | (extract('year', HopDongLaoDong.ngay_ket_thuc) >= nam),
+    #     )
+    #     .first()
+    # )
+
+    # if hopdong and hopdong.ngay_nghi_phep_nam is not None:
+    #     return hopdong.ngay_nghi_phep_nam
+    # else:
+    #     quyche = QuyCheCongTy.query.first()
+    #     return quyche.ngay_nghi_phep_nam if quyche and quyche.ngay_nghi_phep_nam is not None else 12  # mặc định 12 ngày
+
+
+
+# TÍNH LƯƠNG------------------------------------------------------------------------------------------------
+def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
+
+    """Tính số công cho 1 nhân viên trong 1 tháng"""
+    try:
+        tinh_so_cong = get_tinhsocong_1nhanvien_theothang_service(nhanvien_id, thang, nam)
+    except Exception as e:
+        print(f"Lỗi tính số công: {e}")
+        tinh_so_cong = False
+    """Tính lương cho 1 nhân viên trong 1 tháng"""
+    # lấy toàn bộ chấm công trong tháng
+    if tinh_so_cong:
+        chamcongs = (
+            ChamCong.query
+            .filter(
+                ChamCong.nhan_vien_id == nhanvien_id,
+                extract('month', ChamCong.thoi_gian_vao) == thang,
+                extract('year',  ChamCong.thoi_gian_vao) == nam,
+            )
+            .all()
+        )
+        ds_ngay_nghi_phep = tinh_ngay_nghi_phep_nam(nhanvien_id, thang, nam)
+        ds_ngay_le = lay_ngay_le_trong_thang(thang, nam)
+        so_cong_chuan_thang = tinh_ngay_cong(thang, nam)
+        
+        cong = 0.0
+        tong_ngay_cong = 0.0
+        if ds_ngay_nghi_phep and len(ds_ngay_nghi_phep) > 0:
+            # cong = len(ds_ngay_nghi_phep)  # cộng trước số ngày nghỉ phép
+            tong_ngay_cong = len(ds_ngay_nghi_phep)
+            
+        tong_luong = 0.0
+        
+    
+        kt = True
+        temp_tnc = 0.0
+        tong_ngay_cong_thuc = 0.0
+        
+        
+        tong_gio_tang_ca = 0.0
+        tong_tien_tang_ca = 0.0
+        tien_tang_ca_tinh_thue = 0.0
+        tien_tang_ca_mien_thue = 0.0
+        
+        luong_le = 0.0
+        tong_luong_le = 0.0
+        so_ngay_lam_le = 0.0
+        tien_luong_le_mien_thue = 0.0
+        tien_luong_le_tinh_thue = 0.0
+        
+        khau_tru = 0.0
+        ditre_vesom = 0.0
+        nghi_khong_phep = 0.0
+        vi_pham = 0.0
+        tam_ung = 0.0
+        tru_khac = 0.0
+        
+        phu_cap = 0.0
+        phucap_an_trua = 0.0
+        phucap_xang_xe = 0.0
+        
+        phucap_doc_hai = 0.0
+        phucap_trach_nhiem = 0.0
+        phucap_chuc_vu = 0.0
+        phucap_tham_nien = 0.0
+        
+        
+        
+        for cc in chamcongs:
+            if cc.thoi_gian_vao.date().day in ds_ngay_nghi_phep:
+                if temp_tnc == tong_ngay_cong:
+                    tong_ngay_cong_thuc = tong_ngay_cong - 1
+                kt = False
+                tong_ngay_cong -= 1  # trừ lại ngày công đã cộng ở trên
+                temp_tnc = tong_ngay_cong
+            if kt:
+                tong_ngay_cong_thuc += cc.so_cong
+                # print("1", tong_ngay_cong_thuc)
+                kt = True
+            if kt is False:
+                tong_ngay_cong_thuc += cc.so_cong 
+            
+            
+                
+            policy = get_chinhsach(nhanvien_id, cc.thoi_gian_vao.date())
+            
+            # ======= NGÀY LỄ =======
+            is_holiday = False
+            if ds_ngay_le and cc.thoi_gian_vao.date().day in ds_ngay_le:
+                is_holiday = True
+
+            # ======= TÍNH CÔNG =======
+            
+            cong = cc.so_cong  # đã tính từ logic chấm công (0.5 hoặc 1)
+            tong_ngay_cong += cong
+            # tong_ngay_cong_thuc += cong
+            # print("Công tính:", tong_ngay_cong, "Công thực", tong_ngay_cong_thuc, "cong", cong, "Ngày", cc.thoi_gian_vao.date(), "ngày nghỉ phép", ds_ngay_nghi_phep)
+            # print("Ngày lễ trong tháng:", ds_ngay_le)
+            # ======= LƯƠNG NGÀY THƯỜNG =======
+            # so_cong_chuan_thang = tinh_ngay_cong(thang, nam)
+            luong_ngay = policy.muc_luong_co_ban / so_cong_chuan_thang  
+            if is_holiday:
+                so_ngay_lam_le += cong
+                luong_le = policy.luong_ngay_le_heso * luong_ngay
+                tong_luong_le += cong * luong_le
+            
+            tong_luong += cong * luong_ngay
+            
+            # ======= TĂNG CA =======
+            tangca = (
+                GiayPhep.query
+                .filter(GiayPhep.cham_cong_id == cc.id, GiayPhep.trang_thai == "Đã duyệt", GiayPhep.loai_giay_phep == "Tăng ca")
+                .first()
+            )
+            if tangca:
+                gio_tang_ca = tangca.so_gio
+                tong_gio_tang_ca += gio_tang_ca
+                if is_holiday:
+                    tien_tang_ca = policy.luong_ngay_le_heso * (luong_ngay / 8)
+                    tong_tien_tang_ca += gio_tang_ca * tien_tang_ca
+                    tong_luong += gio_tang_ca * (luong_ngay / 8)
+                else:
+                    tien_tang_ca = policy.tang_ca_heso * (luong_ngay / 8)
+                    tong_tien_tang_ca += gio_tang_ca * tien_tang_ca
+                    tong_luong += gio_tang_ca * (luong_ngay / 8)
+            
+            # if is_holiday and holiday is False:
+            #     tien_tang_ca = policy.luong_ngay_le_heso * (luong_ngay / 8)
+            #     tong_tien_tang_ca += gio_tang_ca * tien_tang_ca
+
+            # ======= KHẤU TRỪ ĐI TRỄ =======
+            ditre, vesom = tinh_tre_som(cc.thoi_gian_vao, cc.thoi_gian_ra)
+            if ditre > 0:
+                # khau_tru += ditre * policy.di_tre_phat
+                ditre_vesom += ditre * policy.di_tre_phat
+            if vesom > 0:
+                # khau_tru += vesom * policy.ve_som_phat
+                ditre_vesom += vesom * policy.ve_som_phat
+            
+            # print(f"Ngày {cc.thoi_gian_vao.date()}: Đi trễ {ditre} phút, Về sớm {vesom} phút")
+            # ======= PHỤ CẤP NẾU CÓ =======
+            if policy.phu_cap_an_trua:
+                phucap_an_trua += policy.phu_cap_an_trua
+            if policy.phu_cap_xang_xe:
+                phucap_xang_xe += policy.phu_cap_xang_xe    
+                
+            # Phụ cấp tính bảo hiểm    
+            if policy.phu_cap_doc_hai:
+                phucap_doc_hai = policy.phu_cap_doc_hai
+            if policy.phu_cap_trach_nhiem:
+                phucap_trach_nhiem = policy.phu_cap_trach_nhiem
+            if policy.phu_cap_chuc_vu:
+                phucap_chuc_vu = policy.phu_cap_chuc_vu
+            if policy.phu_cap_tham_nien:
+                phucap_tham_nien = policy.phu_cap_tham_nien
+
+        # ======= TĂNG CA TÍNH THUẾ =======
+        if locals().get("tien_tang_ca") and tien_tang_ca > 0:
+            luong_gio = luong_ngay / 8
+            tang_ca_mien_thue = tien_tang_ca - luong_gio
+            tien_tang_ca_mien_thue = tang_ca_mien_thue * tong_gio_tang_ca
+            tien_tang_ca_tinh_thue = luong_gio * tong_gio_tang_ca
+        
+        if luong_le > 0 and tong_luong_le > 0:
+            # tong_luong -= tong_luong_le  # trừ lại lương lễ đã cộng vào tổng lương
+            luong_le_mien_thue = luong_le - luong_ngay
+            tien_luong_le_mien_thue = so_ngay_lam_le * luong_le_mien_thue
+            tien_luong_le_tinh_thue = so_ngay_lam_le * luong_ngay
+        
+        # ======= TÍNH BẢO HIỂM =======
+        phu_cap = phucap_doc_hai + phucap_trach_nhiem + phucap_chuc_vu + phucap_tham_nien + phucap_an_trua + phucap_xang_xe
+        
+        # Lương trước khi trừ bảo hiểm cộng các khoản phụ cấp tính bảo hiểm
+        tong_luong += phucap_doc_hai + phucap_trach_nhiem + phucap_chuc_vu + phucap_tham_nien 
+        if luong_le > 0 and tong_luong_le > 0:
+            tong_luong -= tien_luong_le_tinh_thue  # trừ lại phần lương lễ không đóng bảo hiểm đã cộng vào tổng lương
+        if locals().get("tien_tang_ca") and tien_tang_ca > 0:
+            tong_luong -= tien_tang_ca_tinh_thue  # trừ lại phần tăng ca không đóng bảo hiểm đã cộng vào tổng lương
+        
+        bao_hiem_xa_hoi = tong_luong * 0.08
+        bao_hiem_y_te = tong_luong * 0.015
+        bao_hiem_that_nghiep = tong_luong * 0.01
+        tong_bao_hiem = bao_hiem_xa_hoi + bao_hiem_y_te + bao_hiem_that_nghiep
+
+        # Lương sau khi trừ bảo hiểm + tăng ca tính thuế + phụ cấp không đóng bảo hiểm + lương lễ tính thuế
+        if luong_le > 0 and tong_luong_le > 0:
+            tong_luong += tien_luong_le_tinh_thue  # cộng lại phần lương lễ tính thuế đã trừ ở trên
+        if locals().get("tien_tang_ca") and tien_tang_ca > 0:
+            tong_luong += tien_tang_ca_tinh_thue  # cộng lại phần tăng ca tính thuế đã trừ ở trên
+        luong_tinh_thue = tong_luong - tong_bao_hiem + (phucap_an_trua + phucap_xang_xe)
+        
+        # Số người phụ thuộc
+        so_nguoi_phu_thuoc = kiemtra_nguoiphuthuoc(nhanvien_id, thang, nam)
+        
+        # Tính thuế TNCN
+        thue_tncn = tinh_thue_tncn(luong_tinh_thue, so_nguoi_phu_thuoc)
+        
+        # ======= KHẤU TRỪ KHÁC =======
+        khau_tru += ditre_vesom
+        if tong_ngay_cong < so_cong_chuan_thang:
+            ngaynghi = so_cong_chuan_thang - tong_ngay_cong
+            nghi_khong_phep += ngaynghi * luong_ngay
+        # ======= LƯƠNG THỰC LĨNH =======
+        luong_thuc_linh = tong_luong - tong_bao_hiem - thue_tncn - khau_tru + tien_tang_ca_mien_thue + tien_luong_le_mien_thue
+        
+        try:
+            bangluong = BangLuong.query.filter_by(nhan_vien_id=nhanvien_id, thang=thang, nam=nam).first()
+            if bangluong:
+                # Cập nhật lại thông tin lương
+                bangluong.ngay_cong_chuan = int(so_cong_chuan_thang)
+                bangluong.so_ngay_cong = tong_ngay_cong_thuc
+                bangluong.nghi_phep = len(ds_ngay_nghi_phep)
+                bangluong.tong_ngay_lam_le = so_ngay_lam_le
+                bangluong.tong_tien_lam_le = tong_luong_le
+                bangluong.tong_gio_tang_ca = tong_gio_tang_ca
+                bangluong.tong_tien_tang_ca = tong_tien_tang_ca
+                bangluong.tong_khau_tru = khau_tru
+                bangluong.tong_phu_cap = phu_cap
+                bangluong.bhxh = bao_hiem_xa_hoi
+                bangluong.bhtn = bao_hiem_that_nghiep
+                bangluong.bhyt = bao_hiem_y_te
+                bangluong.thue_tncn = thue_tncn
+                bangluong.tong_luong = tong_luong
+                bangluong.thuc_nhan = luong_thuc_linh
+
+                # Xóa chi tiết lương cũ trước khi thêm mới
+                ChiTietLuong.query.filter_by(bang_luong_id=bangluong.id).delete()
+                db.session.commit()
+            else:
+                # Lưu vào bảng BangLuong
+                bangluong = BangLuong(
+                    nhan_vien_id=nhanvien_id,
+                    thang=thang,
+                    nam=nam,
+                    ngay_cong_chuan = int(so_cong_chuan_thang),
+                    so_ngay_cong=tong_ngay_cong_thuc,
+                    nghi_phep=len(ds_ngay_nghi_phep),
+                    tong_ngay_lam_le= so_ngay_lam_le,
+                    tong_tien_lam_le= tong_luong_le,
+                    tong_gio_tang_ca=tong_gio_tang_ca,
+                    tong_tien_tang_ca=tong_tien_tang_ca,
+                    tong_khau_tru=khau_tru,
+                    tong_phu_cap=phu_cap,
+                    bhxh=bao_hiem_xa_hoi,
+                    bhtn=bao_hiem_that_nghiep,
+                    bhyt=bao_hiem_y_te,
+                    thue_tncn=thue_tncn,
+                    tong_luong=tong_luong,
+                    thuc_nhan=luong_thuc_linh,
+                )
+                db.session.add(bangluong)
+                db.session.commit()
+                
+            # 2️⃣ Tạo list chi tiết lương (chỉ thêm nếu có dữ liệu)
+            chi_tiet_list = []
+
+            # ======= KHẤU TRỪ  =======
+            if ditre_vesom and ditre_vesom > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.KHAU_TRU,
+                        loai="DI_TRE_VE_SOM",
+                        so_tien=ditre_vesom
+                    )
+                )
+            if nghi_khong_phep and nghi_khong_phep > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.KHAU_TRU,
+                        loai="NGHI_KHONG_PHEP",
+                        so_tien=nghi_khong_phep
+                    )
+                )
+            if vi_pham and vi_pham > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.KHAU_TRU,
+                        loai="VI_PHAM_NOI_QUY",
+                        so_tien=vi_pham
+                    )
+                )
+            if tam_ung and tam_ung > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.KHAU_TRU,
+                        loai="TAM_UNG",
+                        so_tien=tam_ung
+                    )
+                )
+            if tru_khac and tru_khac > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.KHAU_TRU,
+                        loai="TRU_KHAC",
+                        so_tien=tru_khac
+                    )
+                )
+
+            
+            # ======= PHỤ CẤP  =======
+            if phucap_an_trua and phucap_an_trua > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.PHU_CAP,
+                        loai="AN_UONG",
+                        so_tien=phucap_an_trua
+                    )
+                )
+            if phucap_xang_xe and phucap_xang_xe > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.PHU_CAP,
+                        loai="XANG_XE",
+                        so_tien=phucap_xang_xe
+                    )
+                )
+
+            if phucap_doc_hai and phucap_doc_hai > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.PHU_CAP,
+                        loai="DOC_HAI",
+                        so_tien=phucap_doc_hai
+                    )
+                )
+            if phucap_trach_nhiem and phucap_trach_nhiem > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.PHU_CAP,
+                        loai="TRACH_NHIEM",
+                        so_tien=phucap_trach_nhiem
+                    )
+                )
+            if phucap_chuc_vu and phucap_chuc_vu > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.PHU_CAP,
+                        loai="CHUC_VU",
+                        so_tien=phucap_chuc_vu
+                    )
+                )
+            if phucap_tham_nien and phucap_tham_nien > 0:
+                chi_tiet_list.append(
+                    ChiTietLuong(
+                        bang_luong_id=bangluong.id,
+                        nhom=NhomChiTietLuong.PHU_CAP,
+                        loai="THAM_NIEN",
+                        so_tien=phucap_tham_nien
+                    )
+                )
+
+            # if phucap_tham_nien and phucap_tham_nien > 0: PHỤ CẤP KHÁC
+            #     chi_tiet_list.append(
+            #         ChiTietLuong(
+            #             bang_luong_id=bangluong.id,
+            #             nhom=NhomChiTietLuong.PHU_CAP,
+            #             loai="THAM_NIEN",
+            #             so_tien=phucap_tham_nien
+            #         )
+            #     )
+            
+            # ======= THƯỞNG  =======
+            # if phucap_trach_nhiem and phucap_trach_nhiem > 0:
+            #     chi_tiet_list.append(
+            #         ChiTietLuong(
+            #             bang_luong_id=bangluong.id,
+            #             nhom=NhomChiTietLuong.THUONG,
+            #             loai="LE_TET",
+            #             so_tien=phucap_trach_nhiem
+            #         )
+            #     )
+
+            # 3️⃣ Lưu tất cả chi tiết nếu có
+            if chi_tiet_list:
+                db.session.add_all(chi_tiet_list)
+                db.session.commit()
+            
+            all_bangluong = BangLuong.query.filter_by(nhan_vien_id=nhanvien_id).all()
+            if len(all_bangluong) <= 12:
+                hdld = HopDongLaoDong.query.filter_by(nhan_vien_id=nhanvien_id).first()
+                if hdld:
+                    hdld.phep_nam = len(all_bangluong)
+                    db.session.commit()
+            return bangluong
+        
+        except Exception as e:
+            db.session.rollback()
+            raise Exception(f"Lỗi khi thêm bảng lương: {str(e)}")
+    
+# -----------------------------------------------------------------------------------------------------------------
+def tinh_so_cong_cho_1_ngay(id, check_in: Optional[datetime], check_out: Optional[datetime]) -> Decimal:
+    if not check_in or not check_out:
+        soconggiayphep = get_tinhsocong_theogiayphep_service(id)
+        return soconggiayphep
+    # theo thời gian việt nam
+    in_t = check_in.time()
+    out_t = check_out.time()
+
+    # tính giờ làm việc trong ngày
+    total_hours = Decimal("0")
+    # ca sáng 08:00-12:00
+    a_start, a_end = time(8, 0), time(12, 0)
+    # ca chiều 13:00-17:00
+    b_start, b_end = time(13, 0), time(17, 0)
+
+
+    def overlap_hours(s: time, e: time, ws: time, we: time) -> Decimal:
+        start = max(datetime.combine(date.min, s), datetime.combine(date.min, ws))
+        end = min(datetime.combine(date.min, e), datetime.combine(date.min, we))
+        delta = (end - start).total_seconds() / 3600
+        return Decimal(str(max(delta, 0)))
+
+
+    total_hours += overlap_hours(in_t, out_t, a_start, a_end)
+    total_hours += overlap_hours(in_t, out_t, b_start, b_end)
+
+
+    # 8 hours -> 1 công; 4 hours -> 0.5 công; trễ 30 phút không tính công ca sáng; về sớm 30 phút không tính công ca chiều
+    if total_hours >= Decimal("7.5"):
+        return Decimal("1.00")
+    if total_hours >= Decimal("3.5"):
+        return Decimal("0.50")
+    return Decimal("0.00")
+    
+        
+def get_tinhsocong_1nhanvien_theothang_service(nhan_vien_id, thang, nam):
+    dschamcong = ChamCong.query.filter(ChamCong.nhan_vien_id == nhan_vien_id,extract('month', ChamCong.ngay) == thang,extract('year', ChamCong.ngay) == nam).all()
+    if not dschamcong:
+        return None
+    else:
+        for cc in dschamcong:
+            so_cong_moi = tinh_so_cong_cho_1_ngay(cc.id, cc.thoi_gian_vao, cc.thoi_gian_ra)
+            cc.so_cong = so_cong_moi  # cập nhật lại cột so_cong
+        db.session.commit()
+        return True
+    
+def get_tinhsocong_theogiayphep_service(id):
+    cham_cong = ChamCong.query.get(id)
+    giay_phep = GiayPhep.query.filter(GiayPhep.cham_cong_id == id, GiayPhep.trang_thai == "Đã duyệt").first()
+
+    if not cham_cong or not giay_phep:
+        return Decimal("0.00")
+    if giay_phep.so_gio == 8:
+        return  Decimal("1.00")
+    elif giay_phep.so_gio == 4:
+        return Decimal("0.50")
+    

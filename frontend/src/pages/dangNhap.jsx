@@ -23,6 +23,7 @@ const DangNhap = () => {
       toast.error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu");
       return;
     }
+
     try {
       setLoading(true);
       const response = await loginApi(username, password);
@@ -34,8 +35,7 @@ const DangNhap = () => {
         token: access_token,
       }));
 
-      toast.success(`Đăng nhập thành công với vai trò: ${role?.ma_vai_tro || "N/A"}`);
-      navigate("/", { replace: true }); // ✅ dùng replace
+
     } catch (error) {
       const msg = error?.response?.data?.message || "Tên đăng nhập hoặc mật khẩu không đúng!";
       toast.error(msg);

@@ -22,6 +22,9 @@ import './App.css';
 import Sidebar from "./components/sidebar/sidebar";
 import NotFound from "./pages/NotFound";
 import { Navigate } from "react-router-dom";
+import ChamCongNhanVien from "./pages/modules/ChamCongNhanVien";
+import QuanLyGiayPhep from "./pages/modules/QuanLyGiayPhep";
+
 import PublicIPGuard from "./pages/PublicIPGuard";
 const AppLayout = () => {
   const location = useLocation();
@@ -60,6 +63,11 @@ const AppLayout = () => {
           <Route path="/cham-cong-list" element={<PrivateRoute><ChamCongList /></PrivateRoute>} />
           <Route path="/cham-cong-form" element={<PrivateRoute><ChamCongForm /></PrivateRoute>} />
           <Route path="/quan-ly-nguoi-dung" element={<PrivateRoute><QuanLyNguoiDung /></PrivateRoute>} />
+
+          <Route path="/cham-cong-nhan-vien/:id" element={<PrivateRoute><ChamCongNhanVien /></PrivateRoute>} />
+          <Route path="/quan-ly-giay-phep" element={<PrivateRoute><QuanLyGiayPhep /></PrivateRoute>} />
+
+          {/* Trang 404 */}
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" />} />
         </Routes>
