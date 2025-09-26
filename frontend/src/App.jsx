@@ -18,7 +18,6 @@ import QuanLyDanhGia from "./pages/modules/QuanLyDanhGia";
 import DangNhap from "./pages/dangNhap";
 import PrivateRoute from "./pages/PrivateRoute";
 import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import './App.css';
 import Sidebar from "./components/sidebar/sidebar";
 import NotFound from "./pages/NotFound";
@@ -84,7 +83,16 @@ function App() {
       <Router>
         <AppLayout />
       </Router>
-      <ToastContainer position="top-right" autoClose={2000} />
+      {/* <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        newestOnTop
+        closeOnClick
+        pauseOnFocusLoss={false}
+        pauseOnHover
+        draggable
+        containerStyle={{ zIndex: 999999 }}  
+      /> */}
     </div>
   );
 }

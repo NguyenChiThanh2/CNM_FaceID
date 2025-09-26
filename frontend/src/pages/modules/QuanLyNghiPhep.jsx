@@ -1,14 +1,10 @@
+// src/pages/modules/QuanLyNghiPhep.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import NghiPhepForm from "../../components/nghiphep/NghiPhepForm";
-import {
-  Modal,
-  Button,
-  Table,
-  Breadcrumb,
-} from "react-bootstrap";
+import { Modal, Button, Table, Breadcrumb } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 
 const API_URL = "http://127.0.0.1:5000/api";
 const API_URL_FILE = "http://127.0.0.1:5000/uploads/nghi_phep/thaisan/";
@@ -38,7 +34,7 @@ const QuanLyNghiPhep = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-nghi-phep`);
-      setNghiPhepList(response.data);
+      setNghiPhepList(response.data || []);
     } catch (error) {
       console.error("Lỗi khi gọi API nghỉ phép:", error);
       toast.error("Có lỗi xảy ra khi tải danh sách nghỉ phép!");
@@ -50,7 +46,7 @@ const QuanLyNghiPhep = () => {
   const fetchNhanVien = async () => {
     try {
       const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
-      setNhanVienList(response.data);
+      setNhanVienList(response.data || []);
     } catch (error) {
       console.error("Lỗi khi gọi API nhân viên:", error);
       toast.error("Có lỗi xảy ra khi tải danh sách nhân viên!");
@@ -68,42 +64,43 @@ const QuanLyNghiPhep = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Bạn có chắc muốn hủy đơn nghỉ phép này không?")) {
-      try {
-        await axios.put(`${API_URL}/cancle-nghi-phep/${id}`);
-        fetchNghiPhep();
-        toast.success("Đã hủy đơn nghỉ phép thành công!");
-      } catch (error) {
-        console.error("Lỗi khi hủy đơn nghỉ phép:", error);
-        toast.error("Có lỗi xảy ra khi hủy đơn nghỉ phép!");
-      }
+    if (!window.confirm("Bạn có chắc muốn hủy đơn nghỉ phép này không?")) return;
+    try {
+      await toast.promise(
+        axios.put(`${API_URL}/cancle-nghi-phep/${id}`),
+        { pending: "Đang hủy đơn...", success: "Đã hủy đơn nghỉ phép!", error: "Hủy đơn thất bại!" }
+      );
+      fetchNghiPhep();
+    } catch (error) {
+      console.error("Lỗi khi hủy đơn nghỉ phép:", error);
+      // lỗi đã hiển thị bởi toast.promise
     }
   };
 
   const handleDuyet = async (id) => {
-    if (window.confirm("Bạn có chắc muốn duyệt đơn nghỉ phép này không?")) {
-      try {
-        await axios.put(`${API_URL}/approve-nghi-phep/${id}`);
-        fetchNghiPhep();
-        fetchNhanVien();
-        toast.success("Đã duyệt đơn nghỉ phép thành công!");
-      } catch (error) {
-        console.error("Lỗi khi duyệt đơn nghỉ phép:", error);
-        toast.error("Có lỗi xảy ra khi duyệt đơn nghỉ phép!");
-      }
+    if (!window.confirm("Bạn có chắc muốn duyệt đơn nghỉ phép này không?")) return;
+    try {
+      await toast.promise(
+        axios.put(`${API_URL}/approve-nghi-phep/${id}`),
+        { pending: "Đang duyệt...", success: "Đã duyệt đơn nghỉ phép!", error: "Duyệt đơn thất bại!" }
+      );
+      fetchNghiPhep();
+      fetchNhanVien();
+    } catch (error) {
+      console.error("Lỗi khi duyệt đơn nghỉ phép:", error);
     }
   };
 
   const handleTuChoi = async (id) => {
-    if (window.confirm("Bạn có chắc muốn từ chối đơn nghỉ phép này không?")) {
-      try {
-        await axios.put(`${API_URL}/reject-nghi-phep/${id}`);
-        fetchNghiPhep();
-        toast.success("Đã từ chối đơn nghỉ phép thành công!");
-      } catch (error) {
-        console.error("Lỗi khi từ chối đơn nghỉ phép:", error);
-        toast.error("Có lỗi xảy ra khi từ chối đơn nghỉ phép!");
-      }
+    if (!window.confirm("Bạn có chắc muốn từ chối đơn nghỉ phép này không?")) return;
+    try {
+      await toast.promise(
+        axios.put(`${API_URL}/reject-nghi-phep/${id}`),
+        { pending: "Đang từ chối...", success: "Đã từ chối đơn nghỉ phép!", error: "Từ chối đơn thất bại!" }
+      );
+      fetchNghiPhep();
+    } catch (error) {
+      console.error("Lỗi khi từ chối đơn nghỉ phép:", error);
     }
   };
 
@@ -114,6 +111,7 @@ const QuanLyNghiPhep = () => {
 
   const handleFormSubmit = () => {
     fetchNghiPhep();
+    toast.success(editingNghiPhep ? "Cập nhật đơn nghỉ phép thành công!" : "Tạo đơn nghỉ phép thành công!");
     handleModalClose();
   };
 
@@ -124,26 +122,26 @@ const QuanLyNghiPhep = () => {
       : "Ngày không hợp lệ";
   };
 
+  // map tên NV (lowercase) để search; null-safe
   const nhanVienMap = nhanVienList.reduce((acc, nv) => {
-    acc[nv.id] = nv.ho_ten.toLowerCase();
+    acc[nv.id] = (nv.ho_ten || "").toLowerCase();
     return acc;
   }, {});
 
   const filteredList = nghiPhepList.filter((np) => {
+    const lyDo = (np.ly_do || "").toLowerCase();
+    const searchKey = (searchKeyword || "").toLowerCase();
     const searchMatch =
-      np.ly_do.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      (nhanVienMap[np.nhan_vien_id] &&
-        nhanVienMap[np.nhan_vien_id].includes(searchKeyword.toLowerCase()));
-    const statusMatch = filterTrangThai
-      ? np.trang_thai === filterTrangThai
-      : true;
+      lyDo.includes(searchKey) ||
+      (nhanVienMap[np.nhan_vien_id] && nhanVienMap[np.nhan_vien_id].includes(searchKey));
+    const statusMatch = filterTrangThai ? np.trang_thai === filterTrangThai : true;
     return searchMatch && statusMatch;
   });
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
 
   return (
     <div className="container min-vh-100">
@@ -221,14 +219,16 @@ const QuanLyNghiPhep = () => {
                       <td>{nghiPhep.so_ngay_nghi}</td>
                       <td>{nghiPhep.ly_do}</td>
                       <td className="text-center">
-                        <span className={`badge ${nghiPhep.trang_thai === "Chờ duyệt"
-                          ? "bg-warning text-dark"
-                          : nghiPhep.trang_thai === "Đã duyệt"
-                            ? "bg-success"
-                            : nghiPhep.trang_thai === "Từ chối"
-                              ? "bg-danger"
-                              : "bg-secondary"
-                          }`}>
+                        <span
+                          className={`badge ${nghiPhep.trang_thai === "Chờ duyệt"
+                            ? "bg-warning text-dark"
+                            : nghiPhep.trang_thai === "Đã duyệt"
+                              ? "bg-success"
+                              : nghiPhep.trang_thai === "Từ chối"
+                                ? "bg-danger"
+                                : "bg-secondary"
+                            }`}
+                        >
                           {nghiPhep.trang_thai}
                         </span>
                       </td>
@@ -369,7 +369,6 @@ const QuanLyNghiPhep = () => {
             </div>
           )}
 
-
           {/* Modal thêm/sửa */}
           <Modal show={showModal} onHide={handleModalClose} size="lg">
             <Modal.Header closeButton>
@@ -392,6 +391,7 @@ const QuanLyNghiPhep = () => {
           </Modal>
         </div>
       </div>
+      <ToastContainer position="top-right" autoClose={2000} />
     </div>
   );
 };

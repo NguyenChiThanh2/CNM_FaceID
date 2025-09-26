@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 const API_BASE = "http://127.0.0.1:5000";
 const RECOGNIZE_EVERY = 800; // ms
 const STABLE_MS = 1500;      // ms
-const COOLDOWN_MS = 10000;   // ms
+const COOLDOWN_MS = 5000;   // ms
 
 // Ngưỡng ảnh
 const BLUR_THRESHOLD = 20; // hạ tạm để dễ pass
@@ -251,8 +251,8 @@ export default function FaceCheckin() {
           // 2) Vẽ khung với tên NV mới nhất (nếu có)
           const nvNow = matchedRef.current;
           const label = nvNow
-            ? `Nhân viên: ${nvNow.ho_ten}${stableStartRef.current ? " · đang chờ 2s..." : ""}`
-            : ""; // để trống nếu chưa match
+            ? ` ${nvNow.ho_ten}${stableStartRef.current ? "" : ""}`
+            : "Chưa tìm thấy dữ liệu nhân viên"; // để trống nếu chưa match
           drawBoxes(faces, label);
 
           // 3) Nếu đã đủ ổn định + ảnh đủ nét → chấm công
@@ -436,7 +436,7 @@ export default function FaceCheckin() {
       }}
     >
       <h2 className="mb-3" style={{ fontWeight: 600, color: "#343a40" }}>
-        Chấm công bằng FaceID (Tự động)
+        Chấm công
       </h2>
       <p className="text-muted mb-2">
         💡 Hệ thống nhận diện tên trước, sau đó tự chụp lại sau 2 giây ổn định để chấm công.
@@ -476,8 +476,8 @@ export default function FaceCheckin() {
       <div className="mt-3">
         {matched && (
           <div className="mb-2">
-            Nhận diện: <strong>{matched.ho_ten}</strong>
-            {stableStart && <span> · đang chờ 2s…</span>}
+          <strong>{stableStart && <span> · đang chờ 2s…</span>}</strong>
+            
           </div>
         )}
         {loading ? (
@@ -498,7 +498,7 @@ export default function FaceCheckin() {
               <div className="modal-header"><h5 className="modal-title">Thông báo</h5></div>
               <div className="modal-body" dangerouslySetInnerHTML={{ __html: modalHtml }} />
               <div className="modal-footer">
-                <button className="btn btn-primary" onClick={closeModal}>OK</button>
+      
               </div>
             </div>
           </div>

@@ -77,7 +77,7 @@ const QuanLyNhanSu = () => {
       try {
         await axios.delete(`http://127.0.0.1:5000/api/delete-nhan-vien/${id}`);
         fetchNhanSu();
-        toast.success("✅ Cập nhật thành công!");
+        toast.success("Cập nhật thành công!");
       } catch (error) {
         console.error("Lỗi khi xóa nhân sự:", error.response || error.message);
         toast.error("❌ Có lỗi xảy ra!");
@@ -96,7 +96,7 @@ const QuanLyNhanSu = () => {
     fetchNhanSu();
     setShowModal(false);
     setEditingNhanSu(null);
-    toast.success("✅ Cập nhật hoặc thêm mới nhân sự thành công!");
+    toast.success("Cập nhật hoặc thêm mới nhân sự thành công!");
   };
 
   const handleRowClick = (nv) => {
