@@ -11,3 +11,16 @@ def get_bang_luong_service():
 
 def get_bang_luong_1nv_service(nhan_vien_id):
     return BangLuong.query.filter_by(nhan_vien_id=nhan_vien_id).all()
+
+# Xóa bảng lương theo ID
+def delete_bangluong_service(id):
+    bangLuong = BangLuong.query.get(id)
+    if bangLuong:
+        try:
+            db.session.delete(bangLuong)
+            db.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error in cancle_nghi_phep_service: {str(e)}") 
+            raise e
+    return False

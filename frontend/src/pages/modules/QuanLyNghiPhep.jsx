@@ -67,7 +67,7 @@ const QuanLyNghiPhep = () => {
     if (!window.confirm("Bạn có chắc muốn hủy đơn nghỉ phép này không?")) return;
     try {
       await toast.promise(
-        axios.put(`${API_URL}/cancle-nghi-phep/${id}`),
+        axios.delete(`${API_URL}/delete-nghi-phep/${id}`),
         { pending: "Đang hủy đơn...", success: "Đã hủy đơn nghỉ phép!", error: "Hủy đơn thất bại!" }
       );
       fetchNghiPhep();
@@ -189,8 +189,8 @@ const QuanLyNghiPhep = () => {
             </button>
           </div>
 
-          <div className="table-responsive">
-            <Table bordered hover striped className="rounded">
+          <div className="table-responsive" style={{ overflowX: "auto" }}>
+            <Table bordered hover striped className="rounded  text-nowrap">
               <thead className="table-dark text-center">
                 <tr>
                   <th>Nhân viên</th>
@@ -200,6 +200,7 @@ const QuanLyNghiPhep = () => {
                   <th>Tổng ngày nghỉ</th>
                   <th>Lý do</th>
                   <th>Trạng thái</th>
+                  <th>File giấy tờ</th>
                   <th>Hành động</th>
                 </tr>
               </thead>
@@ -233,6 +234,21 @@ const QuanLyNghiPhep = () => {
                         </span>
                       </td>
                       <td>
+                          {nghiPhep.can_cu_phap_ly_file ? (
+                            <a
+                              href={`${API_URL}/can_cu_phap_ly_thai_san/${nghiPhep.can_cu_phap_ly_file}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="link"
+                              style={{ textDecoration: "none", color: "#0d6efd", fontWeight: 500 }}
+                            >
+                              📎{nghiPhep.can_cu_phap_ly_file}
+                            </a>
+                          ) : (
+                            <span className="text-muted">Không có</span>
+                          )}
+                        </td>
+                      <td>
                         {nghiPhep.trang_thai === "Chờ duyệt" && (
                           <>
                             <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>✔ Duyệt</button>
@@ -258,7 +274,7 @@ const QuanLyNghiPhep = () => {
           </div>
 
           <div className="table-responsive" style={{ overflowX: "auto" }}>
-            <h3 className="text-center mb-3">Nghỉ thai sản</h3>
+            <h3 className="text-center mb-3 mt-3">Nghỉ thai sản</h3>
             <Table bordered hover striped className="rounded text-nowrap">
               <thead className="table-dark text-center">
                 <tr>
@@ -279,7 +295,7 @@ const QuanLyNghiPhep = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center">Đang tải dữ liệu...</td>
+                    <td colSpan="12" className="text-center">Đang tải dữ liệu...</td>
                   </tr>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((nghiPhep) => (

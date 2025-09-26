@@ -24,6 +24,7 @@ class BangLuong(db.Model):
     thue_tncn = db.Column(db.Float, default=0.0)
     tong_luong = db.Column(db.Float, default=0.0)
     thuc_nhan = db.Column(db.Float, default=0.0)
+    ghi_chu = db.Column(db.String(255))
 
     bang_luong_nhan_vien = db.relationship('NhanVien', back_populates='bang_luong_nhan_vien', lazy=True)
     chi_tiet_luong_bang_luong = db.relationship('ChiTietLuong', back_populates='chi_tiet_luong_bang_luong', lazy=True)
@@ -49,6 +50,7 @@ class BangLuong(db.Model):
             "thue_tncn": self.thue_tncn,
             "tong_luong": self.tong_luong,
             "thuc_nhan": self.thuc_nhan,
-            "chi_tiet_luong": [ct.to_dict() for ct in self.chi_tiet_luong_bang_luong]
+            "chi_tiet_luong": [ct.to_dict() for ct in self.chi_tiet_luong_bang_luong],
+            "ghi_chu": self.ghi_chu
         }
     

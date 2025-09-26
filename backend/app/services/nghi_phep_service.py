@@ -87,6 +87,7 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
         .filter(
             NghiPhep.nhan_vien_id == nhan_vien_id,
             NghiPhep.trang_thai == "Đã duyệt",
+            NghiPhep.loai_nghi_phep_id != 3,
             db.extract('year', NghiPhep.tu_ngay) == nam
         ).scalar() or 0
 
@@ -99,11 +100,14 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
 
     # Xử lý file upload
     filename = None
-    # ten_file_moi = None 
+    ten_file_moi = None 
     if file:
         filename = secure_filename(file.filename)
         ext = os.path.splitext(filename)[1]
-        ten_file_moi = f"nghiphep_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+        if loai_nghi_phep_id == "3":
+            ten_file_moi = f"nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+        else:
+            ten_file_moi = f"nghiphep_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
         file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
     # Tạo đơn nghỉ phép mới
     new_nghi_phep = NghiPhep(
@@ -187,6 +191,7 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
         .filter(
             NghiPhep.nhan_vien_id == nhan_vien_id,
             NghiPhep.trang_thai == "Đã duyệt",
+            NghiPhep.loai_nghi_phep_id != 3,
             db.extract('year', NghiPhep.tu_ngay) == nam
         ).scalar() or 0
 
@@ -219,7 +224,10 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
         # Lưu file mới
         filename = secure_filename(file.filename)
         ext = os.path.splitext(filename)[1]
-        ten_file_moi = f"nghiphep_nv{nghi_phep.nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+        if loai_nghi_phep_id == "3":
+            ten_file_moi = f"nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+        else:
+            ten_file_moi = f"nghiphep_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
         file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
         nghi_phep.can_cu_phap_ly_file=ten_file_moi
 
@@ -275,14 +283,19 @@ def reject_nghi_phep_service(id):
         raise e
 
 def delete_nghi_phep_service(id):
-    nghi_phep = NghiPhep.query.get(id)
-    if not nghi_phep:
-        raise ValueError("Nghỉ phép không tồn tại")
-    
-    # Xóa đơn nghỉ phép
-    db.session.delete(nghi_phep)
-    db.session.commit()
-    return nghi_phep
+    try:
+        nghi_phep = NghiPhep.query.get(id)
+        if not nghi_phep:
+            raise ValueError("Nghỉ phép không tồn tại")
+        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file)):
+            os.remove(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file))
+        # Xóa đơn nghỉ phép
+        db.session.delete(nghi_phep)
+        db.session.commit()
+        return True
+    except Exception as e:
+        print(f"Error in reject_nghi_phep_service: {str(e)}")
+        raise e
 
 
 def cancle_nghi_phep_service(id):
