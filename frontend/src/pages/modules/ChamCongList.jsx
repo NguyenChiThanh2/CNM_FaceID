@@ -131,6 +131,9 @@ const ChamCongList = () => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   };
+  const handleRowClick_tennv = (nv) => {
+    navigate(`/cham-cong-nhan-vien/${nv.id}`); 
+  };
 
   return (
     

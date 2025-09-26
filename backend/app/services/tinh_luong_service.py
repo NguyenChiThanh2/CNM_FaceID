@@ -141,6 +141,7 @@ def tinh_ngay_nghi_phep_nam(nhanvien_id: int,thang: int, nam: int):
     ngaynghiphep = NghiPhep.query.filter(
         NghiPhep.nhan_vien_id == nhanvien_id,
         NghiPhep.trang_thai == "Đã duyệt",
+        NghiPhep.loai_nghi_phep_id != 3,
         # Điều kiện có giao khoảng thời gian
         or_(
             # bắt đầu trong tháng
