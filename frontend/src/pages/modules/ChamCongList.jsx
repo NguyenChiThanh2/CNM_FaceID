@@ -13,7 +13,6 @@ const ChamCongList = () => {
   const [dsNhanVien, setDsNhanVien] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
 
   const itemsPerPage = 10;
   const navigate = useNavigate();
