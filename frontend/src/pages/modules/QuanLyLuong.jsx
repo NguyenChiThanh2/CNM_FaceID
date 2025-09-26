@@ -16,6 +16,7 @@ import { toast, ToastContainer } from "react-toastify";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import "react-toastify/dist/ReactToastify.css";
+import Loading from '../../../src/components/Loading';
 
 const API_URL = "http://127.0.0.1:5000/api";
 
@@ -140,9 +141,11 @@ const QuanLyLuong = () => {
           fetchLuong();
         } else {
           toast.error("Không thể tính lương.");
+          setLoading(false);
         }
       } catch (error) {
         toast.error("Lỗi khi tính lương!");
+        setLoading(false);
       }
     }
   };
@@ -207,11 +210,12 @@ const QuanLyLuong = () => {
   };
 
   if (loading) return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
+    <div>
       <ToastContainer />
-      <Spinner animation="border" variant="primary" role="status" />
-      <span className="ms-2">⏳ Đang tải dữ liệu...</span>
+      <Loading />
     </div>
+    
+      
   ); 
 
   return (
@@ -353,7 +357,7 @@ const QuanLyLuong = () => {
                   <th
                     style={{
                       position: "sticky",
-                      left: "150px",
+                      left: "149px",
                       zIndex: 4,
                     }}
                   >
@@ -452,7 +456,7 @@ const QuanLyLuong = () => {
                       <td
                         style={{
                           position: "sticky",
-                          left: "150px",
+                          left: "149px",
                           zIndex: 2,
                           minWidth: "100px",
                         }}

@@ -81,7 +81,7 @@ export default function PublicIPGuard({ children }) {
     };
   }, []);
 
-  if (state.checking) return <div style={{ padding: 24 }}>Đang kiểm tra mạng…</div>;
+  if (state.checking) return <div><Loading /></div>;
   if (!state.allowed) return <Navigate to="/404" replace />;
   return children;
 }

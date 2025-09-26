@@ -8,6 +8,7 @@ from app.services.nghi_phep_service import (
     get_all_nghi_phep_service,
     get_nghi_phep_by_id_service
 )
+from werkzeug.utils import secure_filename
 
 nghi_phep_bp = Blueprint('nghi_phep', __name__)
 
@@ -35,35 +36,51 @@ def get_nghi_phep_by_id(id):
 
 def create_nghi_phep():
     try:
-        data = request.json
+        data = request.form  # lấy dữ liệu text từ form
+        file = request.files.get("file")  # lấy file (nếu có)
         new_nghi_phep = create_nghi_phep_service(
-            data['nhan_vien_id'],
-            data['loai_nghi_phep_id'],
-            data['tu_ngay'],
-            data['den_ngay'],
-            data['ly_do'],
-            data['trang_thai']
+            nhan_vien_id=data.get("nhan_vien_id"),
+            loai_nghi_phep_id=data.get("loai_nghi_phep_id"),
+            tu_ngay=data.get("tu_ngay"),
+            den_ngay=data.get("den_ngay"),
+            ly_do=data.get("ly_do"),
+            trang_thai=data.get("trang_thai", "Chờ duyệt"),
+            file=file,
+            ngay_du_kien_sinh=data.get("ngay_du_kien_sinh"),
+            so_con=data.get("so_con"),
+            phuong_phap_sinh=data.get("phuong_phap_sinh"),
         )
         return jsonify(new_nghi_phep.to_dict()), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({"error": str(e)}), 400
 
 # API: Update Nghi Phep
 
 def update_nghi_phep(id):
     try:
-        data = request.json
+        data = request.form  # lấy dữ liệu text từ form
+        file = request.files.get("file")  # lấy file (nếu có)
+        file_status = request.form.get("file_status")
+
         updated_nghi_phep = update_nghi_phep_service(
-            id,
-            loai_nghi_phep_id=data.get('loai_nghi_phep_id'),
-            tu_ngay=data.get('tu_ngay'),
-            den_ngay=data.get('den_ngay'),
-            ly_do=data.get('ly_do'),
-            trang_thai=data.get('trang_thai')
+            id=id,
+            nhan_vien_id=data.get("nhan_vien_id"),
+            loai_nghi_phep_id=data.get("loai_nghi_phep_id"),
+            tu_ngay=data.get("tu_ngay"),
+            den_ngay=data.get("den_ngay"),
+            ly_do=data.get("ly_do"),
+            trang_thai=data.get("trang_thai", "Chờ duyệt"),
+            file=file,
+            ngay_du_kien_sinh=data.get("ngay_du_kien_sinh"),
+            so_con=data.get("so_con"),
+            phuong_phap_sinh=data.get("phuong_phap_sinh"),
+            file_status=file_status,
         )
-        return jsonify(updated_nghi_phep.to_dict()), 200
+        
+
+        return jsonify({"message": "Cập nhật thành công", "data": updated_nghi_phep.to_dict()}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({"error": str(e)}), 400
 
 
 def approve_nghi_phep(id):

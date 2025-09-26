@@ -3,6 +3,7 @@ from app.routes import register_routes  # bạn cần có 1 file routes/__init__
 from flask import send_file, abort
 import os
 from flask_cors import CORS
+from config import UPLOAD_FOLDER
 
 app = create_app()
 register_routes(app)  # đăng ký blueprint
@@ -33,6 +34,12 @@ def get_checkin_image(filename):
         return send_file(image_path, mimetype=mime_type)
     else:
         abort(404)
+
+@app.route('/api/can_cu_phap_ly_thai_san/<filename>')
+def get_can_cu_phap_ly_thai_san(filename):
+    image_path = os.path.join(UPLOAD_FOLDER, filename)
+    return send_file(image_path)
+    
 
 @app.errorhandler(404)
 def page_not_found(e):

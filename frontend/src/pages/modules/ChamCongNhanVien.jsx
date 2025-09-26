@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Button, Modal, OverlayTrigger, Tooltip, Form, Spinner, Row, Col  } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-
+import Loading from '../../../src/components/Loading';
+const API_BASE = "http://127.0.0.1:5000";
 const ChamCongNhanVien = () => {
   const { id } = useParams(); // lấy id nhân viên từ URL
 
@@ -25,7 +26,7 @@ const ChamCongNhanVien = () => {
   }, [id, thang, nam]);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/get-nhan-vien-by-id/${id}`)
+    fetch(`${API_BASE}/api/get-nhan-vien-by-id/${id}`)
       .then((res) => res.json())
       .then((data) => setNhanVien(data));
   }, [id]);
@@ -34,7 +35,7 @@ const ChamCongNhanVien = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:5000/api/chamcong_1nhanvien_theothang/${id}?thang=${thang}&nam=${nam}`
+        `${API_BASE}/api/chamcong_1nhanvien_theothang/${id}?thang=${thang}&nam=${nam}`
       );
       const data = await response.json();
       setChamCong(data);
@@ -52,7 +53,7 @@ const ChamCongNhanVien = () => {
      
     try {
        const laygiayphep = await axios.get(
-        `http://localhost:5000/api/get_giay_phep_quen_chamcong/${cc}`
+        `${API_BASE}/api/get_giay_phep_quen_chamcong/${cc}`
       );
       setFormData(laygiayphep.data); // set dữ liệu lấy về vào form
     } catch (error) {
@@ -71,7 +72,7 @@ const ChamCongNhanVien = () => {
       setLoading(true);
 
       const res = await fetch(
-        `http://localhost:5000/api/tinh-so-cong/${id}?thang=${thang}&nam=${nam}`
+        `${API_BASE}/api/tinh-so-cong/${id}?thang=${thang}&nam=${nam}`
       );
       const data = await res.json();
       // alert(data.message || "✅ Đã tính số công thành công!");
@@ -81,7 +82,7 @@ const ChamCongNhanVien = () => {
 
       // Sau khi tính số công, fetch lại dữ liệu chấm công
       const chamCongRes = await fetch(
-        `http://localhost:5000/api/chamcong_1nhanvien_theothang/${id}?thang=${thang}&nam=${nam}`
+        `${API_BASE}/api/chamcong_1nhanvien_theothang/${id}?thang=${thang}&nam=${nam}`
       );
       const chamCongData = await chamCongRes.json();
       setChamCong(chamCongData);
@@ -98,7 +99,7 @@ const ChamCongNhanVien = () => {
     setLoading(true);
     try {
        const response = await axios.put(
-        `http://127.0.0.1:5000/api/tinhsocong_theogiayphep`, formData
+        `${API_BASE}/api/tinhsocong_theogiayphep`, formData
       );
        if (response.status === 200) {
         setModalMessage("✅ Cập nhật giấy phép và số công thành công!");
@@ -116,17 +117,19 @@ const ChamCongNhanVien = () => {
   };
 
   if (!nhanVien) return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" variant="primary" role="status" />
-        <span className="ms-2">⏳ Đang tải thông tin nhân viên...</span>
-      </div>
+      <Loading />
+      // <div className="d-flex justify-content-center align-items-center vh-100">
+      //   <Spinner animation="border" variant="primary" role="status" />
+      //   <span className="ms-2">⏳ Đang tải thông tin nhân viên...</span>
+      // </div>
     );
 
   if (loading) return (
-       <div className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" variant="primary" role="status" />
-        <span className="ms-2">⏳ Đang tải dữ liệu...</span>
-      </div>
+      <Loading /> 
+      //  <div className="d-flex justify-content-center align-items-center vh-100">
+      //   <Spinner animation="border" variant="primary" role="status" />
+      //   <span className="ms-2">⏳ Đang tải dữ liệu...</span>
+      // </div>
     ); 
 
   return (
@@ -213,7 +216,7 @@ const ChamCongNhanVien = () => {
                           <td>{cc.thoi_gian_ra || "-"}</td>
                           <td>
                             <img
-                              src={`http://127.0.0.1:5000/api/checkin_images/${cc.hinh_anh_vao}`}
+                              src={`${API_BASE}/api/checkin_images/${cc.hinh_anh_vao}`}
                               alt="Ảnh vào"
                               width="50"
                               height="50"
@@ -225,7 +228,7 @@ const ChamCongNhanVien = () => {
                           </td>
                           <td>
                             <img
-                              src={`http://127.0.0.1:5000/api/checkin_images/${cc.hinh_anh_ra}`}
+                              src={`${API_BASE}/api/checkin_images/${cc.hinh_anh_ra}`}
                               alt="Ảnh vào"
                               width="50"
                               height="50"

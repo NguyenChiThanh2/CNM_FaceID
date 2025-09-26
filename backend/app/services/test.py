@@ -63,34 +63,65 @@
 # print(tinh_ngay_cong(7, 2025))  
 
 
-from datetime import datetime, time
+# from datetime import datetime, time
 
-def tinh_tre_som(thoigianvao: datetime, thoigianra: datetime):
-    # Mốc giờ chuẩn
-    gio_vao_chuan = time(8, 0)   # 08:01
-    gio_ra_chuan = time(17, 0)   # 17:00
+# def tinh_tre_som(thoigianvao: datetime, thoigianra: datetime):
+#     # Mốc giờ chuẩn
+#     gio_vao_chuan = time(8, 0)   # 08:01
+#     gio_ra_chuan = time(17, 0)   # 17:00
 
-    # ---- TÍNH ĐI TRỄ ----
-    tre_phut = 0
-    if thoigianvao.time() > gio_vao_chuan:
-        diff = datetime.combine(thoigianvao.date(), thoigianvao.time()) - \
-               datetime.combine(thoigianvao.date(), gio_vao_chuan)
-        tre_phut = int(diff.total_seconds() // 60)
+#     # ---- TÍNH ĐI TRỄ ----
+#     tre_phut = 0
+#     if thoigianvao.time() > gio_vao_chuan:
+#         diff = datetime.combine(thoigianvao.date(), thoigianvao.time()) - \
+#                datetime.combine(thoigianvao.date(), gio_vao_chuan)
+#         tre_phut = int(diff.total_seconds() // 60)
 
-    # ---- TÍNH VỀ SỚM ----
-    som_phut = 0
-    if thoigianra.time() < gio_ra_chuan:
-        diff = datetime.combine(thoigianra.date(), gio_ra_chuan) - \
-               datetime.combine(thoigianra.date(), thoigianra.time())
-        som_phut = int(diff.total_seconds() // 60)
+#     # ---- TÍNH VỀ SỚM ----
+#     som_phut = 0
+#     if thoigianra.time() < gio_ra_chuan:
+#         diff = datetime.combine(thoigianra.date(), gio_ra_chuan) - \
+#                datetime.combine(thoigianra.date(), thoigianra.time())
+#         som_phut = int(diff.total_seconds() // 60)
 
-    return tre_phut, som_phut
+#     return tre_phut, som_phut
 
 
-# ==========================
-# Ví dụ sử dụng:
-vao = datetime.strptime("2025-08-23 07:10:00", "%Y-%m-%d %H:%M:%S")
-ra = datetime.strptime("2025-08-23 16:45:00", "%Y-%m-%d %H:%M:%S")
+# # ==========================
+# # Ví dụ sử dụng:
+# vao = datetime.strptime("2025-08-23 07:10:00", "%Y-%m-%d %H:%M:%S")
+# ra = datetime.strptime("2025-08-23 16:45:00", "%Y-%m-%d %H:%M:%S")
 
-tre, som = tinh_tre_som(vao, ra)
-print(f"Đi trễ: {tre} phút, Về sớm: {som} phút")
+# tre, som = tinh_tre_som(vao, ra)
+# print(f"Đi trễ: {tre} phút, Về sớm: {som} phút")
+from datetime import datetime, date, timedelta
+import calendar
+import random
+
+thang = 3
+nam = 2025
+nhan_vien_id = 1
+
+ngay_dau_thang = date(nam, thang, 1)
+so_ngay_trong_thang = calendar.monthrange(nam, thang)[1]
+
+values = []
+for i in range(so_ngay_trong_thang):
+    ngay = ngay_dau_thang + timedelta(days=i)
+    if ngay.weekday() < 5:  # chỉ lấy thứ 2 - thứ 6
+        gio_vao_gio = 7 if random.random() < 0.5 else 8
+        gio_vao_phut = random.randint(30, 59) if gio_vao_gio == 7 else random.randint(0, 5)
+        thoi_gian_vao = datetime(nam, thang, ngay.day, gio_vao_gio, gio_vao_phut)
+
+        gio_ra = 17  # chỉ trong giờ 17h
+        phut_ra = random.randint(0, 59)
+        thoi_gian_ra = datetime(nam, thang, ngay.day, gio_ra, phut_ra)
+
+        values.append(
+            f"({nhan_vien_id}, '{thoi_gian_vao}', '{thoi_gian_ra}', '{ngay}', NULL, NULL)"
+        )
+
+sql = "INSERT INTO cham_cong (nhan_vien_id, thoi_gian_vao, thoi_gian_ra, ngay, hinh_anh_vao, hinh_anh_ra) VALUES\n"
+sql += ",\n".join(values) + ";"
+
+print(sql)
