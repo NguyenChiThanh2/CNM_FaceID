@@ -44,6 +44,7 @@ FACE_AREA_MAX          = float(os.getenv("LIVENESS_FACE_AREA_MAX", "0.70"))
 DEBUG_LIVENESS         = os.getenv("DEBUG_LIVENESS", "0") == "1"
 
 
+
 # ====== CRUD cơ bản ======
 def get_all_cham_cong_service():
     return ChamCong.query.order_by(ChamCong.ngay.desc()).all()
@@ -56,29 +57,85 @@ def get_cham_cong_by_id_service(id):
 def get_cham_cong_by_nhan_vien_id_service(nhan_vien_id):
     return ChamCong.query.filter_by(nhan_vien_id=nhan_vien_id).all()
 
-def update_cham_cong_service(id, thoi_gian_vao=None, thoi_gian_ra=None, ngay=None, hinh_anh=None):
-    cham_cong = ChamCong.query.get(id)
-    if not cham_cong:
+def update_cham_cong_service(id, thoi_gian_vao=None, thoi_gian_ra=None, ngay=None,
+                             hinh_anh_vao=None, hinh_anh_ra=None, hinh_anh=None):
+    cc = ChamCong.query.get(id)
+    if not cc:
         return None
-    if thoi_gian_vao is not None:
-        cham_cong.thoi_gian_vao = thoi_gian_vao
-    if thoi_gian_ra is not None:
-        cham_cong.thoi_gian_ra = thoi_gian_ra
-    if ngay is not None:
-        cham_cong.ngay = ngay
-    if hinh_anh is not None:
-        cham_cong.hinh_anh = hinh_anh
+
+    old_files = []
+    if hinh_anh_vao is not None and cc.hinh_anh_vao and cc.hinh_anh_vao != hinh_anh_vao:
+        old_files.append(cc.hinh_anh_vao)
+        cc.hinh_anh_vao = hinh_anh_vao
+
+    if hinh_anh_ra is not None and cc.hinh_anh_ra and cc.hinh_anh_ra != hinh_anh_ra:
+        old_files.append(cc.hinh_anh_ra)
+        cc.hinh_anh_ra = hinh_anh_ra
+
+    if hinh_anh is not None and getattr(cc, "hinh_anh", None) and cc.hinh_anh != hinh_anh:
+        old_files.append(cc.hinh_anh)
+        cc.hinh_anh = hinh_anh
+
+    if thoi_gian_vao is not None: cc.thoi_gian_vao = thoi_gian_vao
+    if thoi_gian_ra is not None:  cc.thoi_gian_ra  = thoi_gian_ra
+    if ngay is not None:          cc.ngay          = ngay
+
     db.session.commit()
-    return cham_cong
+
+    for f in old_files:
+        _unlink_quiet(_safe_checkin_path(f))
+
+    return cc
+
+# ---- helpers: chọn đường dẫn an toàn & xoá im lặng
+def _safe_checkin_path(filename: str):
+    if not filename:
+        return None
+    # tránh path traversal
+    return os.path.join(CHECKIN_DIR, os.path.basename(filename))
+
+def _unlink_quiet(path: str):
+    try:
+        if path and os.path.exists(path):
+            os.remove(path)
+            return True
+    except Exception:
+        pass
+    return False
 
 def delete_cham_cong_service(id):
     cham_cong = ChamCong.query.get(id)
     if not cham_cong:
         return False
+
+    # gom các tên file có thể có (tuỳ model của bạn)
+    files = []
+    if getattr(cham_cong, "hinh_anh_vao", None):
+        files.append(cham_cong.hinh_anh_vao)
+    if getattr(cham_cong, "hinh_anh_ra", None):
+        files.append(cham_cong.hinh_anh_ra)
+    if getattr(cham_cong, "hinh_anh", None):   # nếu còn field cũ
+        files.append(cham_cong.hinh_anh)
+
+    # chuẩn bị path trước khi xoá DB
+    paths = [_safe_checkin_path(f) for f in files]
+
     db.session.delete(cham_cong)
     db.session.commit()
+
+    # xoá file sau khi commit để tránh “mất file mà DB vẫn còn”
+    for p in paths:
+        _unlink_quiet(p)
+
     return True
 
+
+def _bbox_area(loc):  # (top, right, bottom, left)
+    t, r, b, l = loc
+    return (b - t) * (r - l)
+
+def _pick_biggest(locs):
+    return max(locs, key=_bbox_area)
 # ====== Tiện ích nhận dạng ======
 def _best_match(input_encoding):
     matched_nv, min_d = None, float("inf")
@@ -94,10 +151,11 @@ def _encode_one_face(img):
     locs = face_recognition.face_locations(img)
     if not locs:
         return None, None
-    encs = face_recognition.face_encodings(img, known_face_locations=locs)
+    best = _pick_biggest(locs)  # <- chọn mặt lớn nhất
+    encs = face_recognition.face_encodings(img, known_face_locations=[best])
     if not encs:
         return None, None
-    return encs[0], locs[0]
+    return encs[0], best
 
 # ====== Passive liveness (không thử thách) ======
 def _lap_var(img_bgr):
@@ -254,10 +312,12 @@ def passive_liveness_score(frames_bgr):
     locs0 = face_recognition.face_locations(frames_bgr[0])
     if not locs0:
         return False, 0.1, "Không phát hiện khuôn mặt ổn định"
-    top, right, bottom, left = loc0 = locs0[0]
+    loc0 = _pick_biggest(locs0)
+
+    loc0 = _pick_biggest(locs0)  # dùng mặt lớn nhất
+    top, right, bottom, left = loc0
     H, W = frames_bgr[0].shape[:2]
     face_area_ratio = ((bottom-top) * (right-left)) / float(H*W + 1e-6)
-
 
     # 1) nét
     sharp_vals = [float(cv2.Laplacian(f, cv2.CV_64F).var()) for f in frames_bgr]

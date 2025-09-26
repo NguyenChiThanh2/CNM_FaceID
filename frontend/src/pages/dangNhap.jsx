@@ -1,15 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { FaUser, FaLock } from "react-icons/fa";
+import { loginApi } from "../services/authService";
 
 const DangNhap = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false); // ✅ chống double submit
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const saved = localStorage.getItem("user");
+    if (saved) {
+      navigate("/", { replace: true });
+    }
+  }, [navigate]);
+
   const handleLogin = async () => {
+    if (loading) return; // chống double click
     if (!username.trim() || !password.trim()) {
       toast.error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu");
       return;
@@ -20,51 +29,34 @@ const DangNhap = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/api/login", {
-        username,
-        password,
-      });
-
+      setLoading(true);
+      const response = await loginApi(username, password);
       const { access_token, role } = response.data;
 
       localStorage.setItem("user", JSON.stringify({
         username,
         role,
-        token: access_token
+        token: access_token,
       }));
-      toast.success(`Đăng nhập thành công với vai trò: ${role.ma_vai_tro}`);
-      navigate("/");
-      // const { access_token, role } = response.data;
 
-      // // Không lưu vào localStorage
-      // document.cookie = `access_token=${access_token}; Secure; SameSite=Strict; path=/`;
-      // localStorage.setItem("role", JSON.stringify(role)); // có thể lưu vai trò, không nhạy cảm
-
-      // toast.success(`Đăng nhập thành công với vai trò: ${role.ma_vai_tro}`);
-      // navigate("/");
+      toast.success(`Đăng nhập thành công với vai trò: ${role?.ma_vai_tro || "N/A"}`);
+      navigate("/", { replace: true }); // ✅ dùng replace
     } catch (error) {
-      toast.error("Tên đăng nhập hoặc mật khẩu không đúng!");
+      const msg = error?.response?.data?.message || "Tên đăng nhập hoặc mật khẩu không đúng!";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div
       className="d-flex align-items-center justify-content-center vh-100"
-      style={{
-        background: "linear-gradient(135deg, #1c1f24 0%,rgb(54, 57, 61) 100%)"
-      }}
+      style={{ background: "linear-gradient(135deg, #1c1f24 0%,rgb(54, 57, 61) 100%)" }}
+      onKeyDown={(e) => e.key === "Enter" && handleLogin()} // ✅ Enter để submit
     >
-      <div
-        className="shadow p-5 rounded-4"
-        style={{
-          width: "100%",
-          maxWidth: "400px",
-          backgroundColor: "#f8f9fa",
-        }}
-      >
-        <h3 className="text-center mb-4 fw-bold text-dark">
-          Đăng nhập hệ thống
-        </h3>
+      <div className="shadow p-5 rounded-4" style={{ width: "100%", maxWidth: "400px", backgroundColor: "#f8f9fa" }}>
+        <h3 className="text-center mb-4 fw-bold text-dark">Đăng nhập hệ thống</h3>
 
         <div className="mb-3 input-group">
           <span className="input-group-text bg-white"><FaUser /></span>
@@ -90,21 +82,22 @@ const DangNhap = () => {
 
         <button
           className="btn w-100 fw-semibold py-2"
+          disabled={loading} // ✅
           style={{
             background: "linear-gradient(90deg, #343a40 0%, #212529 100%)",
             color: "#fff",
-            transition: "background 0.3s ease"
+            transition: "background 0.3s ease",
+            opacity: loading ? 0.8 : 1,
+            cursor: loading ? "not-allowed" : "pointer",
           }}
           onMouseEnter={e => e.currentTarget.style.background = "linear-gradient(90deg, #495057 0%, #343a40 100%)"}
           onMouseLeave={e => e.currentTarget.style.background = "linear-gradient(90deg, #343a40 0%, #212529 100%)"}
           onClick={handleLogin}
         >
-          Đăng nhập
+          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
         </button>
 
-        <p className="text-center text-muted mt-3" style={{ fontSize: "0.9rem" }}>
-          © 2025 Công ty TNHH TK
-        </p>
+        <p className="text-center text-muted mt-3" style={{ fontSize: "0.9rem" }}>© 2025 Công ty TNHH TK</p>
       </div>
     </div>
   );

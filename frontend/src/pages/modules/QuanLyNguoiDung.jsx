@@ -1,26 +1,17 @@
+// src/pages/modules/QuanLyNguoiDung.jsx
 import React, { useState, useEffect } from "react";
-import {
-  Button,
-  Table,
-  Modal,
-  Breadcrumb,
-  Toast,
-  ToastContainer,
-  Row,
-  Col,
-} from "react-bootstrap";
+import { Button, Table, Modal, Breadcrumb, Row, Col } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import UserForm from "../../components/user/userForm";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { ToastContainer, toast } from "react-toastify";
 
 const QuanLyNguoiDung = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [showToast, setShowToast] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -29,10 +20,12 @@ const QuanLyNguoiDung = () => {
   const fetchUsers = async () => {
     try {
       const res = await fetch("http://localhost:5000/api/get-all-users");
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setUsers(data);
     } catch (err) {
       console.error("Lỗi khi tải người dùng:", err);
+      toast.error("Không thể tải danh sách người dùng!");
     }
   };
 
@@ -66,17 +59,14 @@ const QuanLyNguoiDung = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa không?")) {
       try {
-        await fetch(`http://localhost:5000/api/delete-user/${id}`, {
-          method: "DELETE",
-        });
-        fetchUsers();
-        setToastMessage("✅ Xóa người dùng thành công!");
-        setShowToast(true);
+        const res = await fetch(`http://localhost:5000/api/delete-user/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error();
+        await fetchUsers();
+        toast.success("Xóa người dùng thành công!");
         setCurrentPage(1);
       } catch (err) {
         console.error("Lỗi xóa:", err);
-        setToastMessage("❌ Lỗi khi xóa người dùng!");
-        setShowToast(true);
+        toast.error("Lỗi khi xóa người dùng!");
       }
     }
   };
@@ -84,26 +74,30 @@ const QuanLyNguoiDung = () => {
   const handleFormSubmit = (message) => {
     fetchUsers();
     setShowModal(false);
-    setToastMessage(message || "✅ Cập nhật thành công!");
-    setShowToast(true);
+    toast.success(message || "Cập nhật người dùng thành công!");
     setCurrentPage(1);
   };
 
   const exportToExcel = () => {
-    const exportData = users.map((u) => ({
-      ID: u.id,
-      Tên_đăng_nhập: u.username,
-      Email: u.email,
-      Vai_trò: u.role?.ma_vai_tro || "",
-    }));
+    try {
+      const exportData = users.map((u) => ({
+        ID: u.id,
+        Tên_đăng_nhập: u.username,
+        Email: u.email,
+        Vai_trò: u.role?.ma_vai_tro || "",
+      }));
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
 
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const file = new Blob([excelBuffer], { type: "application/octet-stream" });
-    saveAs(file, "DanhSachNguoiDung.xlsx");
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const file = new Blob([excelBuffer], { type: "application/octet-stream" });
+      saveAs(file, "DanhSachNguoiDung.xlsx");
+      toast.success("📤 Đã xuất Excel!");
+    } catch (e) {
+      toast.error("❌ Xuất Excel thất bại!");
+    }
   };
 
   const handlePageChange = (page) => {
@@ -114,18 +108,6 @@ const QuanLyNguoiDung = () => {
     <div className="container min-vh-100">
       <div className="row">
         <div className="col-12 mt-5">
-          <ToastContainer position="top-end" className="p-3">
-            <Toast
-              onClose={() => setShowToast(false)}
-              show={showToast}
-              bg="success"
-              delay={3000}
-              autohide
-            >
-              <Toast.Body className="text-white">{toastMessage}</Toast.Body>
-            </Toast>
-          </ToastContainer>
-
           <Breadcrumb className="mt-3">
             <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
             <Breadcrumb.Item active>Quản lý người dùng</Breadcrumb.Item>
@@ -245,6 +227,7 @@ const QuanLyNguoiDung = () => {
           </Modal>
         </div>
       </div>
+      <ToastContainer position="top-right" autoClose={2000} />
     </div>
   );
 };
