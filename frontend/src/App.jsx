@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import TrangChu from "./pages/TrangChu";
 import QuanLyNhanSu from "./pages/modules/QuanLyNhanSu";
 import QuanlyNghiPhep from "./pages/modules/QuanLyNghiPhep";
@@ -21,8 +21,7 @@ import { ToastContainer } from "react-toastify";
 import './App.css';
 import Sidebar from "./components/sidebar/sidebar";
 import NotFound from "./pages/NotFound";
-import { Navigate } from "react-router-dom";
-import PublicIPGuard from "./pages/PublicIPGuard";
+import GeoLocationGuard from "./pages/GeoLocationGuard";
 const AppLayout = () => {
   const location = useLocation();
   const hideNavbarPaths = ["/dang-nhap", "/404", "/cham-cong-face"];
@@ -39,9 +38,9 @@ const AppLayout = () => {
           <Route
             path="/cham-cong-face"
             element={
-              <PublicIPGuard>
+              <GeoLocationGuard>
                 <FaceCheckIn />
-              </PublicIPGuard>
+              </GeoLocationGuard>
             }
           />
 

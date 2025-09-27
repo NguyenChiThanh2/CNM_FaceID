@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
-  Modal, Button, Table, Container,
-  Row, Col, Breadcrumb
+  Modal, Button, Table, Row, Col, Breadcrumb
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import NhanSuAddForm from "../../components/nhansu/NhanSuAddForm";
 import { getAllChucVu } from "../../services/api/chuc-vu-api";
 import { getAllPhongBan } from "../../services/api/phong-ban-api";
-
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
-import Tooltip from 'react-bootstrap/Tooltip';
-
-import 'react-toastify/dist/ReactToastify.css';
-import { toast, ToastContainer } from "react-toastify";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
+import { ToastContainer, toast } from "react-toastify";
 
 const QuanLyNhanSu = () => {
   const [nhanSuList, setNhanSuList] = useState([]);
@@ -37,28 +33,31 @@ const QuanLyNhanSu = () => {
 
   const fetchNhanSu = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:5000/api/get-all-nhan-vien");
-      setNhanSuList(response.data);
+      const res = await axios.get("http://127.0.0.1:5000/api/get-all-nhan-vien");
+      setNhanSuList(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("Lỗi khi gọi API:", error);
+      toast.error("Không thể tải danh sách nhân sự!");
     }
   };
 
   const fetchChucVu = async () => {
     try {
       const data = await getAllChucVu();
-      setDsChucVu(data);
+      setDsChucVu(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Lỗi khi load chức vụ:", err);
+      toast.error("Không thể tải danh sách chức vụ!");
     }
   };
 
   const fetchPhongBan = async () => {
     try {
       const data = await getAllPhongBan();
-      setDsPhongBan(data);
+      setDsPhongBan(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Lỗi khi load phòng ban:", err);
+      toast.error("Không thể tải danh sách phòng ban!");
     }
   };
 
@@ -73,15 +72,21 @@ const QuanLyNhanSu = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Bạn có chắc muốn xóa nhân sự này không?")) {
-      try {
-        await axios.delete(`http://127.0.0.1:5000/api/delete-nhan-vien/${id}`);
-        fetchNhanSu();
-        toast.success("Cập nhật thành công!");
-      } catch (error) {
-        console.error("Lỗi khi xóa nhân sự:", error.response || error.message);
-        toast.error("❌ Có lỗi xảy ra!");
-      }
+    if (!window.confirm("Bạn có chắc muốn xóa nhân sự này không?")) return;
+    try {
+      await toast.promise(
+        axios.delete(`http://127.0.0.1:5000/api/delete-nhan-vien/${id}`),
+        {
+          pending: "Đang xóa nhân sự...",
+          success: "Đã xóa nhân sự!",
+          error: "Xóa nhân sự thất bại!",
+        }
+      );
+      await fetchNhanSu();
+      setCurrentPage(1);
+    } catch (error) {
+      // lỗi đã được toast.promise hiển thị
+      console.error(error);
     }
   };
 
@@ -92,11 +97,12 @@ const QuanLyNhanSu = () => {
     }
   };
 
-  const handleFormSubmit = () => {
-    fetchNhanSu();
+  const handleFormSubmit = async () => {
+    await fetchNhanSu();
     setShowModal(false);
     setEditingNhanSu(null);
-    toast.success("Cập nhật hoặc thêm mới nhân sự thành công!");
+    toast.success("Cập nhật / thêm mới nhân sự thành công!");
+    setCurrentPage(1);
   };
 
   const handleRowClick = (nv) => {
@@ -106,25 +112,24 @@ const QuanLyNhanSu = () => {
   const getTenChucVu = (id) => dsChucVu.find((c) => c.id === id)?.ten_chuc_vu || "Không rõ";
   const getTenPhongBan = (id) => dsPhongBan.find((p) => p.id === id)?.ten_phong_ban || "Không rõ";
 
-  const filteredList = nhanSuList.filter((nv) =>
-    nv.ho_ten.toLowerCase().includes(searchKeyword.toLowerCase()) &&
-    (selectedTrangThai ? nv.trang_thai === selectedTrangThai : true)
-  );
+  const filteredList = nhanSuList.filter((nv) => {
+    const matchName = (nv.ho_ten || "").toLowerCase().includes((searchKeyword || "").toLowerCase());
+    const matchStatus = selectedTrangThai ? nv.trang_thai === selectedTrangThai : true;
+    return matchName && matchStatus;
+  });
 
-  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
   const currentItems = filteredList.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
   const handlePageChange = (pageNumber) => {
-    if (pageNumber >= 1 && pageNumber <= totalPages) {
-      setCurrentPage(pageNumber);
-    }
+    if (pageNumber >= 1 && pageNumber <= totalPages) setCurrentPage(pageNumber);
   };
 
   const handleExportExcel = () => {
-    const exportData = filteredList.map(nv => ({
+    const exportData = filteredList.map((nv) => ({
       ID: nv.id,
       "Họ tên": nv.ho_ten,
       "Giới tính": nv.gioi_tinh,
@@ -181,10 +186,10 @@ const QuanLyNhanSu = () => {
                   setCurrentPage(1);
                 }}
               >
-                <option key="all" value="">Tất cả trạng thái</option>
-                <option key="working" value="Đang làm việc">Đang làm việc</option>
-                <option key="quit" value="Đã nghỉ việc">Đã nghỉ việc</option>
-                <option key="trial" value="Đang thử việc">Đang thử việc</option>
+                <option value="">Tất cả trạng thái</option>
+                <option value="Đang làm việc">Đang làm việc</option>
+                <option value="Đã nghỉ việc">Đã nghỉ việc</option>
+                <option value="Đang thử việc">Đang thử việc</option>
               </select>
             </Col>
             <Col md={4} className="text-end">
@@ -232,17 +237,26 @@ const QuanLyNhanSu = () => {
                           style={{ objectFit: "cover", borderRadius: "50%" }}
                         />
                       ) : (
-                        <div style={{
-                          width: "40px", height: "40px", borderRadius: "50%",
-                          backgroundColor: "#ccc", display: "flex",
-                          justifyContent: "center", alignItems: "center", fontSize: "12px"
-                        }}>No Image</div>
+                        <div
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            backgroundColor: "#ccc",
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            fontSize: "12px",
+                          }}
+                        >
+                          No Image
+                        </div>
                       )}
                     </td>
                     <td>{nv.id}</td>
                     <td>{nv.ho_ten}</td>
                     <td>{nv.gioi_tinh}</td>
-                    <td>{nv.ngay_sinh ? new Date(nv.ngay_sinh).toLocaleDateString() : ""}</td>
+                    <td>{nv.ngay_sinh ? new Date(nv.ngay_sinh).toLocaleDateString("vi-VN") : ""}</td>
                     <td>{nv.email}</td>
                     <td>{nv.so_dien_thoai}</td>
                     <td>{getTenChucVu(nv.chuc_vu_id)}</td>
@@ -250,15 +264,22 @@ const QuanLyNhanSu = () => {
                     <td>{nv.dia_chi}</td>
                     <td>{nv.luong_co_ban}</td>
                     <td>{nv.trang_thai}</td>
-                    <td className="text-nowrap">
-                      <Button variant="outline-warning" size="sm" className="me-2"
-                        onClick={(e) => { e.stopPropagation(); handleEdit(nv); }}>
+                    <td className="text-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="outline-warning"
+                        size="sm"
+                        className="me-2"
+                        onClick={() => handleEdit(nv)}
+                      >
                         ✏️ Sửa
                       </Button>
-                      {/* <Button variant="outline-danger" size="sm"
-                        onClick={(e) => { e.stopPropagation(); handleDelete(nv.id); }}>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => handleDelete(nv.id)}
+                      >
                         🗑️ Xóa
-                      </Button> */}
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -268,18 +289,23 @@ const QuanLyNhanSu = () => {
 
           {totalPages > 1 && (
             <div className="d-flex justify-content-center align-items-center mt-4 gap-3">
-              <Button variant="outline-secondary" disabled={currentPage === 1}
-                onClick={() => handlePageChange(currentPage - 1)}>
+              <Button
+                variant="outline-secondary"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
                 ← Trang trước
               </Button>
               <span>Trang {currentPage} / {totalPages}</span>
-              <Button variant="outline-secondary" disabled={currentPage === totalPages}
-                onClick={() => handlePageChange(currentPage + 1)}>
+              <Button
+                variant="outline-secondary"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
                 Trang sau →
               </Button>
             </div>
           )}
-
 
           <Modal show={showModal} onHide={handleModalClose} size="lg" centered>
             <Modal.Header closeButton>
@@ -298,12 +324,13 @@ const QuanLyNhanSu = () => {
               <Button variant="secondary" onClick={handleModalClose}>Đóng</Button>
             </Modal.Footer>
           </Modal>
-          <ToastContainer position="top-right" autoClose={3000} />
+
+
         </div>
       </div>
+      <ToastContainer position="top-right" autoClose={2000} />
     </div>
   );
-
 };
 
 export default QuanLyNhanSu;
