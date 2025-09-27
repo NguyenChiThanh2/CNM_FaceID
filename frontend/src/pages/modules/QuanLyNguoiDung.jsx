@@ -1,11 +1,14 @@
 // src/pages/modules/QuanLyNguoiDung.jsx
-import React, { useState, useEffect } from "react";
-import { Button, Table, Modal, Breadcrumb, Row, Col } from "react-bootstrap";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Button, Table, Modal, Breadcrumb, Row, Col, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import UserForm from "../../components/user/userForm";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { ToastContainer, toast } from "react-toastify";
+
+// ⬇️ dùng service
+import { getAllUsers, deleteUser as apiDeleteUser } from "../../services/nguoiDungApi";
 
 const QuanLyNguoiDung = () => {
   const [users, setUsers] = useState([]);
@@ -13,38 +16,43 @@ const QuanLyNguoiDung = () => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
   const itemsPerPage = 5;
 
   const navigate = useNavigate();
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/get-all-users");
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setUsers(data);
+      const data = await getAllUsers();
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Lỗi khi tải người dùng:", err);
-      toast.error("Không thể tải danh sách người dùng!");
+      toast.error(err?.message || "Không thể tải danh sách người dùng!");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.username.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      (u.role?.ma_vai_tro || "").toLowerCase().includes(searchKeyword.toLowerCase())
-  );
+  const normalized = (searchKeyword || "").toLowerCase();
 
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const currentItems = filteredUsers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) =>
+      (u.username || "").toLowerCase().includes(normalized) ||
+      (u.email || "").toLowerCase().includes(normalized) ||
+      ((u.role?.ma_vai_tro || "").toLowerCase().includes(normalized))
+    );
+  }, [users, normalized]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage));
+  const currentItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredUsers.slice(start, start + itemsPerPage);
+  }, [filteredUsers, currentPage]);
 
   const handleAdd = () => {
     setSelectedUser(null);
@@ -57,17 +65,18 @@ const QuanLyNguoiDung = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa không?")) {
-      try {
-        const res = await fetch(`http://localhost:5000/api/delete-user/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error();
-        await fetchUsers();
-        toast.success("Xóa người dùng thành công!");
-        setCurrentPage(1);
-      } catch (err) {
-        console.error("Lỗi xóa:", err);
-        toast.error("Lỗi khi xóa người dùng!");
-      }
+    if (!window.confirm("Bạn có chắc chắn muốn xóa không?")) return;
+    try {
+      await toast.promise(apiDeleteUser(id), {
+        pending: "Đang xóa người dùng...",
+        success: "Xóa người dùng thành công!",
+        error: "Lỗi khi xóa người dùng!",
+      });
+      // Optimistic update
+      setUsers((prev) => prev.filter((x) => x.id !== id));
+      setCurrentPage(1);
+    } catch (err) {
+      console.error("Lỗi xóa:", err);
     }
   };
 
@@ -76,6 +85,10 @@ const QuanLyNguoiDung = () => {
     setShowModal(false);
     toast.success(message || "Cập nhật người dùng thành công!");
     setCurrentPage(1);
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
   const exportToExcel = () => {
@@ -95,13 +108,9 @@ const QuanLyNguoiDung = () => {
       const file = new Blob([excelBuffer], { type: "application/octet-stream" });
       saveAs(file, "DanhSachNguoiDung.xlsx");
       toast.success("📤 Đã xuất Excel!");
-    } catch (e) {
+    } catch {
       toast.error("❌ Xuất Excel thất bại!");
     }
-  };
-
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
   return (
@@ -139,7 +148,12 @@ const QuanLyNguoiDung = () => {
             </Col>
           </Row>
 
-          {currentItems.length === 0 ? (
+          {loading ? (
+            <div className="text-center my-5">
+              <Spinner animation="border" />
+              <div className="mt-2">Đang tải dữ liệu...</div>
+            </div>
+          ) : currentItems.length === 0 ? (
             <div className="text-center py-3">Không có dữ liệu phù hợp</div>
           ) : (
             <Table striped bordered hover responsive className="align-middle">
@@ -182,7 +196,7 @@ const QuanLyNguoiDung = () => {
             </Table>
           )}
 
-          {totalPages > 1 && (
+          {totalPages > 1 && !loading && (
             <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap">
               <Button
                 variant="outline-secondary"
@@ -233,3 +247,4 @@ const QuanLyNguoiDung = () => {
 };
 
 export default QuanLyNguoiDung;
+

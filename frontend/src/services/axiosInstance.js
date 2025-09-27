@@ -1,4 +1,3 @@
-// src/services/axiosInstance.js
 import axios from "axios";
 
 const axiosInstance = axios.create({
@@ -9,4 +8,13 @@ const axiosInstance = axios.create({
   },
 });
 
-export default axiosInstance; 
+// (Tùy chọn) Thêm interceptor để log hoặc xử lý lỗi tập trung
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("Axios error:", error);
+    return Promise.reject(error);
+  }
+);
+
+export default axiosInstance;

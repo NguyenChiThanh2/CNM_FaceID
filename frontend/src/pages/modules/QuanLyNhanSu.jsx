@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Modal, Button, Table, Row, Col, Breadcrumb
+  Modal, Button, Table, Row, Col, Breadcrumb, Spinner
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import NhanSuAddForm from "../../components/nhansu/NhanSuAddForm";
 import { getAllChucVu } from "../../services/api/chuc-vu-api";
-import { getAllPhongBan } from "../../services/api/phong-ban-api";
+import { getAllPhongBan } from "../../services/phongBanApi";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { ToastContainer, toast } from "react-toastify";
+
+// ⬇️ dùng service mới
+import { getAllNhanVien, deleteNhanVien as apiDeleteNhanVien } from "../../services/nhanSuApi";
 
 const QuanLyNhanSu = () => {
   const [nhanSuList, setNhanSuList] = useState([]);
@@ -22,44 +24,39 @@ const QuanLyNhanSu = () => {
   const [dsPhongBan, setDsPhongBan] = useState([]);
   const [selectedTrangThai, setSelectedTrangThai] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+
   const itemsPerPage = 5;
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchNhanSu();
-    fetchChucVu();
-    fetchPhongBan();
-  }, []);
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api";
 
-  const fetchNhanSu = async () => {
+  const fetchNhanSu = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await axios.get("http://127.0.0.1:5000/api/get-all-nhan-vien");
-      setNhanSuList(Array.isArray(res.data) ? res.data : []);
+      const data = await getAllNhanVien();
+      setNhanSuList(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Lỗi khi gọi API:", error);
-      toast.error("Không thể tải danh sách nhân sự!");
+      toast.error(error?.message || "Không thể tải danh sách nhân sự!");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchChucVu = async () => {
-    try {
-      const data = await getAllChucVu();
-      setDsChucVu(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Lỗi khi load chức vụ:", err);
-      toast.error("Không thể tải danh sách chức vụ!");
-    }
-  };
-
-  const fetchPhongBan = async () => {
-    try {
-      const data = await getAllPhongBan();
-      setDsPhongBan(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Lỗi khi load phòng ban:", err);
-      toast.error("Không thể tải danh sách phòng ban!");
-    }
-  };
+  useEffect(() => {
+    fetchNhanSu();
+    (async () => {
+      try {
+        const [cv, pb] = await Promise.all([getAllChucVu(), getAllPhongBan()]);
+        setDsChucVu(Array.isArray(cv) ? cv : []);
+        setDsPhongBan(Array.isArray(pb) ? pb : []);
+      } catch (err) {
+        console.error("Lỗi tải danh mục:", err);
+        toast.error("Không thể tải danh sách chức vụ/phòng ban!");
+      }
+    })();
+  }, [fetchNhanSu]);
 
   const handleAdd = () => {
     setEditingNhanSu(null);
@@ -74,18 +71,15 @@ const QuanLyNhanSu = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa nhân sự này không?")) return;
     try {
-      await toast.promise(
-        axios.delete(`http://127.0.0.1:5000/api/delete-nhan-vien/${id}`),
-        {
-          pending: "Đang xóa nhân sự...",
-          success: "Đã xóa nhân sự!",
-          error: "Xóa nhân sự thất bại!",
-        }
-      );
-      await fetchNhanSu();
+      await toast.promise(apiDeleteNhanVien(id), {
+        pending: "Đang xóa nhân sự...",
+        success: "Đã xóa nhân sự!",
+        error: "Xóa nhân sự thất bại!",
+      });
+      // Optimistic update
+      setNhanSuList((prev) => prev.filter((x) => x.id !== id));
       setCurrentPage(1);
     } catch (error) {
-      // lỗi đã được toast.promise hiển thị
       console.error(error);
     }
   };
@@ -112,17 +106,23 @@ const QuanLyNhanSu = () => {
   const getTenChucVu = (id) => dsChucVu.find((c) => c.id === id)?.ten_chuc_vu || "Không rõ";
   const getTenPhongBan = (id) => dsPhongBan.find((p) => p.id === id)?.ten_phong_ban || "Không rõ";
 
-  const filteredList = nhanSuList.filter((nv) => {
-    const matchName = (nv.ho_ten || "").toLowerCase().includes((searchKeyword || "").toLowerCase());
-    const matchStatus = selectedTrangThai ? nv.trang_thai === selectedTrangThai : true;
-    return matchName && matchStatus;
-  });
+  const normalizedKeyword = (searchKeyword || "").toLowerCase();
+
+  // Tối ưu lọc & phân trang
+  const filteredList = useMemo(() => {
+    return nhanSuList.filter((nv) => {
+      const matchName = (nv.ho_ten || "").toLowerCase().includes(normalizedKeyword);
+      const matchStatus = selectedTrangThai ? nv.trang_thai === selectedTrangThai : true;
+      return matchName && matchStatus;
+    });
+  }, [nhanSuList, normalizedKeyword, selectedTrangThai]);
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
-  const currentItems = filteredList.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+
+  const currentItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredList.slice(start, start + itemsPerPage);
+  }, [filteredList, currentPage]);
 
   const handlePageChange = (pageNumber) => {
     if (pageNumber >= 1 && pageNumber <= totalPages) setCurrentPage(pageNumber);
@@ -205,89 +205,96 @@ const QuanLyNhanSu = () => {
             </Col>
           </Row>
 
-          <div className="table-responsive">
-            <Table bordered hover className="bg-white shadow-sm table-hover">
-              <thead className="table-dark text-center">
-                <tr>
-                  <th>Ảnh</th>
-                  <th>ID</th>
-                  <th>Họ tên</th>
-                  <th>Giới tính</th>
-                  <th>Ngày sinh</th>
-                  <th>Email</th>
-                  <th>SĐT</th>
-                  <th>Chức vụ</th>
-                  <th>Phòng ban</th>
-                  <th>Địa chỉ</th>
-                  <th>Lương</th>
-                  <th>Trạng thái</th>
-                  <th>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentItems.map((nv) => (
-                  <tr key={nv.id} onClick={() => handleRowClick(nv)} style={{ cursor: "pointer" }}>
-                    <td className="text-center">
-                      {nv.avatar ? (
-                        <img
-                          src={`http://127.0.0.1:5000/api/images/${nv.avatar}`}
-                          alt="avatar"
-                          width="40"
-                          height="40"
-                          style={{ objectFit: "cover", borderRadius: "50%" }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: "40px",
-                            height: "40px",
-                            borderRadius: "50%",
-                            backgroundColor: "#ccc",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            fontSize: "12px",
-                          }}
-                        >
-                          No Image
-                        </div>
-                      )}
-                    </td>
-                    <td>{nv.id}</td>
-                    <td>{nv.ho_ten}</td>
-                    <td>{nv.gioi_tinh}</td>
-                    <td>{nv.ngay_sinh ? new Date(nv.ngay_sinh).toLocaleDateString("vi-VN") : ""}</td>
-                    <td>{nv.email}</td>
-                    <td>{nv.so_dien_thoai}</td>
-                    <td>{getTenChucVu(nv.chuc_vu_id)}</td>
-                    <td>{getTenPhongBan(nv.phong_ban_id)}</td>
-                    <td>{nv.dia_chi}</td>
-                    <td>{nv.luong_co_ban}</td>
-                    <td>{nv.trang_thai}</td>
-                    <td className="text-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="outline-warning"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => handleEdit(nv)}
-                      >
-                        ✏️ Sửa
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        onClick={() => handleDelete(nv.id)}
-                      >
-                        🗑️ Xóa
-                      </Button>
-                    </td>
+          {loading ? (
+            <div className="text-center my-5">
+              <Spinner animation="border" />
+              <div className="mt-2">Đang tải dữ liệu...</div>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <Table bordered hover className="bg-white shadow-sm table-hover">
+                <thead className="table-dark text-center">
+                  <tr>
+                    <th>Ảnh</th>
+                    <th>ID</th>
+                    <th>Họ tên</th>
+                    <th>Giới tính</th>
+                    <th>Ngày sinh</th>
+                    <th>Email</th>
+                    <th>SĐT</th>
+                    <th>Chức vụ</th>
+                    <th>Phòng ban</th>
+                    <th>Địa chỉ</th>
+                    <th>Lương</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
+                </thead>
+                <tbody>
+                  {currentItems.map((nv) => (
+                    <tr key={nv.id} onClick={() => handleRowClick(nv)} style={{ cursor: "pointer" }}>
+                      <td className="text-center">
+                        {nv.avatar ? (
+                          <img
+                            src={`${API_BASE}/images/${nv.avatar}`}
+                            alt="avatar"
+                            width="40"
+                            height="40"
+                            style={{ objectFit: "cover", borderRadius: "50%" }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "40px",
+                              height: "40px",
+                              borderRadius: "50%",
+                              backgroundColor: "#ccc",
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              fontSize: "12px",
+                            }}
+                          >
+                            No Image
+                          </div>
+                        )}
+                      </td>
+                      <td>{nv.id}</td>
+                      <td>{nv.ho_ten}</td>
+                      <td>{nv.gioi_tinh}</td>
+                      <td>{nv.ngay_sinh ? new Date(nv.ngay_sinh).toLocaleDateString("vi-VN") : ""}</td>
+                      <td>{nv.email}</td>
+                      <td>{nv.so_dien_thoai}</td>
+                      <td>{getTenChucVu(nv.chuc_vu_id)}</td>
+                      <td>{getTenPhongBan(nv.phong_ban_id)}</td>
+                      <td>{nv.dia_chi}</td>
+                      <td>{nv.luong_co_ban}</td>
+                      <td>{nv.trang_thai}</td>
+                      <td className="text-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="outline-warning"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => handleEdit(nv)}
+                        >
+                          ✏️ Sửa
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => handleDelete(nv.id)}
+                        >
+                          🗑️ Xóa
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          )}
 
-          {totalPages > 1 && (
+          {totalPages > 1 && !loading && (
             <div className="d-flex justify-content-center align-items-center mt-4 gap-3">
               <Button
                 variant="outline-secondary"
@@ -324,8 +331,6 @@ const QuanLyNhanSu = () => {
               <Button variant="secondary" onClick={handleModalClose}>Đóng</Button>
             </Modal.Footer>
           </Modal>
-
-
         </div>
       </div>
       <ToastContainer position="top-right" autoClose={2000} />
