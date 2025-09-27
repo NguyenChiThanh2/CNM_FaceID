@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 
 const API_URL = "http://127.0.0.1:5000/api";
+const API_URL_FILE = "http://127.0.0.1:5000/uploads/nghi_phep/thaisan/";
 
 const QuanLyNghiPhep = () => {
   const [nghiPhepList, setNghiPhepList] = useState([]);
@@ -194,7 +195,8 @@ const QuanLyNghiPhep = () => {
                 <tr>
                   <th>Nhân viên</th>
                   <th>Từ ngày</th>
-                  <th>Đến ngày</th>
+                  <th>Đến hết ngày</th>
+                  <th>Loại nghỉ phép</th>
                   <th>Tổng ngày nghỉ</th>
                   <th>Lý do</th>
                   <th>Trạng thái</th>
@@ -204,14 +206,16 @@ const QuanLyNghiPhep = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="7" className="text-center">Đang tải dữ liệu...</td>
+                    <td colSpan="8" className="text-center">Đang tải dữ liệu...</td>
                   </tr>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((nghiPhep) => (
+                    (nghiPhep.loai_nghi_phep_id != 3) ?(
                     <tr key={nghiPhep.id}>
                       <td>{nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
                       <td>{formatDate(nghiPhep.tu_ngay)}</td>
                       <td>{formatDate(nghiPhep.den_ngay)}</td>
+                      <td>{nghiPhep.loai_nghi_phep}</td>
                       <td>{nghiPhep.so_ngay_nghi}</td>
                       <td>{nghiPhep.ly_do}</td>
                       <td className="text-center">
@@ -240,7 +244,96 @@ const QuanLyNghiPhep = () => {
                           <button className="btn btn-sm btn-outline-warning" onClick={() => handleEdit(nghiPhep)}>✏️ Sửa</button>
                         )}
                       </td>
-                    </tr>
+                    </tr>) : ("")
+                 ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center text-muted">
+                      Không có đơn nghỉ phép nào phù hợp
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </div>
+
+          <div className="table-responsive" style={{ overflowX: "auto" }}>
+            <h3 className="text-center mb-3">Nghỉ thai sản</h3>
+            <Table bordered hover striped className="rounded text-nowrap">
+              <thead className="table-dark text-center">
+                <tr>
+                  <th>Nhân viên</th>
+                  <th>Ngày dự kiến sinh</th>
+                  <th>Từ ngày</th>
+                  <th>Đến hết ngày</th>
+                  <th>Loại nghỉ phép</th>
+                  <th>Tổng ngày nghỉ</th>
+                  <th>Số con</th>
+                  <th>Phương pháp sinh</th>
+                  <th>File giấy tờ</th>
+                  <th>Lý do</th>
+                  <th>Trạng thái</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" className="text-center">Đang tải dữ liệu...</td>
+                  </tr>
+                ) : currentItems.length > 0 ? (
+                  currentItems.map((nghiPhep) => (
+                    nghiPhep.loai_nghi_phep_id == 3 ?
+                      (<tr key={nghiPhep.id}>
+                        <td>{nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
+                        <td>{nghiPhep.ngay_du_kien_sinh}</td>
+                        <td>{formatDate(nghiPhep.tu_ngay)}</td>
+                        <td>{formatDate(nghiPhep.den_ngay)}</td>
+                        <td>{nghiPhep.loai_nghi_phep}</td>
+                        <td>{nghiPhep.so_ngay_nghi}</td>
+                        <td>{nghiPhep.so_con}</td>
+                        <td>{nghiPhep.phuong_phap_sinh}</td>
+                        <td>
+                          {nghiPhep.can_cu_phap_ly_file ? (
+                            <a
+                              href={`${API_URL}/can_cu_phap_ly_thai_san/${nghiPhep.can_cu_phap_ly_file}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="link"
+                              style={{ textDecoration: "none", color: "#0d6efd", fontWeight: 500 }}
+                            >
+                              📎{nghiPhep.can_cu_phap_ly_file}
+                            </a>
+                          ) : (
+                            <span className="text-muted">Không có</span>
+                          )}
+                        </td>
+                        <td>{nghiPhep.ly_do}</td>
+                        <td className="text-center">
+                          <span className={`badge ${nghiPhep.trang_thai === "Chờ duyệt"
+                            ? "bg-warning text-dark"
+                            : nghiPhep.trang_thai === "Đã duyệt"
+                              ? "bg-success"
+                              : nghiPhep.trang_thai === "Từ chối"
+                                ? "bg-danger"
+                                : "bg-secondary"
+                            }`}>
+                            {nghiPhep.trang_thai}
+                          </span>
+                        </td>
+                        <td>
+                          {nghiPhep.trang_thai === "Chờ duyệt" && (
+                            <>
+                              <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>✔ Duyệt</button>
+                              <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>✖ Từ chối</button>
+                              <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
+                            </>
+                          )}
+                          {["Chờ duyệt", "Từ chối"].includes(nghiPhep.trang_thai) && (
+                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleEdit(nghiPhep)}>✏️ Sửa</button>
+                          )}
+                        </td>
+                      </tr>) : ("")
                   ))
                 ) : (
                   <tr>

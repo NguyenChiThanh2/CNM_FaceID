@@ -28,6 +28,7 @@ const Sidebar = () => {
     { title: "Quản lý nhân sự", icon: "👤", path: "/nhan-su" },
     { title: "Quản lý chấm công", icon: "📷", path: "/quan-ly-cham-cong" },
     { title: "Nghỉ phép", icon: "📆", path: "/nghi-phep" },
+    { title: "Giấy phép", icon: "📜", path: "/quan-ly-giay-phep" },
     { title: "Tính lương", icon: "💰", path: "/tinh-luong" },
     { title: "Phúc lợi", icon: "🎁", path: "/phuc-loi" },
     { title: "Đào tạo", icon: "📚", path: "/dao-tao" },

@@ -4,7 +4,8 @@ from app.controllers.nhan_vien_controller import (
     get_nhan_vien_by_id_controller,
     create_nhan_vien_controller,
     update_nhan_vien_controller,
-    delete_nhan_vien_controller
+    delete_nhan_vien_controller,
+    search_nhan_vien_theoten_controller
 )
 
 nhan_vien_bp = Blueprint('nhan_vien_bp', __name__)
@@ -32,3 +33,9 @@ def update_nhan_vien(id):
 @nhan_vien_bp.route('/delete-nhan-vien/<int:id>', methods=['DELETE'])
 def delete_nhan_vien(id):
     return delete_nhan_vien_controller(id)
+
+@nhan_vien_bp.route("/search_nhanvien_theoten", methods=["GET"])
+def search_nhan_vien_theoten():
+    from flask import request
+    q = request.args.get("q", "")
+    return search_nhan_vien_theoten_controller(q)

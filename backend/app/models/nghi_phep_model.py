@@ -13,6 +13,11 @@ class NghiPhep(db.Model):
     trang_thai = db.Column(db.String(20), default='Chờ duyệt')
     so_ngay_nghi = db.Column(db.Integer, nullable=False)  # Thêm trường này để lưu số ngày nghỉ
     
+    ngay_du_kien_sinh = db.Column(db.Date, nullable=True)
+    so_con = db.Column(db.Integer, nullable=True)
+    phuong_phap_sinh = db.Column(db.String(50), nullable=True)
+    can_cu_phap_ly_file = db.Column(db.String(255), nullable=True)  # tên file đã upload
+    
     nhan_vien = db.relationship('NhanVien', back_populates='nghi_phep', lazy=True)
     loai_nghi_phep = db.relationship('LoaiNghiPhep', back_populates='nghi_phep', lazy=True)
     
@@ -35,7 +40,11 @@ class NghiPhep(db.Model):
             'den_ngay': self.den_ngay.isoformat(),
             'ly_do': self.ly_do,
             'trang_thai': self.trang_thai,
-            'so_ngay_nghi': self.so_ngay_nghi  # Thêm số ngày nghỉ vào dict
+            'so_ngay_nghi': self.so_ngay_nghi,  # Thêm số ngày nghỉ vào dict
+            'ngay_du_kien_sinh': self.ngay_du_kien_sinh.isoformat() if self.ngay_du_kien_sinh else None,
+            'so_con': self.so_con,
+            'phuong_phap_sinh': self.phuong_phap_sinh,
+            'can_cu_phap_ly_file': self.can_cu_phap_ly_file
         }
     
     def update_nghi_phep(self, tu_ngay=None, den_ngay=None, ly_do=None, trang_thai=None):

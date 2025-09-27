@@ -3,7 +3,10 @@ from app.controllers.cham_cong_controller import (
     get_all_cham_cong,
     get_cham_cong_by_id,
     update_cham_cong,
-    delete_cham_cong
+    delete_cham_cong,
+    get_chamcong_1nhanvien_theothang_controller,
+    get_tinhsocong_1nhanvien_theothang_controller,
+    get_tinhsocong_theogiayphep_controller
 )
 # Dùng service mới cho check-in
 from app.services.cham_cong_service import (
@@ -45,3 +48,31 @@ def face_checkin_router():
         return jsonify({"ok": False, "message": "Thiếu ảnh base64"}), 400
     res, code = create_cham_cong_from_face_service(base64_image)
     return jsonify(res), code
+
+# ------------------------------------------------------------------------
+# Route: GET by ID theo tháng năm
+@cham_cong_bp.route('/chamcong_1nhanvien_theothang/<int:id>', methods=['GET'])
+def get_chamcong_1nhanvien_theothang(id):
+    
+    thang = request.args.get("thang",type=int)
+    nam = request.args.get("nam", type=int)
+    if not thang or not nam:
+        return jsonify({'message': 'Thiếu tham số tháng hoặc năm'}), 400
+    return get_chamcong_1nhanvien_theothang_controller(id, thang, nam)
+
+# Route: GET by ID theo tháng năm
+@cham_cong_bp.route('/tinh-so-cong/<int:id>', methods=['GET'])
+def get_tinhsocong_1nhanvien_theothang(id):
+    thang = request.args.get("thang",type=int)
+    nam = request.args.get("nam", type=int)
+    if not thang or not nam:
+        return jsonify({'message': 'Thiếu tham số tháng hoặc năm'}), 400
+    return get_tinhsocong_1nhanvien_theothang_controller(id, thang, nam)
+
+@cham_cong_bp.route('/tinhsocong_theogiayphep', methods=['PUT'])
+def get_tinhsocong_theogiayphep_router(): 
+    data = request.get_json()  # lấy body JSON
+    cham_cong_id = data.get("cham_cong_id")
+    if not cham_cong_id:
+        return jsonify({'error': 'Thiếu thông tin bắt buộc'}), 400
+    return get_tinhsocong_theogiayphep_controller(cham_cong_id)
