@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import TrangChu from "./pages/TrangChu";
 import QuanLyNhanSu from "./pages/modules/QuanLyNhanSu";
 import QuanlyNghiPhep from "./pages/modules/QuanLyNghiPhep";
@@ -21,11 +21,9 @@ import { ToastContainer } from "react-toastify";
 import './App.css';
 import Sidebar from "./components/sidebar/sidebar";
 import NotFound from "./pages/NotFound";
-import { Navigate } from "react-router-dom";
 import ChamCongNhanVien from "./pages/modules/ChamCongNhanVien";
 import QuanLyGiayPhep from "./pages/modules/QuanLyGiayPhep";
-
-import PublicIPGuard from "./pages/PublicIPGuard";
+import GeoLocationGuard from "./pages/GeoLocationGuard";
 const AppLayout = () => {
   const location = useLocation();
   const hideNavbarPaths = ["/dang-nhap", "/404", "/cham-cong-face"];
@@ -42,9 +40,9 @@ const AppLayout = () => {
           <Route
             path="/cham-cong-face"
             element={
-              <PublicIPGuard>
+              <GeoLocationGuard>
                 <FaceCheckIn />
-              </PublicIPGuard>
+              </GeoLocationGuard>
             }
           />
 
@@ -60,10 +58,9 @@ const AppLayout = () => {
           <Route path="/quan-ly-cham-cong" element={<PrivateRoute><ChamCongList /></PrivateRoute>} />
           <Route path="/tinh-luong" element={<PrivateRoute><QuanLyLuong /></PrivateRoute>} />
           <Route path="/get-phong-ban-by-id/:id" element={<PrivateRoute><DanhSachNhanVien /></PrivateRoute>} />
-          <Route path="/cham-cong-list" element={<PrivateRoute><ChamCongList /></PrivateRoute>} />
+          {/* <Route path="/cham-cong-list" element={<PrivateRoute><ChamCongList /></PrivateRoute>} /> */}
           <Route path="/cham-cong-form" element={<PrivateRoute><ChamCongForm /></PrivateRoute>} />
           <Route path="/quan-ly-nguoi-dung" element={<PrivateRoute><QuanLyNguoiDung /></PrivateRoute>} />
-
           <Route path="/cham-cong-nhan-vien/:id" element={<PrivateRoute><ChamCongNhanVien /></PrivateRoute>} />
           <Route path="/quan-ly-giay-phep" element={<PrivateRoute><QuanLyGiayPhep /></PrivateRoute>} />
 

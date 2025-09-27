@@ -13,7 +13,7 @@ const ChamCongList = () => {
   const [dsNhanVien, setDsNhanVien] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+
 
   const itemsPerPage = 10;
   const navigate = useNavigate();
@@ -116,12 +116,9 @@ const ChamCongList = () => {
   };
 
 
-  const getTenNhanVien = (id) => {
-    const item = dsNhanVien.find((nv) => nv.id === id);
-    return item ? item.ho_ten : "Không rõ";
-  };
 
-  
+
+
   // --- Tìm kiếm theo ngày (chuỗi) hoặc tên NV
   const filteredList = chamCongList.filter((cc) => {
     const ngayStr = formatDate(cc.ngay);
@@ -142,11 +139,11 @@ const ChamCongList = () => {
   };
 
   const handleRowClick_tennv = (nv) => {
-    navigate(`/cham-cong-nhan-vien/${nv.id}`); 
+    navigate(`/cham-cong-nhan-vien/${nv.id}`);
   };
- 
+
   return (
-    
+
     <div className="container min-vh-100">
       <div className="row">
         <div className="col-12 mt-5">
