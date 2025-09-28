@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import { Navigate } from "react-router-dom";
 import ChamCongNhanVien from "./pages/modules/ChamCongNhanVien";
 import QuanLyGiayPhep from "./pages/modules/QuanLyGiayPhep";
+import Thuong from "./pages/modules/QuanLyThuong";
 
 import PublicIPGuard from "./pages/PublicIPGuard";
 const AppLayout = () => {
@@ -63,7 +64,7 @@ const AppLayout = () => {
           <Route path="/cham-cong-list" element={<PrivateRoute><ChamCongList /></PrivateRoute>} />
           <Route path="/cham-cong-form" element={<PrivateRoute><ChamCongForm /></PrivateRoute>} />
           <Route path="/quan-ly-nguoi-dung" element={<PrivateRoute><QuanLyNguoiDung /></PrivateRoute>} />
-
+          <Route path="/thuong" element={<PrivateRoute><Thuong /></PrivateRoute>} />
           <Route path="/cham-cong-nhan-vien/:id" element={<PrivateRoute><ChamCongNhanVien /></PrivateRoute>} />
           <Route path="/quan-ly-giay-phep" element={<PrivateRoute><QuanLyGiayPhep /></PrivateRoute>} />
 

@@ -24,7 +24,7 @@ class GiayPhep(db.Model):
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
 
     giayphep_nv = relationship("NhanVien", foreign_keys=[nhan_vien_id], back_populates="giayphep_nv")
-    giayphep_nguoi_duyet = relationship("NhanVien", foreign_keys=[nguoi_duyet_id])
+    nguoi_duyet = relationship("NhanVien", foreign_keys=[nguoi_duyet_id],back_populates="giayphep_nguoi_duyet")
     giayphep_cc = relationship("ChamCong", back_populates="giayphep_cc", lazy=True)
     
     def __repr__(self):
