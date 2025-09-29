@@ -1,79 +1,84 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+// src/pages/chamcong/ChamCongList.jsx
+import React, { useState, useEffect, useMemo } from "react";
 import { Button, Breadcrumb, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 
+import {
+  searchNhanVienByName,
+  getAllChamCong,
+  deleteChamCong as apiDeleteChamCong,
+  getAllNhanVien,
+} from "../../services/chamCongApi";
+import axiosInstance from "../../services/axiosInstance";
+
+const ITEMS_PER_PAGE = 10;
+
 const ChamCongList = () => {
+  // Tìm kiếm gợi ý NV theo tên (ô trên)
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
 
+  // Bảng chấm công
   const [chamCongList, setChamCongList] = useState([]);
   const [dsNhanVien, setDsNhanVien] = useState([]);
-  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState(""); // filter trong bảng
+  const [loadingTable, setLoadingTable] = useState(false);
+
+  // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
 
-
-  const itemsPerPage = 10;
   const navigate = useNavigate();
 
+  // Base URL cho ảnh (lấy từ axiosInstance để không bị lệch env)
+  const API_BASE =
+    (axiosInstance.defaults.baseURL || "").replace(/\/+$/, "") ||
+    (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api");
+
+  // ====== Load dữ liệu ban đầu ======
   useEffect(() => {
-    fetchChamCong();
-    fetchNhanVien();
+    (async () => {
+      setLoadingTable(true);
+      try {
+        const [chamCong, nhanVien] = await Promise.all([
+          getAllChamCong(),
+          getAllNhanVien(),
+        ]);
+        setChamCongList(Array.isArray(chamCong) ? chamCong : []);
+        setDsNhanVien(Array.isArray(nhanVien) ? nhanVien : []);
+      } catch (error) {
+        console.error(error);
+        toast.error("Không thể tải dữ liệu chấm công/nhân viên!");
+      } finally {
+        setLoadingTable(false);
+      }
+    })();
   }, []);
 
+  // ====== Debounce search gợi ý NV theo tên ======
   useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      if (query.trim() !== "") {
-        fetchData(query);
-      } else {
-        setResults([]); // clear nếu input rỗng
+    const t = setTimeout(async () => {
+      if (!query.trim()) {
+        setResults([]);
+        return;
       }
-    }, 0); // chờ 400ms sau khi gõ mới gọi API
-
-    return () => clearTimeout(delayDebounce); // clear timeout khi gõ tiếp
+      try {
+        setLoadingSearch(true);
+        const list = await searchNhanVienByName(query.trim());
+        setResults(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error("Error searching:", err);
+      } finally {
+        setLoadingSearch(false);
+      }
+    }, 350);
+    return () => clearTimeout(t);
   }, [query]);
 
-  const fetchData = async (q) => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`http://127.0.0.1:5000/api/search_nhanvien_theoten?q=${q}`);
-      setResults(res.data);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchChamCong = async () => {
-    setLoading(true);
-    try {
-      const { data } = await axios.get("http://127.0.0.1:5000/api/get-all-cham-cong");
-      setChamCongList(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Lỗi khi gọi API chấm công:", error);
-      toast.error("Không thể tải danh sách chấm công!");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchNhanVien = async () => {
-    try {
-      const { data } = await axios.get("http://127.0.0.1:5000/api/get-all-nhan-vien");
-      setDsNhanVien(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Lỗi khi load nhân viên:", error);
-      toast.error("Không thể tải danh sách nhân viên!");
-    }
-  };
-
-  const getTenNhanVien = (id) => {
-    const nv = dsNhanVien.find((x) => x.id === id);
-    return nv?.ho_ten || "Không rõ";
-  };
+  // ====== Helpers ======
+  const getTenNhanVien = (id) =>
+    dsNhanVien.find((x) => x.id === id)?.ho_ten || "Không rõ";
 
   const formatDate = (d) => {
     const dt = new Date(d);
@@ -83,67 +88,62 @@ const ChamCongList = () => {
   const formatTime = (d) => {
     if (!d) return "-";
     const dt = new Date(d);
+    // nếu backend trả chuỗi custom -> giữ nguyên
     return isNaN(dt)
-      ? d // nếu backend trả chuỗi giờ dạng custom thì hiển thị nguyên văn
+      ? d
       : dt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const getImgUrl = (file) =>
-    file ? `http://127.0.0.1:5000/api/checkin_images/${file}` : "";
+  const getImgUrl = (file) => (file ? `${API_BASE}/checkin_images/${file}` : "");
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa chấm công này không?")) return;
-    try {
-      await toast.promise(
-        axios.delete(`http://127.0.0.1:5000/api/delete-cham-cong/${id}`),
-        {
-          pending: "Đang xóa chấm công...",
-          success: "Đã xóa chấm công!",
-          error: "Xóa chấm công thất bại!",
-        }
-      );
-      // làm mới dữ liệu & về trang 1 để tránh trang trống
-      await fetchChamCong();
-      setCurrentPage(1);
-    } catch (error) {
-      // lỗi đã được toast.promise hiển thị
-      console.error("Lỗi khi xóa chấm công:", error);
-    }
-  };
-
-  const handleRowClick = (chamCong) => {
-    navigate(`/cham-cong/${chamCong.id}`);
-  };
-
-
-
-
-
-  // --- Tìm kiếm theo ngày (chuỗi) hoặc tên NV
-  const filteredList = chamCongList.filter((cc) => {
-    const ngayStr = formatDate(cc.ngay);
-    const tenNhanVien = getTenNhanVien(cc.nhan_vien_id).toLowerCase();
+  // ====== Lọc & phân trang tối ưu ======
+  const filteredList = useMemo(() => {
     const key = (searchKeyword || "").toLowerCase();
-    return ngayStr.toLowerCase().includes(key) || tenNhanVien.includes(key);
+    return chamCongList.filter((cc) => {
+      const ngayStr = formatDate(cc.ngay).toLowerCase();
+      const tenNhanVien = getTenNhanVien(cc.nhan_vien_id).toLowerCase();
+      return ngayStr.includes(key) || tenNhanVien.includes(key);
+    });
+  }, [chamCongList, dsNhanVien, searchKeyword]);
 
-  });
+  const totalPages = Math.max(1, Math.ceil(filteredList.length / ITEMS_PER_PAGE));
 
-  const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredList.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredList, currentPage]);
 
   const paginate = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   };
 
-  const handleRowClick_tennv = (nv) => {
-    navigate(`/cham-cong-nhan-vien/${nv.id}`);
+  // ====== Actions ======
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc muốn xóa chấm công này không?")) return;
+    try {
+      await toast.promise(apiDeleteChamCong(id), {
+        pending: "Đang xóa chấm công...",
+        success: "Đã xóa chấm công!",
+        error: "Xóa chấm công thất bại!",
+      });
+      // reload bảng
+      setLoadingTable(true);
+      const data = await getAllChamCong();
+      setChamCongList(Array.isArray(data) ? data : []);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error("Lỗi khi xóa chấm công:", error);
+    } finally {
+      setLoadingTable(false);
+    }
   };
 
-  return (
+  const handleRowClick = (chamCong) => navigate(`/cham-cong/${chamCong.id}`);
+  const handleRowClick_tennv = (nv) => navigate(`/cham-cong-nhan-vien/${nv.id}`);
 
+  // ====== Render ======
+  return (
     <div className="container min-vh-100">
       <div className="row">
         <div className="col-12 mt-5">
@@ -152,31 +152,41 @@ const ChamCongList = () => {
             <Breadcrumb.Item active>Quản lý chấm công</Breadcrumb.Item>
           </Breadcrumb>
 
-          <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
+          <Button variant="secondary" onClick={() => navigate("/")}>
+            ← Trang chủ
+          </Button>
 
           <h2 className="mb-4 text-center">Quản lý chấm công</h2>
 
-          <div className="">
-            <div className="mb-1 d-flex justify-content-between">
-              <input
-                type="text"
-
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Nhập tên nhân viên..."
-                className="form-control"
-              />
-            </div>
+          {/* Search gợi ý nhân viên */}
+          <div className="mb-2">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Nhập tên nhân viên..."
+              className="form-control"
+            />
             <div className="list-group w-auto mb-4">
-              {results.map((nv) => (
-                <button type="button" className="list-group-item list-group-item-action" key={nv.id} onClick={() => handleRowClick_tennv(nv)} >
-                  {nv.ho_ten}
-                </button>
-              ))}
+              {loadingSearch && (
+                <div className="px-3 py-2 text-muted small">Đang tìm...</div>
+              )}
+              {!loadingSearch &&
+                results.map((nv) => (
+                  <button
+                    type="button"
+                    className="list-group-item list-group-item-action"
+                    key={nv.id}
+                    onClick={() => handleRowClick_tennv(nv)}
+                  >
+                    {nv.ho_ten}
+                  </button>
+                ))}
             </div>
           </div>
 
-          <div className="mb-4 d-flex justify-content-between">
+          {/* Search lọc trong bảng */}
+          <div className="mb-4">
             <input
               type="text"
               className="form-control"
@@ -189,7 +199,7 @@ const ChamCongList = () => {
             />
           </div>
 
-          {loading ? (
+          {loadingTable ? (
             <div className="text-center my-4">
               <Spinner animation="border" variant="primary" />
               <div className="mt-2">Đang tải dữ liệu...</div>

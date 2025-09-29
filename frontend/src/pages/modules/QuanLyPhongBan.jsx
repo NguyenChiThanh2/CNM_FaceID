@@ -16,8 +16,9 @@ const QuanLyPhongBan = () => {
   const fetchPhongBan = async () => {
     setLoading(true);
     try {
-      const res = await getAllPhongBan();
-      setPhongBanList(res.data);
+      // ⬇️ getAllPhongBan đã unwrap → trả thẳng data (array)
+      const data = await getAllPhongBan();
+      setPhongBanList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Lỗi khi tải phòng ban:", err);
       toast.error("Không thể tải danh sách phòng ban!");

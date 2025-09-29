@@ -1,7 +1,9 @@
 import axiosInstance from "./axiosInstance";
 
-export const getAllPhongBan = () => axiosInstance.get("/get-all-phong-ban");
-export const deletePhongBan = (id) => axiosInstance.delete(`/delete-phong-ban/${id}`);
-export const createPhongBan = (data) => axiosInstance.post("/create-phong-ban", data);
-export const updatePhongBan = (id, data) => axiosInstance.put(`/update-phong-ban/${id}`, data);
-export const getPhongBanById = (id) => axiosInstance.get(`/get-phong-ban-by-id/${id}`);
+const unwrap = (p) => p.then(r => r.data);
+
+export const getAllPhongBan = () => unwrap(axiosInstance.get("/get-all-phong-ban"));
+export const deletePhongBan = (id) => unwrap(axiosInstance.delete(`/delete-phong-ban/${id}`));
+export const createPhongBan = (data) => unwrap(axiosInstance.post("/create-phong-ban", data));
+export const updatePhongBan = (id, data) => unwrap(axiosInstance.put(`/update-phong-ban/${id}`, data));
+export const getPhongBanById = (id) => unwrap(axiosInstance.get(`/get-phong-ban-by-id/${id}`));

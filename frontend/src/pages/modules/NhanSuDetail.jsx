@@ -11,7 +11,7 @@ import {
   FaGift,
   FaChalkboardTeacher,
 } from "react-icons/fa";
-import { getChucVuById } from "../../services/api/chuc-vu-api";
+import { getChucVuById } from "../../services/chucVuApi";
 import { getPhongBanById } from "../../services/api/phong-ban-api";
 import { getPhucLoiByNhanVienId } from "../../services/api/phuc-loi-api";
 import { Button, Modal, Breadcrumb } from "react-bootstrap";

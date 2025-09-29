@@ -7,10 +7,19 @@ export const getAllDaoTao = () => unwrap(axiosInstance.get("/get-all-dao-tao"));
 export const getDaoTaoById = (id) => unwrap(axiosInstance.get(`/get-dao-tao-by-id/${id}`));
 
 // Chốt endpoint theo BE của bạn (nếu đang là /add-/edit-/delete- thì đổi lại cho khớp)
-export const createDaoTao = (payload) => unwrap(axiosInstance.post("/create-dao-tao", payload));
-export const updateDaoTao = (id, payload) => unwrap(axiosInstance.put(`/update-dao-tao/${id}`, payload));
 export const deleteDaoTao = (id) => unwrap(axiosInstance.delete(`/delete-dao-tao/${id}`));
+export const createDaoTao = (payload) => unwrap(axiosInstance.post("/add-dao-tao", payload));   // đổi endpoint nếu BE khác
+export const updateDaoTao = (id, payload) => unwrap(axiosInstance.put(`/edit-dao-tao/${id}`, payload));
 
+// Gán nhân viên (theo endpoint bạn đang dùng trong code hiện tại)
+export const assignNhanVienToDaoTao = (daoTaoId, nhanVienId) =>
+  unwrap(axiosInstance.post(`/dao_taos/${daoTaoId}/assign`, {
+    nhan_viens: [{ id: nhanVienId }]
+  }));
+export const assignNhanViensBulk = (daoTaoId, nhanVienIds) =>
+  unwrap(axiosInstance.post(`/dao_taos/${daoTaoId}/assign`, {
+    nhan_viens: nhanVienIds.map(id => ({ id }))
+  }));
 // Nhân viên trong khoá đào tạo
 export const getNhanVienByDaoTaoId = (daoTaoId) =>
   unwrap(axiosInstance.get(`/get-all-nhan-vien-by-dao-tao-id/${daoTaoId}`));

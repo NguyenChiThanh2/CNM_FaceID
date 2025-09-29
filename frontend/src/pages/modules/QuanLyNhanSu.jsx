@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import {
-  Modal, Button, Table, Row, Col, Breadcrumb, Spinner
-} from "react-bootstrap";
+import { Modal, Button, Table, Row, Col, Breadcrumb, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import NhanSuAddForm from "../../components/nhansu/NhanSuAddForm";
-import { getAllChucVu } from "../../services/api/chuc-vu-api";
+import { getAllChucVu } from "../../services/chucVuApi";
 import { getAllPhongBan } from "../../services/phongBanApi";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // ⬇️ dùng service mới
 import { getAllNhanVien, deleteNhanVien as apiDeleteNhanVien } from "../../services/nhanSuApi";
@@ -76,7 +75,7 @@ const QuanLyNhanSu = () => {
         success: "Đã xóa nhân sự!",
         error: "Xóa nhân sự thất bại!",
       });
-      // Optimistic update
+      // optimistic update
       setNhanSuList((prev) => prev.filter((x) => x.id !== id));
       setCurrentPage(1);
     } catch (error) {
@@ -91,12 +90,20 @@ const QuanLyNhanSu = () => {
     }
   };
 
-  const handleFormSubmit = async () => {
-    await fetchNhanSu();
-    setShowModal(false);
-    setEditingNhanSu(null);
-    toast.success("Cập nhật / thêm mới nhân sự thành công!");
-    setCurrentPage(1);
+  // nhận kết quả từ Form: ok (true/false), err (Error?)
+  const handleFormSubmit = async (ok, err) => {
+    if (ok) {
+      await fetchNhanSu();
+      setShowModal(false);
+      setEditingNhanSu(null);
+      toast.success("Cập nhật / thêm mới nhân sự thành công!");
+      setCurrentPage(1);
+    } else if (err) {
+      toast.error(err?.message || "Lưu nhân sự thất bại!");
+    } else {
+      // trường hợp validate fail nhưng không có err object (hiếm)
+      toast.error("Vui lòng kiểm tra lại thông tin!");
+    }
   };
 
   const handleRowClick = (nv) => {
@@ -108,7 +115,6 @@ const QuanLyNhanSu = () => {
 
   const normalizedKeyword = (searchKeyword || "").toLowerCase();
 
-  // Tối ưu lọc & phân trang
   const filteredList = useMemo(() => {
     return nhanSuList.filter((nv) => {
       const matchName = (nv.ho_ten || "").toLowerCase().includes(normalizedKeyword);
@@ -333,6 +339,7 @@ const QuanLyNhanSu = () => {
           </Modal>
         </div>
       </div>
+
       <ToastContainer position="top-right" autoClose={2000} />
     </div>
   );
