@@ -49,6 +49,11 @@ class NhanVien(db.Model):
     giayphep_nv = db.relationship("GiayPhep", foreign_keys='GiayPhep.nhan_vien_id', back_populates="giayphep_nv", lazy=True)
     giayphep_nguoi_duyet = db.relationship("GiayPhep", foreign_keys='GiayPhep.nguoi_duyet_id',back_populates="nguoi_duyet", lazy=True)
     
+    khautru_list = db.relationship(
+        'KhauTru',
+        secondary='khautru_nhanvien',
+        back_populates='nhan_viens'
+    )
     
 
     def __repr__(self):

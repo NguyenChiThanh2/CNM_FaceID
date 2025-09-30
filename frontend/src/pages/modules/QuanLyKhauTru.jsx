@@ -1,4 +1,4 @@
-// src/pages/modules/Thuong.jsx
+// src/pages/modules/KhauTru.jsx
 import React, { useState, useEffect } from "react";
 import {
   Row,
@@ -7,19 +7,17 @@ import {
   Table,
   Modal,
   Breadcrumb,
-  OverlayTrigger,
-  Tooltip,
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import ThuongForm from "../../components/thuong/ThuongForm";
+import KhauTruForm from "../../components/khautru/KhauTruForm";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { ToastContainer, toast } from "react-toastify";
 import axios from "axios";
 
-const Thuong = () => {
-  const [thuongList, setThuongList] = useState([]);
-  const [selectedThuong, setSelectedThuong] = useState(null);
+const KhauTru = () => {
+  const [khautruList, setKhauTruList] = useState([]);
+  const [selectedKhauTru, setSelectedKhauTru] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,31 +28,32 @@ const Thuong = () => {
   const [showAddNhanVienModal, setShowAddNhanVienModal] = useState(false);
   const [nhanVienList, setNhanVienList] = useState([]);
   const [selectedNhanVienIds, setSelectedNhanVienIds] = useState([]);
-  const [selectedThuongId, setSelectedThuongId] = useState(null);
+  const [selectedKhauTruId, setSelectedKhauTruId] = useState(null);
   const [PhongBanList, setPhongBanList] = useState([]);
+  // const [editingKhauTru, setSelectedKhauTru] = useState(null);
 
   const navigate = useNavigate();
   const API_BASE = "http://localhost:5000";
 
-  const fetchThuongList = async () => {
+  const fetchKhauTruList = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/get-all-thuong`);
+      const res = await fetch(`${API_BASE}/api/get-all-khau-tru`);
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setThuongList(data);
+      setKhauTruList(data);
     } catch (err) {
-      console.error("Lỗi khi tải thưởng:", err);
-      toast.error("Không thể tải danh sách thưởng!");
+      console.error("Lỗi khi tải khấu trừ:", err);
+      toast.error("Không thể tải danh sách khấu trừ!");
     }
   };
 
   useEffect(() => {
-    fetchThuongList();
+    fetchKhauTruList();
   }, []);
 
-  const filteredList = thuongList.filter(
+  const filteredList = khautruList.filter(
     (pl) =>
-      (pl.ten_thuong || "")
+      (pl.ten_khau_tru || "")
         .toLowerCase()
         .includes(searchKeyword.toLowerCase()) ||
       (pl.ngay_quyet_dinh || "")
@@ -73,51 +72,51 @@ const Thuong = () => {
   };
 
   const handleAdd = () => {
-    setSelectedThuong(null);
+    setSelectedKhauTru(null);
     setShowModal(true);
   };
 
   const handleEdit = (pl) => {
-    setSelectedThuong(pl);
+    setSelectedKhauTru(pl);
     setShowModal(true);
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa không?")) {
       try {
-        const res = await fetch(`${API_BASE}/api/delete-thuong/${id}`, {
+        const res = await fetch(`${API_BASE}/api/delete-khau-tru/${id}`, {
           method: "DELETE",
         });
         if (!res.ok) throw new Error();
-        await fetchThuongList();
-        toast.success("Xóa thưởng thành công!");
+        await fetchKhauTruList();
+        toast.success("Xóa khấu trừ thành công!");
         setCurrentPage(1);
       } catch (err) {
         console.error("Lỗi xóa:", err);
-        toast.error("❌ Lỗi khi xóa thưởng!");
+        toast.error("❌ Lỗi khi xóa khấu trừ!");
       }
     }
   };
 
   const handleFormSubmit = (message) => {
-    fetchThuongList();
+    fetchKhauTruList();
     setShowModal(false);
-    toast.success(message || "Cập nhật thưởng thành công!");
+    toast.success(message || "Cập nhật khấu trừ thành công!");
     setCurrentPage(1);
   };
 
   const exportToExcel = () => {
     try {
-      const exportData = thuongList.map((item) => ({
-        "Tên thưởng": item.ten_thuong,
+      const exportData = khautruList.map((item) => ({
+        "Tên khấu trừ": item.ten_khau_tru,
         "Ngày quyết định": item.ngay_quyet_dinh,
         "Giá trị": item.so_tien,
-        Loại: item.loai_thuong,
+        Loại: item.loai_khau_tru,
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(exportData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Thuong");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "KhauTru");
 
       const excelBuffer = XLSX.write(workbook, {
         bookType: "xlsx",
@@ -126,10 +125,10 @@ const Thuong = () => {
       const file = new Blob([excelBuffer], {
         type: "application/octet-stream",
       });
-      saveAs(file, "DanhSachThuong.xlsx");
+      saveAs(file, "DanhSachKhauTru.xlsx");
       toast.success("📤 Đã xuất Excel!");
     } catch (e) {
-      toast.error("❌ Xuất Excel thất bại!");
+      toast.error("❌ Xuất Excel thất bại!", e);
     }
   };
 
@@ -137,23 +136,20 @@ const Thuong = () => {
     amount?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
   // 👉 Xem nhân viên
-  const handleViewNhanVien = async (thuongId) => {
+  const handleViewNhanVien = async (khautruId) => {
     try {
       const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
       setPhongBanList(respb.data);
 
       const res = await axios.get(
-        `${API_BASE}/api/get-all-nhan-vien-by-thuong-id/${thuongId}`
+        `${API_BASE}/api/get-all-nhan-vien-by-khau-tru-id/${khautruId}`
       );
-      // Kiểm tra nếu dữ liệu trả về là mảng và có phần tử thì setSelectedNhanVienIds
       if (Array.isArray(res.data) && res.data.length > 0) {
         setSelectedNhanVien(res.data);
       } else {
-        // Nếu không có dữ liệu thì reset danh sách selected
         setSelectedNhanVien([]);
       }
-      setSelectedThuongId(thuongId);
-      
+      setSelectedKhauTruId(khautruId);
     } catch (err) {
       console.error("Lỗi khi lấy nhân viên:", err);
       setSelectedNhanVien([]);
@@ -162,17 +158,17 @@ const Thuong = () => {
     }
   };
 
-  // 👉 Xóa nhân viên khỏi thưởng
-  const handleDeleteNhanVienFromThuong = async (nhanVienId) => {
-    if (!selectedThuongId) return;
-    if (window.confirm("Bạn có chắc muốn xóa nhân viên này khỏi thưởng?")) {
+  // 👉 Xóa nhân viên khỏi khấu trừ
+  const handleDeleteNhanVienFromKhauTru = async (nhanVienId) => {
+    if (!selectedKhauTruId) return;
+    if (window.confirm("Bạn có chắc muốn xóa nhân viên này khỏi khấu trừ?")) {
       try {
-        await axios.post(`${API_BASE}/api/remove-nhan-vien-from-thuong`, {
-          thuong_id: selectedThuongId,
+        await axios.post(`${API_BASE}/api/remove-nhan-vien-from-khau-tru`, {
+          khautru_id: selectedKhauTruId,
           nhan_vien_id: nhanVienId,
         });
-        await handleViewNhanVien(selectedThuongId);
-        toast.success("Đã xóa nhân viên khỏi thưởng.");
+        await handleViewNhanVien(selectedKhauTruId);
+        toast.success("Đã xóa nhân viên khỏi khấu trừ.");
       } catch (err) {
         console.error("Lỗi khi xóa:", err);
         toast.error("Không thể xóa nhân viên.");
@@ -181,26 +177,22 @@ const Thuong = () => {
   };
 
   // 👉 Hiển thị modal thêm nhân viên
-  const handleShowAddNhanVienModal = async (thuongId) => {
+  const handleShowAddNhanVienModal = async (khautruId) => {
     try {
       const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
       setPhongBanList(respb.data);
-      // const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
       const res = await axios.get(`${API_BASE}/api/get-all-nhan-vien`);
-      // Lấy danh sách nhân viên đã có thưởng này
       const resSelected = await axios.get(
-        `${API_BASE}/api/get-all-nhan-vien-by-thuong-id/${thuongId}`
+        `${API_BASE}/api/get-all-nhan-vien-by-khau-tru-id/${khautruId}`
       );
-      // Kiểm tra nếu dữ liệu trả về là mảng và có phần tử thì setSelectedNhanVienIds
       if (Array.isArray(resSelected.data) && resSelected.data.length > 0) {
         const selectedIds = resSelected.data.map((nv) => nv.id);
         setSelectedNhanVienIds(selectedIds);
       } else {
-        // Nếu không có dữ liệu thì reset danh sách selected
         setSelectedNhanVienIds([]);
       }
       setNhanVienList(res.data);
-      setSelectedThuongId(thuongId);
+      setSelectedKhauTruId(khautruId);
       setShowAddNhanVienModal(true);
     } catch (err) {
       console.error("Lỗi khi tải danh sách nhân viên:", err);
@@ -214,15 +206,15 @@ const Thuong = () => {
     setSelectedNhanVienIds([...newSet]);
   };
 
-  // 👉 Thêm nhân viên vào thưởng
-  const handleAddNhanVienToThuong = async () => {
-    if (!selectedThuongId) return;
+  // 👉 Thêm nhân viên vào khấu trừ
+  const handleAddNhanVienToKhauTru = async () => {
+    if (!selectedKhauTruId) return;
     try {
-      await axios.post(`${API_BASE}/api/add-nhan-vien-to-thuong`, {
-        thuong_id: selectedThuongId,
+      await axios.post(`${API_BASE}/api/add-nhan-vien-to-khau-tru`, {
+        khautru_id: selectedKhauTruId,
         nhan_vien_ids: selectedNhanVienIds,
       });
-      toast.success("Đã thêm nhân viên vào thưởng.");
+      toast.success("Đã thêm nhân viên vào khấu trừ.");
       setShowAddNhanVienModal(false);
       setSelectedNhanVienIds([]);
     } catch (err) {
@@ -230,6 +222,7 @@ const Thuong = () => {
       toast.error("Không thể thêm nhân viên.");
     }
   };
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date)
@@ -245,13 +238,13 @@ const Thuong = () => {
             <Breadcrumb.Item onClick={() => navigate("/")}>
               Trang chủ
             </Breadcrumb.Item>
-            <Breadcrumb.Item active>Quản lý thưởng</Breadcrumb.Item>
+            <Breadcrumb.Item active>Quản lý khấu trừ</Breadcrumb.Item>
           </Breadcrumb>
           <Button variant="secondary" onClick={() => navigate("/")}>
             ← Trang chủ
           </Button>
 
-          <h2 className="text-center mb-4">📋 Quản lý Thưởng</h2>
+          <h2 className="text-center mb-4">📋 Quản lý Khấu trừ</h2>
 
           <Row className="mb-3">
             <Col md={6}>
@@ -272,7 +265,7 @@ const Thuong = () => {
                 className="me-2"
                 onClick={handleAdd}
               >
-                ➕ Thêm thưởng
+                ➕ Thêm khấu trừ
               </Button>
               <Button variant="outline-primary" onClick={exportToExcel}>
                 📤 Xuất Excel
@@ -287,30 +280,43 @@ const Thuong = () => {
               <thead className="table-dark text-center">
                 <tr>
                   <th>Tên</th>
-                  <th>Mục đích thưởng</th>
+                  <th>Mục đích khấu trừ</th>
                   <th>Giá trị</th>
                   <th>Ngày quyết định</th>
                   <th>Ghi chú</th>
+                  <th>File giấy tờ</th>
                   <th>Hành động</th>
                 </tr>
               </thead>
               <tbody>
                 {currentItems.map((pl) => (
                   <tr key={pl.id}>
-                    <td>{pl.ten_thuong}</td>
+                    <td>{pl.ten_khau_tru}</td>
                     <td>
                       {{
-                        LE: "Thưởng Lễ",
-                        TET: "Thưởng Tết",
-                        THANG13: "Thưởng Tháng 13",
-                        NONG: "Thưởng Nóng",
-                        THANHTICH: "Thưởng Thành tích",
-                        THUONGKHAC: "Thưởng Khác",
-                      }[pl.loai_thuong] || "Không xác định"}
+                        VI_PHAM: "Trừ vi phạm",
+                        UNG_LUONG: "Trừ ứng lương",
+                        TRU_KHAC: "Khấu trừ khác",
+                      }[pl.loai_khau_tru] || "Không xác định"}
                     </td>
                     <td>{formatCurrency(pl.so_tien)}</td>
                     <td>{formatDate(pl.ngay_quyet_dinh)}</td>
                     <td>{pl.ghi_chu}</td>
+                     <td>
+                          {pl.file_dinh_kem ? (
+                            <a
+                              href={`${API_BASE}/api/file_dinh_kem_khau_tru/${pl.file_dinh_kem}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="link"
+                              style={{ textDecoration: "none", color: "#0d6efd", fontWeight: 500 }}
+                            >
+                              📎{pl.file_dinh_kem}
+                            </a>
+                          ) : (
+                            <span className="text-muted">Không có</span>
+                          )}
+                        </td>
                     <td className="text-center">
                       <Button
                         variant="outline-warning"
@@ -328,23 +334,21 @@ const Thuong = () => {
                       >
                         🗑️ Xóa
                       </Button>
-                    
-                        <Button
-                          variant="outline-info"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleViewNhanVien(pl.id)}
-                        >
-                          Xem nhân viên
-                        </Button>
-                     
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          onClick={() => handleShowAddNhanVienModal(pl.id)}
-                        >
-                          Thêm nhân viên
-                        </Button>
+                      <Button
+                        variant="outline-info"
+                        size="sm"
+                        className="me-2"
+                        onClick={() => handleViewNhanVien(pl.id)}
+                      >
+                        Xem nhân viên
+                      </Button>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handleShowAddNhanVienModal(pl.id)}
+                      >
+                        Thêm nhân viên
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -382,86 +386,90 @@ const Thuong = () => {
             </div>
           )}
 
-          {/* Modal thêm/sửa thưởng */}
+          {/* Modal thêm/sửa khấu trừ */}
           <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
             <Modal.Header closeButton>
               <Modal.Title>
-                {selectedThuong ? "✏️ Cập nhật thưởng" : "➕ Thêm thưởng"}
+                {selectedKhauTru ? "✏️ Cập nhật khấu trừ" : "➕ Thêm khấu trừ"}
               </Modal.Title>
             </Modal.Header>
             <Modal.Body>
-              <ThuongForm
-                selected={selectedThuong}
+              <KhauTruForm
+                selected={selectedKhauTru}
                 onAdded={handleFormSubmit}
                 onClose={() => setShowModal(false)}
-                fetchThuongList={fetchThuongList}
+                fetchKhauTruList={fetchKhauTruList}
+                editingKhauTru={selectedKhauTru}
+                setEditingKhauTru={setSelectedKhauTru}
               />
             </Modal.Body>
           </Modal>
 
+          {/* Modal danh sách nhân viên */}
           <Modal
-  show={showNhanVienModal}
-  onHide={() => setShowNhanVienModal(false)}
-  size="lg"
->
-  <Modal.Header closeButton>
-    <Modal.Title>Danh sách nhân viên có thưởng</Modal.Title>
-  </Modal.Header>
-  <Modal.Body>
-    {selectedNhanVien.length === 0 ? (
-      <p className="text-muted">Không có nhân viên nào được thưởng.</p>
-    ) : (
-      PhongBanList.map((pb) => {
-        const nvTrongPB = selectedNhanVien.filter(
-          (nv) => nv.phong_ban_id === pb.id
-        );
-        if (nvTrongPB.length === 0) return null;
+            show={showNhanVienModal}
+            onHide={() => setShowNhanVienModal(false)}
+            size="lg"
+          >
+            <Modal.Header closeButton>
+              <Modal.Title>Danh sách nhân viên bị khấu trừ</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              {selectedNhanVien.length === 0 ? (
+                <p className="text-muted">Không có nhân viên nào bị khấu trừ.</p>
+              ) : (
+                PhongBanList.map((pb) => {
+                  const nvTrongPB = selectedNhanVien.filter(
+                    (nv) => nv.phong_ban_id === pb.id
+                  );
+                  if (nvTrongPB.length === 0) return null;
 
-        return (
-          <div key={pb.id} className="mb-4">
-            <h5 className="fw-bold">{pb.ten_phong_ban}</h5>
-            <hr />
-            <table className="table table-bordered table-hover">
-              <thead className="table-light">
-                <tr>
-                  <th>Họ tên</th>
-                  <th>Email</th>
-                  <th>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {nvTrongPB.map((nv) => (
-                  <tr key={nv.id}>
-                    <td>{nv.ho_ten}</td>
-                    <td>{nv.email}</td>
-                    <td className="text-center">
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDeleteNhanVienFromThuong(nv.id)}
-                      >
-                        Xóa
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-      })
-    )}
-  </Modal.Body>
-  <Modal.Footer>
-    <Button
-      variant="secondary"
-      onClick={() => setShowNhanVienModal(false)}
-    >
-      Đóng
-    </Button>
-  </Modal.Footer>
-</Modal>
-
+                  return (
+                    <div key={pb.id} className="mb-4">
+                      <h5 className="fw-bold">{pb.ten_phong_ban}</h5>
+                      <hr />
+                      <table className="table table-bordered table-hover">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Hành động</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {nvTrongPB.map((nv) => (
+                            <tr key={nv.id}>
+                              <td>{nv.ho_ten}</td>
+                              <td>{nv.email}</td>
+                              <td className="text-center">
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDeleteNhanVienFromKhauTru(nv.id)
+                                  }
+                                >
+                                  Xóa
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })
+              )}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                variant="secondary"
+                onClick={() => setShowNhanVienModal(false)}
+              >
+                Đóng
+              </Button>
+            </Modal.Footer>
+          </Modal>
 
           {/* Modal thêm nhân viên */}
           <Modal
@@ -473,7 +481,7 @@ const Thuong = () => {
             size="lg"
           >
             <Modal.Header closeButton>
-              <Modal.Title>Thêm nhân viên có thưởng</Modal.Title>
+              <Modal.Title>Thêm nhân viên bị khấu trừ</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               {nhanVienList.length === 0 ? (
@@ -584,7 +592,7 @@ const Thuong = () => {
               >
                 Đóng
               </Button>
-              <Button variant="primary" onClick={handleAddNhanVienToThuong}>
+              <Button variant="primary" onClick={handleAddNhanVienToKhauTru}>
                 Xác nhận
               </Button>
             </Modal.Footer>
@@ -596,4 +604,4 @@ const Thuong = () => {
   );
 };
 
-export default Thuong;
+export default KhauTru;

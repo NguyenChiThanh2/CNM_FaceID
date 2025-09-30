@@ -15,6 +15,8 @@ from .nguoi_phu_thuoc_service import kiemtra_nguoiphuthuoc
 from app.models.chi_tiet_luong_model import ChiTietLuong, NhomChiTietLuong
 from app.models.nghi_phep_model import NghiPhep
 from app.models.ngay_nghi_le_model import NgayNghiLe
+from app.models.thuong_model import Thuong
+from app.models.thuong_nhanvien_model import ThuongNhanVien
 from app import db
 
 # class TinhLuongService:
@@ -212,6 +214,13 @@ def kiemtra_nghithaisan(nhanvien_id: int,thang: int, nam: int):
             
     return danh_sach_ngay
 
+def thuong_theo_thang(nhanvien_id: int, thang: int, nam: int):
+    return db.session.query(Thuong).join(ThuongNhanVien).filter(
+                            ThuongNhanVien.nhanvien_id == nhanvien_id,
+                            extract('month', Thuong.ngay_quyet_dinh) == thang,
+                            extract('year', Thuong.ngay_quyet_dinh) == nam,
+                        ).all()
+        
 # TÍNH LƯƠNG------------------------------------------------------------------------------------------------
 def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     tong_luong = 0.0
@@ -247,9 +256,13 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     phucap_chuc_vu = 0.0
     phucap_tham_nien = 0.0
     
-    thuong_le=0.0
-    thuong_tet=0.0
+    thuong_le=0.0    
+    thuong_nong = 0.0
+    thuong_khac=0.0
+    ds_thuong_khac = []
+    tong_thuong = 0.0
     
+    luongcoban = 0.0
     cong = 0.0
     tong_ngay_cong = 0.0
     
@@ -268,6 +281,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 bangluong.tong_tien_tang_ca = 0
                 bangluong.tong_khau_tru = 0
                 bangluong.tong_phu_cap = 0
+                bangluong.tong_thuong = 0
                 bangluong.bhxh = 0
                 bangluong.bhtn = 0
                 bangluong.bhyt = 0
@@ -390,6 +404,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 # print("Ngày lễ trong tháng:", ds_ngay_le)
                 # ======= LƯƠNG NGÀY THƯỜNG =======
                 # so_cong_chuan_thang = tinh_ngay_cong(thang, nam)
+                luongcoban = policy.muc_luong_co_ban
                 luong_ngay = policy.muc_luong_co_ban / so_cong_chuan_thang  
                 if is_holiday:
                     so_ngay_lam_le += cong
@@ -445,6 +460,30 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     phucap_chuc_vu = policy.phu_cap_chuc_vu
                 if policy.phu_cap_tham_nien:
                     phucap_tham_nien = policy.phu_cap_tham_nien
+                    
+            dsthuong = thuong_theo_thang(nhanvien_id, thang, nam)
+            if dsthuong and len(dsthuong):
+                for thuong in dsthuong:
+                    tong_thuong += float(thuong.so_tien)
+                    if thuong.loai_thuong == "NONG":
+                        thuong_nong += float(thuong.so_tien)
+                    if thuong.loai_thuong == "LE":
+                        thuong_le += float(thuong.so_tien)
+                    if thuong.loai_thuong not in ["NONG", "LE"]:
+                        if thuong.loai_thuong == "THANG13":
+                            ds_bangluong = BangLuong.query.filter_by(nhan_vien_id=nhanvien_id).all()
+                            sothang = len(ds_bangluong)+1
+                            if sothang >= 12:
+                                thuong_khac += luongcoban
+                                ds_thuong_khac.append({'ten_thuong': thuong.ten_thuong, 'so_tien': luongcoban})
+                            else: 
+                                l13 = (sothang/12) * luongcoban
+                                thuong_khac += l13
+                                ds_thuong_khac.append({'ten_thuong': thuong.ten_thuong, 'so_tien': l13})
+                        else:    
+                            thuong_khac += float(thuong.so_tien)
+                            ds_thuong_khac.append({'ten_thuong': thuong.ten_thuong, 'so_tien': float(thuong.so_tien)})
+                
 
             # ======= TĂNG CA TÍNH THUẾ =======
             if locals().get("tien_tang_ca") and tien_tang_ca > 0:
@@ -479,7 +518,9 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 tong_luong += tien_luong_le_tinh_thue  # cộng lại phần lương lễ tính thuế đã trừ ở trên
             if locals().get("tien_tang_ca") and tien_tang_ca > 0:
                 tong_luong += tien_tang_ca_tinh_thue  # cộng lại phần tăng ca tính thuế đã trừ ở trên
-            luong_tinh_thue = tong_luong - tong_bao_hiem + (phucap_an_trua + phucap_xang_xe)
+                
+            tong_luong += tong_thuong
+            luong_tinh_thue = tong_luong - tong_bao_hiem + (phucap_an_trua + phucap_xang_xe) 
             
             # Số người phụ thuộc
             so_nguoi_phu_thuoc = kiemtra_nguoiphuthuoc(nhanvien_id, thang, nam)
@@ -508,6 +549,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     bangluong.tong_tien_tang_ca = tong_tien_tang_ca
                     bangluong.tong_khau_tru = khau_tru
                     bangluong.tong_phu_cap = phu_cap
+                    bangluong.tong_thuong = tong_thuong
                     bangluong.bhxh = bao_hiem_xa_hoi
                     bangluong.bhtn = bao_hiem_that_nghiep
                     bangluong.bhyt = bao_hiem_y_te
@@ -533,6 +575,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                         tong_tien_tang_ca=tong_tien_tang_ca,
                         tong_khau_tru=khau_tru,
                         tong_phu_cap=phu_cap,
+                        tong_thuong = tong_thuong,
                         bhxh=bao_hiem_xa_hoi,
                         bhtn=bao_hiem_that_nghiep,
                         bhyt=bao_hiem_y_te,
@@ -671,6 +714,26 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                             so_tien=thuong_le
                         )
                     )
+                if thuong_nong and thuong_nong > 0:
+                    chi_tiet_list.append(
+                        ChiTietLuong(
+                            bang_luong_id=bangluong.id,
+                            nhom=NhomChiTietLuong.THUONG,
+                            loai="NONG",
+                            so_tien=thuong_nong
+                        )
+                    )
+                if thuong_khac and thuong_khac > 0:
+                    for tk in ds_thuong_khac:
+                        chi_tiet_list.append(
+                            ChiTietLuong(
+                                bang_luong_id=bangluong.id,
+                                nhom=NhomChiTietLuong.THUONG,
+                                loai="THUONGKHAC",
+                                so_tien=tk['so_tien'],
+                                ghi_chu=tk['ten_thuong']
+                            )
+                        )
 
                 # 3️⃣ Lưu tất cả chi tiết nếu có
                 if chi_tiet_list:

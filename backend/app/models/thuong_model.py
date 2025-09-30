@@ -16,7 +16,7 @@ class Thuong(db.Model):
     thuong_nhanvien = db.relationship('ThuongNhanVien', back_populates='thuong')
 
     def __repr__(self):
-        return f"<Thuong id={self.id}, loai={self.loai_thuong}, so_tien={self.so_tien}>"
+        return f"<Thuong id={self.id}, loai={self.loai_thuong}, so_tien={self.so_tien}>, ten_thuong={self.ten_thuong}>"
     
     def to_dict(self):
         return {

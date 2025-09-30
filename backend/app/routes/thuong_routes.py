@@ -50,3 +50,4 @@ def get_nhan_vien_by_thuong(thuong_id):
 @thuong_bp.route("/remove-nhan-vien-from-thuong", methods=["POST"])
 def remove_nhan_vien_from_thuong():
     return remove_nhan_vien_from_thuong_controller()
+

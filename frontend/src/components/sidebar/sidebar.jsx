@@ -31,6 +31,7 @@ const Sidebar = () => {
     { title: "Giấy phép", icon: "📜", path: "/quan-ly-giay-phep" },
     { title: "Tính lương", icon: "💰", path: "/tinh-luong" },
     { title: "Thưởng", icon: "🎁", path: "/thuong" },
+    { title: "Khấu trừ", icon: "❌", path: "/khau-tru" },
     { title: "Phúc lợi", icon: "⚜️", path: "/phuc-loi" },
     { title: "Đào tạo", icon: "📚", path: "/dao-tao" },
     { title: "Đánh giá", icon: "📈", path: "/danh-gia" },

@@ -55,8 +55,9 @@ from .tinh_luong_routers import tinhluong_bp
 from .giay_phep_routers import giayphep_bp
 from .chi_tiet_luong_routers import chitietluong_bp
 from .thuong_routes import thuong_bp
-
+from .khau_tru_routes import khau_tru_bp
 def register_routes(app):
+    app.register_blueprint(khau_tru_bp, url_prefix='/api')
     app.register_blueprint(thuong_bp, url_prefix='/api')
     app.register_blueprint(chitietluong_bp, url_prefix='/api')
     app.register_blueprint(giayphep_bp, url_prefix='/api')

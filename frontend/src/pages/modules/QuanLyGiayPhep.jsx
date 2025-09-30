@@ -214,7 +214,7 @@ const QuanLyGiayPhep = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="7" className="text-center">
+                    <td colSpan="9" className="text-center">
                       Đang tải dữ liệu...
                     </td>
                   </tr>

@@ -17,6 +17,7 @@ class BangLuong(db.Model):
     tong_tien_tang_ca = db.Column(db.Float, default=0.0)
     tong_khau_tru = db.Column(db.Float, default=0.0) 
     tong_phu_cap = db.Column(db.Float, default=0.0)
+    tong_thuong = db.Column(db.Float, default=0.0)
     
     bhxh = db.Column(db.Float, default=0.0)
     bhtn = db.Column(db.Float, default=0.0) 
@@ -44,6 +45,7 @@ class BangLuong(db.Model):
             "tong_tien_tang_ca": self.tong_tien_tang_ca,
             "tong_khau_tru": self.tong_khau_tru,
             "tong_phu_cap": self.tong_phu_cap,
+            "tong_thuong": self.tong_thuong,
             "bhxh": self.bhxh,
             "bhtn": self.bhtn,
             "bhyt": self.bhyt,

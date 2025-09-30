@@ -16,7 +16,7 @@ def get_thuong_by_name_service(ten_thuong):
 def get_thuong_by_id_service(thuong_id):
     return Thuong.query.get(thuong_id)
 def get_thuong_by_nhan_vien_id_service(nhan_vien_id):
-    return db.session.query(Thuong).join(ThuongNhanVien).filter(ThuongNhanVien.nhan_vien_id == nhan_vien_id).all()
+    return db.session.query(Thuong).join(ThuongNhanVien).filter(ThuongNhanVien.nhanvien_id == nhan_vien_id).all()
 
 # Thêm mới phúc lợi
 def create_thuong_service(data):
@@ -62,9 +62,13 @@ def delete_thuong_service(thuong_id):
     thuong = get_thuong_by_id_service(thuong_id)
     if not thuong:
         return False
-    db.session.delete(thuong)
-    db.session.commit()
-    return True
+    try:
+        db.session.delete(thuong)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        raise Exception(str(e))
 
 
 def add_nhan_vien_to_thuong_service(thuong_id, nhan_vien_ids):

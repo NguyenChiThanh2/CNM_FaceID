@@ -69,6 +69,7 @@ const QuanLyLuong = () => {
       setLuongList(response.data);
       setLoading(false);
     } catch (error) {
+      setLoading(false);
       toast.error("Không thể tải dữ liệu lương!");
     }
   };
@@ -78,6 +79,7 @@ const QuanLyLuong = () => {
       const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
       setNhanVienList(response.data);
     } catch (error) {
+      setLoading(false);
       toast.error("Không thể tải danh sách nhân viên!");
     }
   };
@@ -89,7 +91,6 @@ const QuanLyLuong = () => {
       await axios.delete(`${API_URL}/delete-bangluong/${luongId}`);
       toast.success("Xoá lương thành công!");
       fetchLuong();
-      
     } catch (error) {
       setLoading(false);
       toast.error("Không thể xoá lương.");
@@ -223,6 +224,12 @@ const QuanLyLuong = () => {
 
   return (
     <div className="container min-vh-100">
+      {/* {loading && (
+        <div>
+          <ToastContainer />
+          <Loading />
+        </div>
+      )} */}
       <ToastContainer />
       <div className="row">
         <div className="col-12 mt-5">
@@ -397,6 +404,11 @@ const QuanLyLuong = () => {
                   <th>Phụ cấp khác</th>
                   <th>Tổng phụ cấp</th>
 
+                  <th>Thưởng nóng</th>
+                  <th>Thưởng lễ</th>
+                  <th>Thưởng khác</th>
+                  <th>Tổng Thưởng</th>
+
                   <th>Tổng lương</th>
 
                   <th>Trừ đi trễ, về sớm</th>
@@ -457,6 +469,19 @@ const QuanLyLuong = () => {
                     (ct) => ct.loai === "TRU_KHAC"
                   );
 
+                  const thuongNong = luong.chi_tiet_luong?.find(
+                    (ct) => ct.loai === "NONG"
+                  );
+                  const thuongLe = luong.chi_tiet_luong?.find(
+                    (ct) => ct.loai === "LE"
+                  );
+                  // const thuongKhac = luong.chi_tiet_luong?.find(
+                  //   (ct) => ct.loai === "THUONGKHAC"
+                  // );
+                  const thuongKhacList = luong.chi_tiet_luong?.filter(
+                    (ct) => ct.loai === "THUONGKHAC"
+                  ) || [];
+
                   return (
                     <tr key={luong.id}>
                       <td
@@ -470,17 +495,18 @@ const QuanLyLuong = () => {
                         }}
                       >
                         <OverlayTrigger
-                          
                           placement="top"
                           overlay={
-                            <Popover className="bg-primary-subtle text-white" >
+                            <Popover className="bg-primary-subtle text-white">
                               <Popover.Body as="h5">
                                 <small>{luong?.ghi_chu || ""}</small>
                               </Popover.Body>
                             </Popover>
                           }
-                        ><h3>{luong.ghi_chu === "Nghỉ thai sản" ? "🤰" : ""}</h3>
-                          
+                        >
+                          <h3>
+                            {luong.ghi_chu === "Nghỉ thai sản" ? "🤰" : ""}
+                          </h3>
                         </OverlayTrigger>
                       </td>
 
@@ -584,6 +610,58 @@ const QuanLyLuong = () => {
                       <td className="text-success bg-success bg-opacity-50">
                         <b>{formatCurrency(luong.tong_phu_cap)}</b>
                       </td>
+
+                      <td className="bg-warning-subtle">
+                        {thuongNong
+                          ? formatCurrency(thuongNong.so_tien)
+                          : formatCurrency(0)}
+                      </td>
+                      <td className="bg-warning-subtle">
+                        {thuongLe
+                          ? formatCurrency(thuongLe.so_tien)
+                          : formatCurrency(0)}
+                      </td>
+
+                      <OverlayTrigger
+                        placement="top"
+                        overlay={
+                          <Popover>
+                            <Popover.Header as="h5">
+                              Thưởng khác
+                            </Popover.Header>
+                            <Popover.Body>
+                              {thuongKhacList.length > 0 ? (
+                                <ul className="mb-0 ps-3">
+                                  {thuongKhacList.map((tk, index) => (
+                                    <li key={index}>
+                                      <div><strong>{tk.ghi_chu || "Thưởng khác"}</strong></div>
+                                      <div>Số tiền: {formatCurrency(tk.so_tien)}</div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <small>Không có thưởng khác</small>
+                              )}
+                            </Popover.Body>
+                          </Popover>
+                        }
+                      >
+                        <td className="bg-warning-subtle">
+                          <span style={{ cursor: "pointer" }}>
+                            {thuongKhacList.length > 0
+                              ? formatCurrency(
+                                  thuongKhacList.reduce((sum, tk) => sum + (tk.so_tien || 0), 0)
+                                )
+                              : formatCurrency(0)
+                            }
+                          </span>
+                        </td>
+                      </OverlayTrigger>
+
+                      <td className="bg-warning bg-opacity-50">
+                        <b>{formatCurrency(luong.tong_thuong)}</b>
+                      </td>
+
                       <td>
                         <b>{formatCurrency(luong.tong_luong)}</b>
                       </td>

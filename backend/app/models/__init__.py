@@ -21,11 +21,13 @@ from .chi_tiet_luong_model import ChiTietLuong
 from .ngay_nghi_le_model import NgayNghiLe
 from .thuong_model import Thuong
 from .thuong_nhanvien_model import ThuongNhanVien
+from .khau_tru_model import KhauTru
+from .khautru_nhanvien_model import KhauTruNhanVien
 
 __all__ = [
     'NhanVien', 'ChamCong', 'PhucLoi', 'NghiPhep', 'Luong', 'DaoTao', 'DanhGia',
     'NhanVienPhucLoi', 'PhongBan', 'ChucVu', 'User', 'Role', 'DaoTaoNhanVien', 'LoaiNghiPhep',
     'HopDongLaoDong', 'QuyCheCongTy', 'GiayPhep', 'BangLuong', 'NguoiPhuThuoc', 'ChiTietLuong',
-    'NgayNghiLe', 'Thuong', 'ThuongNhanVien',
+    'NgayNghiLe', 'Thuong', 'ThuongNhanVien', 'KhauTru', 'KhauTruNhanVien',
     
 ]

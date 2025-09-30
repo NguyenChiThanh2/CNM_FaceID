@@ -83,7 +83,7 @@ def get_nhan_vien_by_thuong_controller(thuong_id):
         result, error, status = get_nhan_vien_by_thuong_service(thuong_id)
 
         if error:
-            return jsonify({"message": error}), status
+             jsonify({"message": error}), status
 
         return jsonify(result), 200
 
@@ -105,3 +105,4 @@ def remove_nhan_vien_from_thuong_controller():
 
     except Exception as e:
         return jsonify({"message": f"Lỗi server: {str(e)}"}), 500
+    
