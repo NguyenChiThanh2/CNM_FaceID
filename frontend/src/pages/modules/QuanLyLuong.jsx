@@ -460,14 +460,14 @@ const QuanLyLuong = () => {
                     (ct) => ct.loai === "NGHI_KHONG_PHEP"
                   );
                   const viPhamNoiQuy = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "VI_PHAM_NOI_QUY"
+                    (ct) => ct.loai === "VI_PHAM"
                   );
                   const tamUng = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "TAM_UNG"
+                    (ct) => ct.loai === "UNG_LUONG"
                   );
-                  const truKhac = luong.chi_tiet_luong?.find(
+                  const truKhacList = luong.chi_tiet_luong?.filter(
                     (ct) => ct.loai === "TRU_KHAC"
-                  );
+                  ) || [];
 
                   const thuongNong = luong.chi_tiet_luong?.find(
                     (ct) => ct.loai === "NONG"
@@ -475,11 +475,8 @@ const QuanLyLuong = () => {
                   const thuongLe = luong.chi_tiet_luong?.find(
                     (ct) => ct.loai === "LE"
                   );
-                  // const thuongKhac = luong.chi_tiet_luong?.find(
-                  //   (ct) => ct.loai === "THUONGKHAC"
-                  // );
                   const thuongKhacList = luong.chi_tiet_luong?.filter(
-                    (ct) => ct.loai === "THUONGKHAC"
+                    (ct) => ct.loai === "THUONG_KHAC"
                   ) || [];
 
                   return (
@@ -682,7 +679,7 @@ const QuanLyLuong = () => {
                           : formatCurrency(0)}
                       </td>
 
-                      <OverlayTrigger
+                      {/* <OverlayTrigger
                         placement="top"
                         overlay={
                           <Popover>
@@ -700,6 +697,41 @@ const QuanLyLuong = () => {
                             {truKhac
                               ? formatCurrency(truKhac.so_tien)
                               : formatCurrency(0)}
+                          </span>
+                        </td>
+                      </OverlayTrigger> */}
+                      <OverlayTrigger
+                        placement="top"
+                        overlay={
+                          <Popover>
+                            <Popover.Header as="h5">
+                              Khấu trừ khác
+                            </Popover.Header>
+                            <Popover.Body>
+                              {truKhacList.length > 0 ? (
+                                <ul className="mb-0 ps-3">
+                                  {truKhacList.map((kt, index) => (
+                                    <li key={index}>
+                                      <div><strong>{kt.ghi_chu || "Khấu trừ khác"}</strong></div>
+                                      <div>Số tiền: {formatCurrency(kt.so_tien)}</div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <small>Không có khấu trừ</small>
+                              )}
+                            </Popover.Body>
+                          </Popover>
+                        }
+                      >
+                        <td className="text-danger bg-danger-subtle">
+                          <span style={{ cursor: "pointer" }}>
+                            {truKhacList.length > 0
+                              ? formatCurrency(
+                                  truKhacList.reduce((sum, kt) => sum + (kt.so_tien || 0), 0)
+                                )
+                              : formatCurrency(0)
+                            }
                           </span>
                         </td>
                       </OverlayTrigger>

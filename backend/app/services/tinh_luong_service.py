@@ -17,6 +17,8 @@ from app.models.nghi_phep_model import NghiPhep
 from app.models.ngay_nghi_le_model import NgayNghiLe
 from app.models.thuong_model import Thuong
 from app.models.thuong_nhanvien_model import ThuongNhanVien
+from app.models.khau_tru_model import KhauTru
+from app.models.khautru_nhanvien_model import KhauTruNhanVien
 from app import db
 
 # class TinhLuongService:
@@ -220,6 +222,12 @@ def thuong_theo_thang(nhanvien_id: int, thang: int, nam: int):
                             extract('month', Thuong.ngay_quyet_dinh) == thang,
                             extract('year', Thuong.ngay_quyet_dinh) == nam,
                         ).all()
+def khautru_theo_thang(nhanvien_id: int, thang: int, nam: int):
+    return db.session.query(KhauTru).join(KhauTruNhanVien).filter(
+                            KhauTruNhanVien.nhan_vien_id == nhanvien_id,
+                            extract('month', KhauTru.ngay_quyet_dinh) == thang,
+                            extract('year', KhauTru.ngay_quyet_dinh) == nam,
+                        ).all()
         
 # TÍNH LƯƠNG------------------------------------------------------------------------------------------------
 def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
@@ -240,12 +248,13 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     tien_luong_le_mien_thue = 0.0
     tien_luong_le_tinh_thue = 0.0
     
+    vi_pham=0.0    
+    tam_ung = 0.0
+    tru_khac=0.0
+    ds_khautru_khac = []
     khau_tru = 0.0
     ditre_vesom = 0.0
     nghi_khong_phep = 0.0
-    vi_pham = 0.0
-    tam_ung = 0.0
-    tru_khac = 0.0
     
     phu_cap = 0.0
     phucap_an_trua = 0.0
@@ -261,6 +270,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     thuong_khac=0.0
     ds_thuong_khac = []
     tong_thuong = 0.0
+    
+    
     
     luongcoban = 0.0
     cong = 0.0
@@ -483,7 +494,20 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                         else:    
                             thuong_khac += float(thuong.so_tien)
                             ds_thuong_khac.append({'ten_thuong': thuong.ten_thuong, 'so_tien': float(thuong.so_tien)})
-                
+                            
+            dskhautru = khautru_theo_thang(nhanvien_id, thang, nam)
+            # print(dskhautru)
+            if dskhautru and len(dskhautru):
+                for kt in dskhautru:
+                    khau_tru += float(kt.so_tien)
+                    if kt.loai_khau_tru == "VI_PHAM":
+                        vi_pham += float(kt.so_tien)
+                    if kt.loai_khau_tru == "UNG_LUONG":
+                        tam_ung += float(kt.so_tien)
+                    if kt.loai_khau_tru not in ["VI_PHAM", "UNG_LUONG"]:
+                        tru_khac += float(kt.so_tien)
+                        ds_khautru_khac.append({'ten_khau_tru': kt.ten_khau_tru, 'so_tien': float(kt.so_tien)})
+            
 
             # ======= TĂNG CA TÍNH THUẾ =======
             if locals().get("tien_tang_ca") and tien_tang_ca > 0:
@@ -613,7 +637,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                         ChiTietLuong(
                             bang_luong_id=bangluong.id,
                             nhom=NhomChiTietLuong.KHAU_TRU,
-                            loai="VI_PHAM_NOI_QUY",
+                            loai="VI_PHAM",
                             so_tien=vi_pham
                         )
                     )
@@ -622,19 +646,21 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                         ChiTietLuong(
                             bang_luong_id=bangluong.id,
                             nhom=NhomChiTietLuong.KHAU_TRU,
-                            loai="TAM_UNG",
+                            loai="UNG_LUONG",
                             so_tien=tam_ung
                         )
                     )
                 if tru_khac and tru_khac > 0:
-                    chi_tiet_list.append(
-                        ChiTietLuong(
-                            bang_luong_id=bangluong.id,
-                            nhom=NhomChiTietLuong.KHAU_TRU,
-                            loai="TRU_KHAC",
-                            so_tien=tru_khac
+                    for kt in ds_khautru_khac:
+                        chi_tiet_list.append(
+                            ChiTietLuong(
+                                bang_luong_id=bangluong.id,
+                                nhom=NhomChiTietLuong.KHAU_TRU,
+                                loai="TRU_KHAC",
+                                so_tien=kt['so_tien'],
+                                ghi_chu=kt['ten_khau_tru']
+                            )
                         )
-                    )
 
                 
                 # ======= PHỤ CẤP  =======
@@ -729,7 +755,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                             ChiTietLuong(
                                 bang_luong_id=bangluong.id,
                                 nhom=NhomChiTietLuong.THUONG,
-                                loai="THUONGKHAC",
+                                loai="THUONG_KHAC",
                                 so_tien=tk['so_tien'],
                                 ghi_chu=tk['ten_thuong']
                             )

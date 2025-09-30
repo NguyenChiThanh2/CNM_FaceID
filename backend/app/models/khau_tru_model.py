@@ -25,7 +25,7 @@ class KhauTru(db.Model):
     )
 
     def __repr__(self):
-        return f"<KhauTru {self.loai_khau_tru} - {self.so_tien} - {self.ten_khau_tru}>"
+        return f"<KhauTru loai={self.loai_khau_tru}, so_tien={self.so_tien}, ten_khau_tru={self.ten_khau_tru}>"
 
     def to_dict(self):
         return {

@@ -108,14 +108,17 @@ def delete_khau_tru_service(khau_tru_id):
 def add_nhan_vien_to_khau_tru_service(khau_tru_id, nhan_vien_ids):
     for nv_id in nhan_vien_ids:
         existing = db.session.query(KhauTruNhanVien).filter_by(
-            nhanvien_id=nv_id, khau_tru_id=khau_tru_id
+            nhan_vien_id=nv_id, khau_tru_id=khau_tru_id
         ).first()
 
         if not existing:
-            new_entry = KhauTruNhanVien(nhanvien_id=nv_id, khau_tru_id=khau_tru_id)
+            new_entry = KhauTruNhanVien(nhan_vien_id=nv_id, khau_tru_id=khau_tru_id)
             db.session.add(new_entry)
-
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise Exception(str(e))
 
 def get_nhan_vien_by_khau_tru_service(khau_tru_id):
     khau_tru = KhauTru.query.get(khau_tru_id)
@@ -128,7 +131,7 @@ def get_nhan_vien_by_khau_tru_service(khau_tru_id):
 
     result = []
     for tg in tham_gias:
-        nv = tg.nhanvien
+        nv = tg.nhan_vien
         result.append({
             "id": nv.id,
             "ho_ten": nv.ho_ten,
@@ -142,7 +145,7 @@ def get_nhan_vien_by_khau_tru_service(khau_tru_id):
 def remove_nhan_vien_from_khau_tru_service(khau_tru_id, nhan_vien_id):
     entry = KhauTruNhanVien.query.filter_by(
         khau_tru_id=khau_tru_id,
-        nhanvien_id=nhan_vien_id
+        nhan_vien_id=nhan_vien_id
     ).first()
 
     if entry:

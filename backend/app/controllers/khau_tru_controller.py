@@ -87,7 +87,7 @@ def delete_khau_tru(khau_tru_id):
 
 def add_nhan_vien_to_khau_tru_controller(data):
     try:
-        khau_tru_id = data.get("khau_tru_id")
+        khau_tru_id = data.get("khautru_id")
         nhan_vien_ids = data.get("nhan_vien_ids", [])
 
         if not khau_tru_id or not isinstance(nhan_vien_ids, list):
@@ -114,7 +114,7 @@ def get_nhan_vien_by_khau_tru_controller(khau_tru_id):
 def remove_nhan_vien_from_khau_tru_controller():
     try:
         data = request.json
-        khau_tru_id = data.get("khau_tru_id")
+        khau_tru_id = data.get("khautru_id")
         nhan_vien_id = data.get("nhan_vien_id")
 
         result, error, status = remove_nhan_vien_from_khau_tru_service(khau_tru_id, nhan_vien_id)

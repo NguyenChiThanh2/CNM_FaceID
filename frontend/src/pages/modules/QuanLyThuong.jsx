@@ -129,7 +129,7 @@ const Thuong = () => {
       saveAs(file, "DanhSachThuong.xlsx");
       toast.success("📤 Đã xuất Excel!");
     } catch (e) {
-      toast.error("❌ Xuất Excel thất bại!");
+      toast.error("❌ Xuất Excel thất bại!", e);
     }
   };
 
