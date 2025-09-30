@@ -1,4 +1,7 @@
-from flask import Blueprint
+from flask import Blueprint, request, jsonify
+from werkzeug.security import check_password_hash
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from app.models import NhanVien
 from app.controllers.nhan_vien_controller import (
     get_all_nhan_vien_controller,
     get_nhan_vien_by_id_controller,
@@ -39,3 +42,46 @@ def search_nhan_vien_theoten():
     from flask import request
     q = request.args.get("q", "")
     return search_nhan_vien_theoten_controller(q)
+
+@nhan_vien_bp.route('/login', methods=['POST', 'OPTIONS'])
+def login_nhan_vien():
+    if request.method == 'OPTIONS':
+        # Cho phép preflight CORS
+        return ('', 204)
+
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    # Tìm nhân viên theo email
+    nhan_vien = NhanVien.query.filter_by(email=email).first()
+
+    if not nhan_vien or not check_password_hash(nhan_vien.password, password):
+        return jsonify({"msg": "Email hoặc mật khẩu không chính xác"}), 401
+
+    # Tạo token đăng nhập
+    access_token = create_access_token(identity={
+        "id": nhan_vien.id,
+        "email": nhan_vien.email,
+        "ho_ten": nhan_vien.ho_ten,
+        "chuc_vu_id": nhan_vien.chuc_vu_id,
+        "phong_ban_id": nhan_vien.phong_ban_id
+    })
+
+    return jsonify({
+        "access_token": access_token,
+        "nhan_vien": {
+            "id": nhan_vien.id,
+            "ho_ten": nhan_vien.ho_ten,
+            "email": nhan_vien.email,
+            "chuc_vu_id": nhan_vien.chuc_vu_id,
+            "phong_ban_id": nhan_vien.phong_ban_id
+        }
+    }), 200
+
+
+@nhan_vien_bp.route('/logout', methods=['POST'])
+@jwt_required()
+def logout_nhan_vien():
+    current_user = get_jwt_identity()
+    return jsonify({"msg": f"Đăng xuất thành công cho {current_user['ho_ten']}"}), 200

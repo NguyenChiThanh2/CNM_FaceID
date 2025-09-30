@@ -36,8 +36,8 @@
 #     app.register_blueprint(dao_tao_bp, url_prefix='/api')
 #     app.register_blueprint(loai_nghi_phep_bp, url_prefix='/api')
 
-from .user_routes import user_bp
-from .role_routes import role_bp
+
+# from .role_routes import role_bp
 from .phuc_loi_routes import phuc_loi_bp
 from .phong_ban_routers import phong_ban_bp
 from .nghi_phep_routers import nghi_phep_bp
@@ -60,9 +60,8 @@ def register_routes(app):
     app.register_blueprint(chitietluong_bp, url_prefix='/api')
     app.register_blueprint(giayphep_bp, url_prefix='/api')
     app.register_blueprint(tinhluong_bp, url_prefix='/api')
-    app.register_blueprint(bangluong_bp, url_prefix='/api')
-    app.register_blueprint(user_bp, url_prefix='/api')  
-    app.register_blueprint(role_bp, url_prefix='/api')  
+    app.register_blueprint(bangluong_bp, url_prefix='/api') 
+    # app.register_blueprint(role_bp, url_prefix='/api')  
     app.register_blueprint(phuc_loi_bp, url_prefix='/api')
     app.register_blueprint(phong_ban_bp, url_prefix='/api')
     app.register_blueprint(nghi_phep_bp, url_prefix='/api')

@@ -185,7 +185,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
         <div className="col-md-6 mb-3">
           <label><strong>Số điện thoại</strong></label>
           <input
-            type="text"
+            type="tel"
             name="so_dien_thoai"
             className="form-control"
             value={formData.so_dien_thoai}

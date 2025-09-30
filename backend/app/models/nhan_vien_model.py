@@ -18,6 +18,7 @@ class NhanVien(db.Model):
     avatar = db.Column(db.String(255), nullable=True)
     trang_thai = db.Column(db.String(50))
     so_ngay_phep_con_lai = db.Column(db.Integer, default=12)
+    password = db.Column(db.String(120), nullable=False)
     face_encoding = db.Column(db.PickleType, nullable=True)
 
     # Relationships
@@ -75,3 +76,8 @@ class NhanVien(db.Model):
         if not self.face_encoding:
             return False
         return face_recognition.compare_faces([self.face_encoding], face_encoding, tolerance=tolerance)[0]
+    def set_password(self, raw_pw: str):
+        self.password = generate_password_hash(raw_pw)
+
+    def check_password(self, raw_pw: str) -> bool:
+        return check_password_hash(self.password, raw_pw)
