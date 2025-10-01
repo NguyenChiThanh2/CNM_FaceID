@@ -107,13 +107,23 @@ def delete_khau_tru_service(khau_tru_id):
 
 def add_nhan_vien_to_khau_tru_service(khau_tru_id, nhan_vien_ids):
     for nv_id in nhan_vien_ids:
+        so_tien = nv_id.get("so_tien_thuc_te")  # có thể là None
         existing = db.session.query(KhauTruNhanVien).filter_by(
-            nhan_vien_id=nv_id, khau_tru_id=khau_tru_id
+            nhan_vien_id=nv_id["id"], khau_tru_id=khau_tru_id
         ).first()
 
         if not existing:
-            new_entry = KhauTruNhanVien(nhan_vien_id=nv_id, khau_tru_id=khau_tru_id)
+            new_entry = KhauTruNhanVien(
+                nhan_vien_id=nv_id["id"],
+                khau_tru_id=khau_tru_id,
+                so_tien_thuc_te=so_tien
+            )
             db.session.add(new_entry)
+        else:
+            # cập nhật lại nếu khác
+            if existing.so_tien_thuc_te != so_tien:
+                existing.so_tien_thuc_te = so_tien
+            
     try:
         db.session.commit()
     except Exception as e:
@@ -137,6 +147,8 @@ def get_nhan_vien_by_khau_tru_service(khau_tru_id):
             "ho_ten": nv.ho_ten,
             "email": nv.email,
             "phong_ban_id": nv.phong_ban_id,
+            "so_tien": float(tg.khau_tru.so_tien) if tg.khau_tru.so_tien else None,
+            "so_tien_thuc_te": float(tg.so_tien_thuc_te) if tg.so_tien_thuc_te else None,
         })
 
     return result, None, 200

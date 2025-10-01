@@ -87,9 +87,10 @@ def delete_khau_tru(khau_tru_id):
 
 def add_nhan_vien_to_khau_tru_controller(data):
     try:
-        khau_tru_id = data.get("khautru_id")
-        nhan_vien_ids = data.get("nhan_vien_ids", [])
-
+        payload = data.get("payload")
+        khau_tru_id = payload["khautru_id"]
+        nhan_vien_ids = payload.get("nhan_vien", [])
+        # print(nhan_vien_ids)
         if not khau_tru_id or not isinstance(nhan_vien_ids, list):
             return jsonify({"error": "Dữ liệu không hợp lệ"}), 400
 

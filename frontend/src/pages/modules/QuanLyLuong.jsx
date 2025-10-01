@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
   Table,
@@ -32,7 +32,6 @@ const QuanLyLuong = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [loading, setLoading] = useState(true);
-  // const hasFetched = useRef(false);
 
   const [formData, setFormData] = useState({
     nhan_vien_id: "",
@@ -70,7 +69,7 @@ const QuanLyLuong = () => {
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      toast.error("Không thể tải dữ liệu lương!");
+      toast.error("Không thể tải dữ liệu lương!", error);
     }
   };
 
@@ -80,7 +79,7 @@ const QuanLyLuong = () => {
       setNhanVienList(response.data);
     } catch (error) {
       setLoading(false);
-      toast.error("Không thể tải danh sách nhân viên!");
+      toast.error("Không thể tải danh sách nhân viên!", error);
     }
   };
 
@@ -93,7 +92,7 @@ const QuanLyLuong = () => {
       fetchLuong();
     } catch (error) {
       setLoading(false);
-      toast.error("Không thể xoá lương.");
+      toast.error("Không thể xoá lương.", error);
     }
   };
 
@@ -119,7 +118,7 @@ const QuanLyLuong = () => {
           toast.error("Không thể tính lương.");
         }
       } catch (error) {
-        toast.error("Lỗi khi tính lương cho tất cả nhân viên.");
+        toast.error("Lỗi khi tính lương cho tất cả nhân viên.", error);
       }
     } else {
       if (!nhan_vien_id) {
@@ -149,7 +148,7 @@ const QuanLyLuong = () => {
           setLoading(false);
         }
       } catch (error) {
-        toast.error("Lỗi khi tính lương!");
+        toast.error("Lỗi khi tính lương!", error);
         setLoading(false);
       }
     }

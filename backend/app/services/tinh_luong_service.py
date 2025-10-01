@@ -223,7 +223,7 @@ def thuong_theo_thang(nhanvien_id: int, thang: int, nam: int):
                             extract('year', Thuong.ngay_quyet_dinh) == nam,
                         ).all()
 def khautru_theo_thang(nhanvien_id: int, thang: int, nam: int):
-    return db.session.query(KhauTru).join(KhauTruNhanVien).filter(
+    return db.session.query(KhauTruNhanVien).join(KhauTru).filter(
                             KhauTruNhanVien.nhan_vien_id == nhanvien_id,
                             extract('month', KhauTru.ngay_quyet_dinh) == thang,
                             extract('year', KhauTru.ngay_quyet_dinh) == nam,
@@ -345,44 +345,6 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             if ds_ngay_nghi_phep and len(ds_ngay_nghi_phep) > 0:
                 # cong = len(ds_ngay_nghi_phep)  # cộng trước số ngày nghỉ phép
                 tong_ngay_cong = len(ds_ngay_nghi_phep)
-                
-            # tong_luong = 0.0
-            
-        
-            # kt = True
-            # temp_tnc = 0.0
-            # tong_ngay_cong_thuc = 0.0
-            
-            
-            # tong_gio_tang_ca = 0.0
-            # tong_tien_tang_ca = 0.0
-            # tien_tang_ca_tinh_thue = 0.0
-            # tien_tang_ca_mien_thue = 0.0
-            
-            # luong_le = 0.0
-            # tong_luong_le = 0.0
-            # so_ngay_lam_le = 0.0
-            # tien_luong_le_mien_thue = 0.0
-            # tien_luong_le_tinh_thue = 0.0
-            
-            # khau_tru = 0.0
-            # ditre_vesom = 0.0
-            # nghi_khong_phep = 0.0
-            # vi_pham = 0.0
-            # tam_ung = 0.0
-            # tru_khac = 0.0
-            
-            # phu_cap = 0.0
-            # phucap_an_trua = 0.0
-            # phucap_xang_xe = 0.0
-            
-            # phucap_doc_hai = 0.0
-            # phucap_trach_nhiem = 0.0
-            # phucap_chuc_vu = 0.0
-            # phucap_tham_nien = 0.0
-            
-            
-            
             for cc in chamcongs:
                 if cc.thoi_gian_vao.date().day in ds_ngay_nghi_phep:
                     if temp_tnc == tong_ngay_cong:
@@ -473,6 +435,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     phucap_tham_nien = policy.phu_cap_tham_nien
                     
             dsthuong = thuong_theo_thang(nhanvien_id, thang, nam)
+            
             if dsthuong and len(dsthuong):
                 for thuong in dsthuong:
                     tong_thuong += float(thuong.so_tien)
@@ -499,14 +462,20 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             # print(dskhautru)
             if dskhautru and len(dskhautru):
                 for kt in dskhautru:
-                    khau_tru += float(kt.so_tien)
-                    if kt.loai_khau_tru == "VI_PHAM":
-                        vi_pham += float(kt.so_tien)
-                    if kt.loai_khau_tru == "UNG_LUONG":
-                        tam_ung += float(kt.so_tien)
-                    if kt.loai_khau_tru not in ["VI_PHAM", "UNG_LUONG"]:
-                        tru_khac += float(kt.so_tien)
-                        ds_khautru_khac.append({'ten_khau_tru': kt.ten_khau_tru, 'so_tien': float(kt.so_tien)})
+                    if kt.so_tien_thuc_te:
+                        khau_tru += float(kt.so_tien_thuc_te)
+                    else: 
+                        khau_tru += float(kt.khau_tru.so_tien)
+                    if kt.khau_tru.loai_khau_tru == "VI_PHAM":
+                        vi_pham += float(kt.khau_tru.so_tien)
+                    if kt.khau_tru.loai_khau_tru == "UNG_LUONG":
+                        if kt.so_tien_thuc_te:
+                            tam_ung += float(kt.so_tien_thuc_te)
+                        else:
+                            tam_ung += float(kt.khau_tru.so_tien)
+                    if kt.khau_tru.loai_khau_tru not in ["VI_PHAM", "UNG_LUONG"]:
+                        tru_khac += float(kt.khau_tru.so_tien)
+                        ds_khautru_khac.append({'ten_khau_tru': kt.khau_tru.ten_khau_tru, 'so_tien': float(kt.khau_tru.so_tien)})
             
 
             # ======= TĂNG CA TÍNH THUẾ =======

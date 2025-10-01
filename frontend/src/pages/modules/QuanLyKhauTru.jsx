@@ -1,13 +1,6 @@
 // src/pages/modules/KhauTru.jsx
 import React, { useState, useEffect } from "react";
-import {
-  Row,
-  Col,
-  Button,
-  Table,
-  Modal,
-  Breadcrumb,
-} from "react-bootstrap";
+import { Row, Col, Button, Table, Modal, Breadcrumb } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import KhauTruForm from "../../components/khautru/KhauTruForm";
 import * as XLSX from "xlsx";
@@ -31,6 +24,7 @@ const KhauTru = () => {
   const [selectedKhauTruId, setSelectedKhauTruId] = useState(null);
   const [PhongBanList, setPhongBanList] = useState([]);
   // const [editingKhauTru, setSelectedKhauTru] = useState(null);
+  const [soTienThucTe, setSoTienThucTe] = useState({});
 
   const navigate = useNavigate();
   const API_BASE = "http://localhost:5000";
@@ -146,6 +140,7 @@ const KhauTru = () => {
       );
       if (Array.isArray(res.data) && res.data.length > 0) {
         setSelectedNhanVien(res.data);
+        console.log(res.data);
       } else {
         setSelectedNhanVien([]);
       }
@@ -187,9 +182,18 @@ const KhauTru = () => {
       );
       if (Array.isArray(resSelected.data) && resSelected.data.length > 0) {
         const selectedIds = resSelected.data.map((nv) => nv.id);
+        // console.log(resSelected);
+        const soTienMap = {};
+        resSelected.data.forEach((nv) => {
+          if (nv.so_tien_thuc_te) {
+            soTienMap[nv.id] = nv.so_tien_thuc_te;
+          }
+        });
         setSelectedNhanVienIds(selectedIds);
+        setSoTienThucTe(soTienMap); 
       } else {
         setSelectedNhanVienIds([]);
+        setSoTienThucTe({});
       }
       setNhanVienList(res.data);
       setSelectedKhauTruId(khautruId);
@@ -205,15 +209,26 @@ const KhauTru = () => {
     else newSet.delete(id);
     setSelectedNhanVienIds([...newSet]);
   };
+  // Khi nhập số tiền
+  const handleChangeSoTien = (id, value) => {
+    setSoTienThucTe((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
 
   // 👉 Thêm nhân viên vào khấu trừ
   const handleAddNhanVienToKhauTru = async () => {
     if (!selectedKhauTruId) return;
     try {
-      await axios.post(`${API_BASE}/api/add-nhan-vien-to-khau-tru`, {
+      const payload = {
         khautru_id: selectedKhauTruId,
-        nhan_vien_ids: selectedNhanVienIds,
-      });
+        nhan_vien: selectedNhanVienIds.map((id) => {
+          const soTien = soTienThucTe[id];
+          return soTien ? { id, so_tien_thuc_te: parseFloat(soTien) } : { id };
+        }),
+      };
+      await axios.post(`${API_BASE}/api/add-nhan-vien-to-khau-tru`, {payload});
       toast.success("Đã thêm nhân viên vào khấu trừ.");
       setShowAddNhanVienModal(false);
       setSelectedNhanVienIds([]);
@@ -276,12 +291,19 @@ const KhauTru = () => {
           {currentItems.length === 0 ? (
             <div className="text-center py-3">Không có dữ liệu phù hợp</div>
           ) : (
-            <Table striped bordered hover responsive className="align-middle rounded text-nowrap" style={{ overflowX: "auto" }}>
+            <Table
+              striped
+              bordered
+              hover
+              responsive
+              className="align-middle rounded text-nowrap"
+              style={{ overflowX: "auto" }}
+            >
               <thead className="table-dark text-center">
                 <tr>
                   <th>Tên</th>
                   <th>Mục đích khấu trừ</th>
-                  <th>Giá trị</th>
+                  <th>Số tiền</th>
                   <th>Ngày quyết định</th>
                   <th>Ghi chú</th>
                   <th>File giấy tờ</th>
@@ -302,21 +324,25 @@ const KhauTru = () => {
                     <td>{formatCurrency(pl.so_tien)}</td>
                     <td>{formatDate(pl.ngay_quyet_dinh)}</td>
                     <td>{pl.ghi_chu}</td>
-                     <td>
-                          {pl.file_dinh_kem ? (
-                            <a
-                              href={`${API_BASE}/api/file_dinh_kem_khau_tru/${pl.file_dinh_kem}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="link"
-                              style={{ textDecoration: "none", color: "#0d6efd", fontWeight: 500 }}
-                            >
-                              📎{pl.file_dinh_kem}
-                            </a>
-                          ) : (
-                            <span className="text-muted">Không có</span>
-                          )}
-                        </td>
+                    <td>
+                      {pl.file_dinh_kem ? (
+                        <a
+                          href={`${API_BASE}/api/file_dinh_kem_khau_tru/${pl.file_dinh_kem}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="link"
+                          style={{
+                            textDecoration: "none",
+                            color: "#0d6efd",
+                            fontWeight: 500,
+                          }}
+                        >
+                          📎{pl.file_dinh_kem}
+                        </a>
+                      ) : (
+                        <span className="text-muted">Không có</span>
+                      )}
+                    </td>
                     <td className="text-center">
                       <Button
                         variant="outline-warning"
@@ -416,12 +442,15 @@ const KhauTru = () => {
             </Modal.Header>
             <Modal.Body>
               {selectedNhanVien.length === 0 ? (
-                <p className="text-muted">Không có nhân viên nào bị khấu trừ.</p>
+                <p className="text-muted">
+                  Không có nhân viên nào bị khấu trừ.
+                </p>
               ) : (
                 PhongBanList.map((pb) => {
                   const nvTrongPB = selectedNhanVien.filter(
                     (nv) => nv.phong_ban_id === pb.id
                   );
+
                   if (nvTrongPB.length === 0) return null;
 
                   return (
@@ -433,6 +462,7 @@ const KhauTru = () => {
                           <tr>
                             <th>Họ tên</th>
                             <th>Email</th>
+                            <th>Số tiền thực tế (Nếu có)</th>
                             <th>Hành động</th>
                           </tr>
                         </thead>
@@ -441,6 +471,7 @@ const KhauTru = () => {
                             <tr key={nv.id}>
                               <td>{nv.ho_ten}</td>
                               <td>{nv.email}</td>
+                              <td>{nv.so_tien_thuc_te ? formatCurrency(nv.so_tien_thuc_te) : formatCurrency(0)}</td>
                               <td className="text-center">
                                 <Button
                                   variant="danger"
@@ -563,17 +594,41 @@ const KhauTru = () => {
 
                         {/* Danh sách nhân viên */}
                         {nhanVienTrongPB.map((nv) => (
-                          <div key={nv.id} className="form-check ms-4">
-                            <input
-                              className="form-check-input"
-                              type="checkbox"
-                              value={nv.id}
-                              checked={selectedNhanVienIds.includes(nv.id)}
-                              onChange={(e) => handleSelectNhanVien(e, nv.id)}
-                            />
-                            <label className="form-check-label">
-                              {nv.ho_ten} - {nv.email}
-                            </label>
+                          <div
+                            key={nv.id}
+                            className="row align-items-center ms-2 mb-2"
+                          >
+                            {/* Checkbox + label */}
+                            <div className="col-md-8 col-12 d-flex align-items-center">
+                              <input
+                                className="form-check-input me-2"
+                                type="checkbox"
+                                value={nv.id}
+                                checked={selectedNhanVienIds.includes(nv.id)}
+                                onChange={(e) => handleSelectNhanVien(e, nv.id)}
+                              />
+                              <label className="form-check-label">
+                                {nv.ho_ten} - {nv.email}
+                              </label>
+                            </div>
+
+                            {/* Input số tiền (chỉ hiện nếu là UNG_LUONG) */}
+                            {khautruList.find(
+                              (kt) => kt.id === selectedKhauTruId
+                            )?.loai_khau_tru === "UNG_LUONG" &&
+                              selectedNhanVienIds.includes(nv.id) && (
+                                <div className="col-md-4 col-12 mt-2 mt-md-0">
+                                  <input
+                                    type="number"
+                                    className="form-control"
+                                    placeholder="Nhập số tiền (nếu có)"
+                                    value={soTienThucTe[nv.id] || ""}
+                                    onChange={(e) =>
+                                      handleChangeSoTien(nv.id, e.target.value)
+                                    }
+                                  />
+                                </div>
+                              )}
                           </div>
                         ))}
                       </div>

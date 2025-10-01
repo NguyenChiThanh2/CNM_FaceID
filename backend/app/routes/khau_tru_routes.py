@@ -41,6 +41,7 @@ def delete_khau_tru_router(khau_tru_id):
 @khau_tru_bp.route("/add-nhan-vien-to-khau-tru", methods=["POST"])
 def add_nhan_vien_to_khau_tru():
     data = request.get_json()
+    print(data)
     return add_nhan_vien_to_khau_tru_controller(data)
 
 @khau_tru_bp.route("/get-all-nhan-vien-by-khau-tru-id/<int:khau_tru_id>", methods=["GET"])

@@ -24,8 +24,8 @@ class KhauTru(db.Model):
         back_populates='khautru_list'
     )
 
-    def __repr__(self):
-        return f"<KhauTru loai={self.loai_khau_tru}, so_tien={self.so_tien}, ten_khau_tru={self.ten_khau_tru}>"
+    # def __repr__(self):
+    #     return f"<KhauTru loai={self.loai_khau_tru}, so_tien={self.so_tien}, ten_khau_tru={self.ten_khau_tru}>"
 
     def to_dict(self):
         return {
