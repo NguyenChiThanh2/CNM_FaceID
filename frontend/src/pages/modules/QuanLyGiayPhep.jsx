@@ -3,7 +3,8 @@ import axios from "axios";
 import GiayPhepForm from "../../components/giayphep/GiayPhepForm";
 import { Modal, Button, Table, Breadcrumb } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import {ToastContainer, toast } from "react-toastify";
+import Loading from "../../../src/components/Loading";
 
 const API_URL = "http://127.0.0.1:5000/api";
 
@@ -38,17 +39,19 @@ const QuanLyGiayPhep = () => {
       toast.error("Không có giấy phép nào được tìm thấy!");
     } finally {
       setLoading(false);
-      
     }
   };
 
   const fetchNhanVien = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
       setNhanVienList(response.data);
     } catch (error) {
       console.error("Lỗi khi gọi API nhân viên:", error);
       toast.error("Có lỗi xảy ra khi tải danh sách nhân viên!");
+    }finally {
+      setLoading(false);
     }
   };
 
@@ -64,6 +67,7 @@ const QuanLyGiayPhep = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc muốn hủy giấy phép này không?")) {
+      setLoading(true);
       try {
         await axios.delete(`${API_URL}/cancel-giay-phep/${id}`);
         fetchGiayPhep();
@@ -71,12 +75,15 @@ const QuanLyGiayPhep = () => {
       } catch (error) {
         console.error("Lỗi khi hủy giấy phép:", error);
         toast.error("Có lỗi xảy ra khi hủy giấy phép!");
+      }finally{
+        setLoading(false);
       }
     }
   };
 
   const handleDuyet = async (id) => {
     if (window.confirm("Bạn có chắc muốn duyệt giấy phép này không?")) {
+      setLoading(true);
       try {
         await axios.put(`${API_URL}/approve-giay-phep/${id}`);
         fetchGiayPhep();
@@ -84,12 +91,15 @@ const QuanLyGiayPhep = () => {
       } catch (error) {
         console.error("Lỗi khi duyệt giấy phép:", error);
         toast.error("Có lỗi xảy ra khi duyệt giấy phép!");
+      }finally{
+        setLoading(false);
       }
     }
   };
 
   const handleTuChoi = async (id) => {
     if (window.confirm("Bạn có chắc muốn từ chối giấy phép này không?")) {
+      setLoading(true);
       try {
         await axios.put(`${API_URL}/reject-giay-phep/${id}`);
         fetchGiayPhep();
@@ -97,6 +107,8 @@ const QuanLyGiayPhep = () => {
       } catch (error) {
         console.error("Lỗi khi từ chối giấy phép:", error);
         toast.error("Có lỗi xảy ra khi từ chối giấy phép!");
+      }finally{
+        setLoading(false);
       }
     }
   };
@@ -143,8 +155,16 @@ const QuanLyGiayPhep = () => {
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
+  if (loading)
+    return (
+      <div>
+        <ToastContainer position="top-right" autoClose={2000} />
+        <Loading />
+      </div>
+  );
   return (
     <div className="container min-vh-100">
+      <ToastContainer position="top-right" autoClose={2000} />
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
@@ -342,6 +362,7 @@ const QuanLyGiayPhep = () => {
           </Modal>
         </div>
       </div>
+      
     </div>
   );
 };

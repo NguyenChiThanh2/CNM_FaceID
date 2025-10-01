@@ -5,6 +5,7 @@ import NghiPhepForm from "../../components/nghiphep/NghiPhepForm";
 import { Modal, Button, Table, Breadcrumb } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
+import Loading from "../../../src/components/Loading";
 
 const API_URL = "http://127.0.0.1:5000/api";
 
@@ -19,6 +20,7 @@ const QuanLyNghiPhep = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const navigate = useNavigate();
+  // const [loadingT, setLoadingT] = useState(true);
 
   useEffect(() => {
     fetchNghiPhep();
@@ -43,12 +45,15 @@ const QuanLyNghiPhep = () => {
   };
 
   const fetchNhanVien = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
       setNhanVienList(response.data || []);
     } catch (error) {
       console.error("Lỗi khi gọi API nhân viên:", error);
       toast.error("Có lỗi xảy ra khi tải danh sách nhân viên!");
+    }finally{
+      setLoading(false);
     }
   };
 
@@ -65,6 +70,7 @@ const QuanLyNghiPhep = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc muốn hủy đơn nghỉ phép này không?"))
       return;
+    setLoading(true);
     try {
       await toast.promise(axios.delete(`${API_URL}/delete-nghi-phep/${id}`), {
         pending: "Đang hủy đơn...",
@@ -74,13 +80,15 @@ const QuanLyNghiPhep = () => {
       fetchNghiPhep();
     } catch (error) {
       console.error("Lỗi khi hủy đơn nghỉ phép:", error);
-      // lỗi đã hiển thị bởi toast.promise
+    }finally{
+      setLoading(false);
     }
   };
 
   const handleDuyet = async (id) => {
     if (!window.confirm("Bạn có chắc muốn duyệt đơn nghỉ phép này không?"))
       return;
+    setLoading(true);
     try {
       await toast.promise(axios.put(`${API_URL}/approve-nghi-phep/${id}`), {
         pending: "Đang duyệt...",
@@ -91,12 +99,15 @@ const QuanLyNghiPhep = () => {
       fetchNhanVien();
     } catch (error) {
       console.error("Lỗi khi duyệt đơn nghỉ phép:", error);
+    }finally{
+      setLoading(false);
     }
   };
 
   const handleTuChoi = async (id) => {
     if (!window.confirm("Bạn có chắc muốn từ chối đơn nghỉ phép này không?"))
       return;
+    setLoading(true);
     try {
       await toast.promise(axios.put(`${API_URL}/reject-nghi-phep/${id}`), {
         pending: "Đang từ chối...",
@@ -106,6 +117,8 @@ const QuanLyNghiPhep = () => {
       fetchNghiPhep();
     } catch (error) {
       console.error("Lỗi khi từ chối đơn nghỉ phép:", error);
+    }finally{
+      setLoading(false);
     }
   };
 
@@ -155,8 +168,16 @@ const QuanLyNghiPhep = () => {
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
 
+  if (loading)
+      return (
+        <div>
+          <ToastContainer position="top-right" autoClose={2000} />
+          <Loading />
+        </div>
+  );
   return (
     <div className="container min-vh-100">
+      <ToastContainer position="top-right" autoClose={2000} />
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
@@ -520,7 +541,7 @@ const QuanLyNghiPhep = () => {
           </Modal>
         </div>
       </div>
-      <ToastContainer position="top-right" autoClose={2000} />
+      
     </div>
   );
 };

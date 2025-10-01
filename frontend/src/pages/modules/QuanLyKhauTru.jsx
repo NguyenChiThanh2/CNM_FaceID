@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { ToastContainer, toast } from "react-toastify";
 import axios from "axios";
+import Loading from "../../../src/components/Loading";
 
 const KhauTru = () => {
   const [khautruList, setKhauTruList] = useState([]);
@@ -25,11 +26,13 @@ const KhauTru = () => {
   const [PhongBanList, setPhongBanList] = useState([]);
   // const [editingKhauTru, setSelectedKhauTru] = useState(null);
   const [soTienThucTe, setSoTienThucTe] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const API_BASE = "http://localhost:5000";
 
   const fetchKhauTruList = async () => {
+    setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/get-all-khau-tru`);
       if (!res.ok) throw new Error();
@@ -38,6 +41,8 @@ const KhauTru = () => {
     } catch (err) {
       console.error("Lỗi khi tải khấu trừ:", err);
       toast.error("Không thể tải danh sách khấu trừ!");
+    } finally{
+      setLoading(false);
     }
   };
 
@@ -77,6 +82,7 @@ const KhauTru = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa không?")) {
+      setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/delete-khau-tru/${id}`, {
           method: "DELETE",
@@ -88,6 +94,8 @@ const KhauTru = () => {
       } catch (err) {
         console.error("Lỗi xóa:", err);
         toast.error("❌ Lỗi khi xóa khấu trừ!");
+      }finally{
+        setLoading(false);
       }
     }
   };
@@ -131,6 +139,7 @@ const KhauTru = () => {
 
   // 👉 Xem nhân viên
   const handleViewNhanVien = async (khautruId) => {
+    setLoading(true);
     try {
       const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
       setPhongBanList(respb.data);
@@ -140,16 +149,17 @@ const KhauTru = () => {
       );
       if (Array.isArray(res.data) && res.data.length > 0) {
         setSelectedNhanVien(res.data);
-        console.log(res.data);
       } else {
         setSelectedNhanVien([]);
       }
       setSelectedKhauTruId(khautruId);
     } catch (err) {
+      toast.error("Lỗi kết nối !");
       console.error("Lỗi khi lấy nhân viên:", err);
       setSelectedNhanVien([]);
     } finally {
       setShowNhanVienModal(true);
+      setLoading(false);
     }
   };
 
@@ -157,6 +167,7 @@ const KhauTru = () => {
   const handleDeleteNhanVienFromKhauTru = async (nhanVienId) => {
     if (!selectedKhauTruId) return;
     if (window.confirm("Bạn có chắc muốn xóa nhân viên này khỏi khấu trừ?")) {
+      setLoading(true);
       try {
         await axios.post(`${API_BASE}/api/remove-nhan-vien-from-khau-tru`, {
           khautru_id: selectedKhauTruId,
@@ -167,12 +178,15 @@ const KhauTru = () => {
       } catch (err) {
         console.error("Lỗi khi xóa:", err);
         toast.error("Không thể xóa nhân viên.");
+      }finally{
+        setLoading(false);
       }
     }
   };
 
   // 👉 Hiển thị modal thêm nhân viên
   const handleShowAddNhanVienModal = async (khautruId) => {
+    setLoading(true);
     try {
       const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
       setPhongBanList(respb.data);
@@ -182,7 +196,6 @@ const KhauTru = () => {
       );
       if (Array.isArray(resSelected.data) && resSelected.data.length > 0) {
         const selectedIds = resSelected.data.map((nv) => nv.id);
-        // console.log(resSelected);
         const soTienMap = {};
         resSelected.data.forEach((nv) => {
           if (nv.so_tien_thuc_te) {
@@ -190,7 +203,7 @@ const KhauTru = () => {
           }
         });
         setSelectedNhanVienIds(selectedIds);
-        setSoTienThucTe(soTienMap); 
+        setSoTienThucTe(soTienMap);
       } else {
         setSelectedNhanVienIds([]);
         setSoTienThucTe({});
@@ -199,7 +212,10 @@ const KhauTru = () => {
       setSelectedKhauTruId(khautruId);
       setShowAddNhanVienModal(true);
     } catch (err) {
+      toast.error("Lỗi kết nối !");
       console.error("Lỗi khi tải danh sách nhân viên:", err);
+    } finally{
+      setLoading(false);
     }
   };
 
@@ -219,6 +235,7 @@ const KhauTru = () => {
 
   // 👉 Thêm nhân viên vào khấu trừ
   const handleAddNhanVienToKhauTru = async () => {
+    setLoading(true);
     if (!selectedKhauTruId) return;
     try {
       const payload = {
@@ -228,13 +245,17 @@ const KhauTru = () => {
           return soTien ? { id, so_tien_thuc_te: parseFloat(soTien) } : { id };
         }),
       };
-      await axios.post(`${API_BASE}/api/add-nhan-vien-to-khau-tru`, {payload});
+      await axios.post(`${API_BASE}/api/add-nhan-vien-to-khau-tru`, {
+        payload,
+      });
       toast.success("Đã thêm nhân viên vào khấu trừ.");
       setShowAddNhanVienModal(false);
       setSelectedNhanVienIds([]);
     } catch (err) {
       console.error("Lỗi thêm nhân viên:", err);
       toast.error("Không thể thêm nhân viên.");
+    }finally{
+      setLoading(false);
     }
   };
 
@@ -244,9 +265,17 @@ const KhauTru = () => {
       ? date.toLocaleDateString("vi-VN")
       : "Ngày không hợp lệ";
   };
+  if (loading)
+    return (
+      <div>
+        <ToastContainer position="top-right" autoClose={2000} />
+        <Loading />
+      </div>
+    );
 
   return (
     <div className="container min-vh-100">
+      <ToastContainer position="top-right" autoClose={2000} />
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
@@ -288,9 +317,9 @@ const KhauTru = () => {
             </Col>
           </Row>
 
-          {currentItems.length === 0 ? (
+          {/* {currentItems.length === 0 ? (
             <div className="text-center py-3">Không có dữ liệu phù hợp</div>
-          ) : (
+          ) : ( */}
             <Table
               striped
               bordered
@@ -311,7 +340,13 @@ const KhauTru = () => {
                 </tr>
               </thead>
               <tbody>
-                {currentItems.map((pl) => (
+                 {loading ? (
+                  <tr>
+                    <td colSpan="7" className="text-center">
+                      Đang tải dữ liệu...
+                    </td>
+                  </tr>
+                ) : currentItems.length > 0 ? (currentItems.map((pl) => (
                   <tr key={pl.id}>
                     <td>{pl.ten_khau_tru}</td>
                     <td>
@@ -377,10 +412,17 @@ const KhauTru = () => {
                       </Button>
                     </td>
                   </tr>
-                ))}
+                ))
+               ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center text-muted">
+                      Không có đơn khấu trừ nào phù hợp
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </Table>
-          )}
+          
 
           {totalPages > 1 && (
             <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap">
@@ -471,7 +513,11 @@ const KhauTru = () => {
                             <tr key={nv.id}>
                               <td>{nv.ho_ten}</td>
                               <td>{nv.email}</td>
-                              <td>{nv.so_tien_thuc_te ? formatCurrency(nv.so_tien_thuc_te) : formatCurrency(0)}</td>
+                              <td>
+                                {nv.so_tien_thuc_te
+                                  ? formatCurrency(nv.so_tien_thuc_te)
+                                  : formatCurrency(0)}
+                              </td>
                               <td className="text-center">
                                 <Button
                                   variant="danger"
@@ -654,7 +700,7 @@ const KhauTru = () => {
           </Modal>
         </div>
       </div>
-      <ToastContainer position="top-right" autoClose={2000} />
+      
     </div>
   );
 };

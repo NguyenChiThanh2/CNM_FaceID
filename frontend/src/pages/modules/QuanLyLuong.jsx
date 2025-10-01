@@ -61,38 +61,40 @@ const QuanLyLuong = () => {
   }, [showModal]);
 
   const fetchLuong = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      // const response = await axios.get(`${API_URL}/get-all-luong`);
       const response = await axios.get(`${API_URL}/get-all-bang-luong`);
       setLuongList(response.data);
-      setLoading(false);
     } catch (error) {
-      setLoading(false);
       toast.error("Không thể tải dữ liệu lương!", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchNhanVien = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
       setNhanVienList(response.data);
     } catch (error) {
-      setLoading(false);
       toast.error("Không thể tải danh sách nhân viên!", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDeleteLuong = async (luongId) => {
     if (!window.confirm("Bạn có chắc chắn muốn xoá dòng lương này?")) return;
+    setLoading(true);
     try {
-      setLoading(true);
       await axios.delete(`${API_URL}/delete-bangluong/${luongId}`);
       toast.success("Xoá lương thành công!");
       fetchLuong();
     } catch (error) {
-      setLoading(false);
       toast.error("Không thể xoá lương.", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -125,30 +127,21 @@ const QuanLyLuong = () => {
         toast.warning("Vui lòng chọn nhân viên.");
         return;
       }
-
+      setLoading(true);
       try {
-        setLoading(true);
-        // const response = await axios.post(`${API_URL}/tinh-luong`, {
-        //   nhan_vien_id: parseInt(nhan_vien_id),
-        //   thang: parseInt(thang),
-        //   nam: parseInt(nam),
-        // });
         const response = await axios.post(`${API_URL}/get-tinh-luong-1nv`, {
           nhan_vien_id: parseInt(nhan_vien_id),
           thang: parseInt(thang),
           nam: parseInt(nam),
         });
-        setLoading(false);
         if (response.data) {
           toast.success("Tính lương thành công!");
           setShowModal(false);
           fetchLuong();
-        } else {
-          toast.error("Không thể tính lương.");
-          setLoading(false);
         }
       } catch (error) {
         toast.error("Lỗi khi tính lương!", error);
+      }finally{
         setLoading(false);
       }
     }
@@ -216,20 +209,14 @@ const QuanLyLuong = () => {
   if (loading)
     return (
       <div>
-        <ToastContainer />
+        <ToastContainer position="top-right" autoClose={2000} />
         <Loading />
       </div>
     );
 
   return (
     <div className="container min-vh-100">
-      {/* {loading && (
-        <div>
-          <ToastContainer />
-          <Loading />
-        </div>
-      )} */}
-      <ToastContainer />
+      <ToastContainer position="top-right" autoClose={2000} />
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
@@ -426,7 +413,13 @@ const QuanLyLuong = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedList.map((luong) => {
+                {loading ? (
+                  <tr>
+                    <td colSpan="9" className="text-center">
+                      Đang tải dữ liệu...
+                    </td>
+                  </tr>
+                ) : paginatedList.length > 0 ? (paginatedList.map((luong) => {
                   const nv = nhanVienList.find(
                     (nv) => nv.id === luong.nhan_vien_id
                   );
@@ -769,7 +762,14 @@ const QuanLyLuong = () => {
                       </td>
                     </tr>
                   );
-                })}
+                })
+              ) : (
+                  <tr>
+                    <td colSpan="11" className="text-center text-muted">
+                      Không có bảng lương
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </Table>
           </div>
@@ -851,6 +851,7 @@ const QuanLyLuong = () => {
           </Modal>
         </div>
       </div>
+      
     </div>
   );
 };
