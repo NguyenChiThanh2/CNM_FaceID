@@ -9,20 +9,23 @@ const getUserInfo = () => {
     const parsedUser = JSON.parse(storedUser);
     console.log("🔍 Full user object từ localStorage:", parsedUser);
 
-    const { username, role } = parsedUser;
-
+    const nv = parsedUser.nhan_vien || {};
     return {
-      username,
-      role: role?.ma_vai_tro || "user" // admin, nhansu, nhanvien, ...
+      username: nv.ho_ten || parsedUser.username || "Người dùng",
+      role: parsedUser.role?.ma_vai_tro || "user",
+      phong_ban_id: nv.phong_ban_id,
+      ten_phong_ban: nv.ten_phong_ban || "",
     };
   }
-  console.warn("⚠️ Không tìm thấy user trong localStorage.");
-  return { username: "Người dùng", role: "user" };
+  return { username: "Người dùng", role: "user", phong_ban_id: null };
 };
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const userInfo = getUserInfo();
+
+  const HR_DEPARTMENT_ID = 2; // 👈 ID phòng nhân sự (chỉnh đúng ID thật)
+  const restrictedPaths = ["/tinh-luong", "/phuc-loi", "/dao-tao"];
 
   const modules = [
     { title: "Quản lý nhân sự", icon: "👤", path: "/nhan-su" },
@@ -38,65 +41,40 @@ const Sidebar = () => {
   ];
 
   const visibleModules = modules.filter((module) => {
-    if (module.roles) {
-      return module.roles.includes(userInfo.role);
+    if (module.roles && !module.roles.includes(userInfo.role)) {
+      return false;
     }
+
+    if (userInfo.phong_ban_id !== HR_DEPARTMENT_ID && restrictedPaths.includes(module.path)) {
+      return false;
+    }
+
     return true;
   });
 
   const handleLogout = async () => {
     const token = localStorage.getItem("access_token");
-
     try {
       if (token) {
-        await axios.post(
-          "/api/auth/logout",
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        await axios.post("/api/auth/logout", {}, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
       }
-
-      // Xóa tất cả thông tin liên quan đến người dùng
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("user");
-
-      // Điều hướng đến trang đăng nhập
-      navigate("/dang-nhap");
     } catch (error) {
       console.error("Lỗi khi đăng xuất:", error);
-
-      // Vẫn xóa dữ liệu trong mọi trường hợp
+    } finally {
       localStorage.removeItem("access_token");
       localStorage.removeItem("user");
-
       navigate("/dang-nhap");
     }
   };
 
-
   return (
-    <div
-      className="sidebar bg-dark text-white p-4"
-      style={{
-        width: "280px",
-        position: "fixed",
-        left: 0,
-        top: 0,
-        bottom: 0,
-        fontSize: "16px",
-        lineHeight: "1.6",
-        overflowY: "auto"
-      }}
-    >
+    <div className="sidebar bg-dark text-white p-4"
+      style={{ width: "280px", position: "fixed", left: 0, top: 0, bottom: 0, fontSize: "16px", lineHeight: "1.6", overflowY: "auto" }}>
       <h4 className="text-center text-light mb-4 fw-bold">Quản lý Nhân sự</h4>
 
-      <Button variant="danger" className="w-100 mb-4" onClick={handleLogout}>
-        Đăng xuất
-      </Button>
+      <Button variant="danger" className="w-100 mb-4" onClick={handleLogout}>Đăng xuất</Button>
 
       <ul className="nav flex-column">
         {visibleModules.map((module, index) => (
@@ -109,7 +87,7 @@ const Sidebar = () => {
                 backgroundColor: "#495057",
                 borderRadius: "8px",
                 textDecoration: "none",
-                transition: "background-color 0.3s"
+                transition: "background-color 0.3s",
               }}
               onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#6c757d"}
               onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#495057"}

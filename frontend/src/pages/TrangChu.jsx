@@ -1,7 +1,8 @@
-// src/pages/TrangChu.jsx
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+
+const HR_DEPARTMENT_ID = 2; // 👈 đổi ID thật
 
 const getUserInfo = () => {
   const saved = localStorage.getItem("user");
@@ -11,7 +12,8 @@ const getUserInfo = () => {
     const nv = parsed.nhan_vien || {};
     return {
       displayName: nv.ho_ten || nv.email || "Người dùng",
-      role: nv.role?.ma_vai_tro || "user", // nếu sau này bạn thêm role vào token
+      phong_ban_id: nv.phong_ban_id,
+      ten_phong_ban: nv.ten_phong_ban || "",
     };
   } catch {
     return null;
@@ -24,11 +26,8 @@ const TrangChu = () => {
 
   useEffect(() => {
     const info = getUserInfo();
-    if (!info) {
-      navigate("/dang-nhap", { replace: true });
-    } else {
-      setUserInfo(info);
-    }
+    if (!info) navigate("/dang-nhap", { replace: true });
+    else setUserInfo(info);
   }, [navigate]);
 
   if (!userInfo) return null;
@@ -44,9 +43,12 @@ const TrangChu = () => {
     { title: "Phòng ban", icon: "🏢", path: "/phong-ban", color: "#6c757d" },
   ];
 
+  // 👇 Lọc module theo phòng ban
+  const restrictedPaths = ["/tinh-luong", "/phuc-loi", "/dao-tao"];
+
   const visibleModules = allModules.filter((m) => {
-    if (m.roles) return m.roles.includes(userInfo.role);
-    return true;
+    if (userInfo.phong_ban_id === HR_DEPARTMENT_ID) return true; // HR thấy hết
+    return !restrictedPaths.includes(m.path); // người khác bị ẩn
   });
 
   return (

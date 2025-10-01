@@ -9,7 +9,7 @@ import QuanLyPhongBan from "./pages/modules/QuanLyPhongBan";
 import NhanSuDetail from "./pages/modules/NhanSuDetail";
 import ChamCong from "./pages/modules/ChamCong";
 import QuanLyLuong from "./pages/modules/QuanLyLuong";
-import ChamCongList from "./pages/modules/ChamCongList";
+import QuanLyChamCong from "./pages/modules/QuanLyChamCong";
 import ChamCongForm from './components/chamcong/ChamCongForm';
 import FaceCheckIn from "./pages/modules/FaceCheckIn";
 import DanhSachNhanVien from "./components/phongban/DanhSachNhanVien";
@@ -55,7 +55,7 @@ const AppLayout = () => {
           <Route path="/phong-ban" element={<PrivateRoute><QuanLyPhongBan /></PrivateRoute>} />
           <Route path="/danh-gia" element={<PrivateRoute><QuanLyDanhGia /></PrivateRoute>} />
           <Route path="/nhan-su/:id" element={<PrivateRoute><NhanSuDetail /></PrivateRoute>} />
-          <Route path="/quan-ly-cham-cong" element={<PrivateRoute><ChamCongList /></PrivateRoute>} />
+          <Route path="/quan-ly-cham-cong" element={<PrivateRoute><QuanLyChamCong /></PrivateRoute>} />
           <Route path="/tinh-luong" element={<PrivateRoute><QuanLyLuong /></PrivateRoute>} />
           <Route path="/get-phong-ban-by-id/:id" element={<PrivateRoute><DanhSachNhanVien /></PrivateRoute>} />
           {/* <Route path="/cham-cong-list" element={<PrivateRoute><ChamCongList /></PrivateRoute>} /> */}

@@ -7,7 +7,7 @@ const COOLDOWN_MS = 5000;   // ms
 
 // Ngưỡng ảnh
 const BLUR_THRESHOLD = 20; // hạ tạm để dễ pass
-const DEBUG = true;       // bật/tắt console.log
+const DEBUG = false;       // bật/tắt console.log
 
 export default function FaceCheckin() {
   // refs & state

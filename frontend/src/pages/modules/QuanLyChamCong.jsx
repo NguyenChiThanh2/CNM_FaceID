@@ -1,4 +1,4 @@
-// src/pages/chamcong/ChamCongList.jsx
+// src/pages/modules/QuanLyChamCong.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { Button, Breadcrumb, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
@@ -14,7 +14,7 @@ import axiosInstance from "../../services/axiosInstance";
 
 const ITEMS_PER_PAGE = 10;
 
-const ChamCongList = () => {
+const QuanLyChamCong = () => {
   // Tìm kiếm gợi ý NV theo tên (ô trên)
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -35,7 +35,27 @@ const ChamCongList = () => {
   const API_BASE =
     (axiosInstance.defaults.baseURL || "").replace(/\/+$/, "") ||
     (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api");
+  const getUserInfo = () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) return null;
 
+      const parsed = JSON.parse(storedUser);
+      const nv = parsed.nhan_vien || {};
+
+      return {
+        id: nv.id,
+        ho_ten: nv.ho_ten,
+        phong_ban_id: nv.phong_ban_id,
+        ten_phong_ban: nv.ten_phong_ban || "",
+        role: parsed.role?.ma_vai_tro || "user",
+      };
+    } catch {
+      return null;
+    }
+  };
+  const HR_DEPARTMENT_ID = 1; // 👈 chỉnh đúng ID phòng nhân sự
+  const userInfo = getUserInfo();
   // ====== Load dữ liệu ban đầu ======
   useEffect(() => {
     (async () => {
@@ -45,7 +65,15 @@ const ChamCongList = () => {
           getAllChamCong(),
           getAllNhanVien(),
         ]);
-        setChamCongList(Array.isArray(chamCong) ? chamCong : []);
+        let list = Array.isArray(chamCong) ? chamCong : [];
+
+        // Nếu không phải phòng nhân sự → chỉ hiển thị bản ghi của chính họ
+        if (userInfo && userInfo.phong_ban_id !== HR_DEPARTMENT_ID) {
+          list = list.filter(cc => cc.nhan_vien_id === userInfo.id);
+        }
+
+        setChamCongList(list);
+
         setDsNhanVien(Array.isArray(nhanVien) ? nhanVien : []);
       } catch (error) {
         console.error(error);
@@ -106,6 +134,7 @@ const ChamCongList = () => {
     });
   }, [chamCongList, dsNhanVien, searchKeyword]);
 
+
   const totalPages = Math.max(1, Math.ceil(filteredList.length / ITEMS_PER_PAGE));
 
   const currentItems = useMemo(() => {
@@ -159,31 +188,34 @@ const ChamCongList = () => {
           <h2 className="mb-4 text-center">Quản lý chấm công</h2>
 
           {/* Search gợi ý nhân viên */}
-          <div className="mb-2">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nhập tên nhân viên..."
-              className="form-control"
-            />
-            <div className="list-group w-auto mb-4">
-              {loadingSearch && (
-                <div className="px-3 py-2 text-muted small">Đang tìm...</div>
-              )}
-              {!loadingSearch &&
-                results.map((nv) => (
-                  <button
-                    type="button"
-                    className="list-group-item list-group-item-action"
-                    key={nv.id}
-                    onClick={() => handleRowClick_tennv(nv)}
-                  >
-                    {nv.ho_ten}
-                  </button>
-                ))}
+          {userInfo?.phong_ban_id === HR_DEPARTMENT_ID && (
+            <div className="mb-2">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Nhập tên nhân viên..."
+                className="form-control"
+              />
+              <div className="list-group w-auto mb-4">
+                {loadingSearch && (
+                  <div className="px-3 py-2 text-muted small">Đang tìm...</div>
+                )}
+                {!loadingSearch &&
+                  results.map((nv) => (
+                    <button
+                      type="button"
+                      className="list-group-item list-group-item-action"
+                      key={nv.id}
+                      onClick={() => handleRowClick_tennv(nv)}
+                    >
+                      {nv.ho_ten}
+                    </button>
+                  ))}
+              </div>
             </div>
-          </div>
+          )}
+
 
           {/* Search lọc trong bảng */}
           <div className="mb-4">
@@ -317,4 +349,4 @@ const ChamCongList = () => {
   );
 };
 
-export default ChamCongList;
+export default QuanLyChamCong;

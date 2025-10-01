@@ -36,9 +36,18 @@ const DangNhap = () => {
         "user",
         JSON.stringify({
           token: access_token,
-          nhan_vien, // {id, ho_ten, email, chuc_vu_id, phong_ban_id}
+          nhan_vien: {
+            id: nhan_vien.id,
+            ho_ten: nhan_vien.ho_ten,
+            email: nhan_vien.email,
+            so_dien_thoai: nhan_vien.so_dien_thoai,
+            chuc_vu_id: nhan_vien.chuc_vu_id,
+            phong_ban_id: nhan_vien.phong_ban_id,
+            avatar: nhan_vien.avatar,
+          },
         })
       );
+
 
       navigate("/", { replace: true });
     } catch (error) {

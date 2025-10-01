@@ -10,6 +10,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { getNhanVienInfo } from "../../utils/auth";
 
 // ⬇️ dùng service mới
 import { getAllNhanVien, deleteNhanVien as apiDeleteNhanVien } from "../../services/nhanSuApi";
@@ -24,7 +25,10 @@ const QuanLyNhanSu = () => {
   const [selectedTrangThai, setSelectedTrangThai] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const currentUser = getNhanVienInfo(); // {id, ho_ten, phong_ban_id, ...}
 
+  const HR_DEPARTMENT_ID = 2; // bạn có thể thay = id thật trong DB
+  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
   const itemsPerPage = 5;
   const navigate = useNavigate();
 
@@ -116,12 +120,20 @@ const QuanLyNhanSu = () => {
   const normalizedKeyword = (searchKeyword || "").toLowerCase();
 
   const filteredList = useMemo(() => {
-    return nhanSuList.filter((nv) => {
+    let list = nhanSuList;
+
+    // Nếu không phải phòng nhân sự => chỉ hiển thị nhân viên hiện tại
+    if (!isHR && currentUser) {
+      list = list.filter((nv) => nv.id === currentUser.id);
+    }
+
+    return list.filter((nv) => {
       const matchName = (nv.ho_ten || "").toLowerCase().includes(normalizedKeyword);
       const matchStatus = selectedTrangThai ? nv.trang_thai === selectedTrangThai : true;
       return matchName && matchStatus;
     });
-  }, [nhanSuList, normalizedKeyword, selectedTrangThai]);
+  }, [nhanSuList, normalizedKeyword, selectedTrangThai, isHR, currentUser]);
+
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
 
@@ -199,15 +211,21 @@ const QuanLyNhanSu = () => {
               </select>
             </Col>
             <Col md={4} className="text-end">
-              <OverlayTrigger placement="top" overlay={<Tooltip>Thêm mới nhân sự</Tooltip>}>
-                <Button variant="outline-primary" className="me-2" onClick={handleAdd}>
-                  ➕ Thêm nhân sự
-                </Button>
-              </OverlayTrigger>
+              {isHR && (
+                <>
+                  <OverlayTrigger placement="top" overlay={<Tooltip>Thêm mới nhân sự</Tooltip>}>
+                    <Button variant="outline-primary" className="me-2" onClick={handleAdd}>
+                      ➕ Thêm nhân sự
+                    </Button>
+                  </OverlayTrigger>
 
-              <Button variant="outline-success" onClick={handleExportExcel}>
-                ⬇️ Xuất Excel
-              </Button>
+                  <Button variant="outline-success" onClick={handleExportExcel}>
+                    ⬇️ Xuất Excel
+                  </Button>
+                </>
+              )}
+
+
             </Col>
           </Row>
 
@@ -276,23 +294,12 @@ const QuanLyNhanSu = () => {
                       <td>{nv.dia_chi}</td>
                       <td>{nv.luong_co_ban}</td>
                       <td>{nv.trang_thai}</td>
-                      <td className="text-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="outline-warning"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleEdit(nv)}
-                        >
-                          ✏️ Sửa
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => handleDelete(nv.id)}
-                        >
-                          🗑️ Xóa
-                        </Button>
-                      </td>
+                      {isHR && (
+                        <td className="text-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="outline-warning" size="sm" className="me-2" onClick={() => handleEdit(nv)}>✏️ Sửa</Button>
+                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(nv.id)}>🗑️ Xóa</Button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
