@@ -54,7 +54,7 @@ const QuanLyChamCong = () => {
       return null;
     }
   };
-  const HR_DEPARTMENT_ID = 1; // 👈 chỉnh đúng ID phòng nhân sự
+  const HR_DEPARTMENT_ID = 2; // 👈 chỉnh đúng ID phòng nhân sự
   const userInfo = getUserInfo();
   // ====== Load dữ liệu ban đầu ======
   useEffect(() => {
