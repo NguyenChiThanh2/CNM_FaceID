@@ -23,7 +23,7 @@ import Sidebar from "./components/sidebar/sidebar";
 import NotFound from "./pages/NotFound";
 import ChamCongNhanVien from "./pages/modules/ChamCongNhanVien";
 import QuanLyGiayPhep from "./pages/modules/QuanLyGiayPhep";
-import GeoLocationGuard from "./pages/GeoLocationGuard";
+import MacGuard from "./pages/MacGuard";
 const AppLayout = () => {
   const location = useLocation();
   const hideNavbarPaths = ["/dang-nhap", "/404", "/cham-cong-face"];
@@ -40,9 +40,10 @@ const AppLayout = () => {
           <Route
             path="/cham-cong-face"
             element={
-              <GeoLocationGuard>
+              <MacGuard>
                 <FaceCheckIn />
-              </GeoLocationGuard>
+              </MacGuard>
+
             }
           />
 
