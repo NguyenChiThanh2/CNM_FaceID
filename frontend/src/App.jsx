@@ -50,7 +50,7 @@ const AppLayout = () => {
           <Route path="/" element={<PrivateRoute><TrangChu /></PrivateRoute>} />
           <Route path="/nhan-su" element={<PrivateRoute><QuanLyNhanSu /></PrivateRoute>} />
           <Route path="/nghi-phep" element={<PrivateRoute><QuanlyNghiPhep /></PrivateRoute>} />
-          <Route path="/dao-tao" element={<PrivateRoute><QuanLyDaoTao /></PrivateRoute>} />
+          {/* <Route path="/dao-tao" element={<PrivateRoute><QuanLyDaoTao /></PrivateRoute>} /> */}
           <Route path="/phuc-loi" element={<PrivateRoute><QuanLyPhucLoi /></PrivateRoute>} />
           <Route path="/cham-cong" element={<PrivateRoute><ChamCong /></PrivateRoute>} />
           <Route path="/phong-ban" element={<PrivateRoute><QuanLyPhongBan /></PrivateRoute>} />

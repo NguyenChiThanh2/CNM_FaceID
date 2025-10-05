@@ -34,10 +34,10 @@ const Sidebar = () => {
     { title: "Giấy phép", icon: "📜", path: "/quan-ly-giay-phep" },
     { title: "Tính lương", icon: "💰", path: "/tinh-luong" },
     { title: "Phúc lợi", icon: "🎁", path: "/phuc-loi" },
-    { title: "Đào tạo", icon: "📚", path: "/dao-tao" },
+    // { title: "Đào tạo", icon: "📚", path: "/dao-tao" },
     { title: "Đánh giá", icon: "📈", path: "/danh-gia" },
-    { title: "Phòng ban", icon: "🏢", path: "/phong-ban", roles: ["admin"] },
-    { title: "Quản lý người dùng", icon: "👥", path: "/quan-ly-nguoi-dung", roles: ["admin"] },
+    { title: "Phòng ban", icon: "🏢", path: "/phong-ban" },
+    // { title: "Quản lý người dùng", icon: "👥", path: "/quan-ly-nguoi-dung" },
   ];
 
   const visibleModules = modules.filter((module) => {
