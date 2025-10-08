@@ -1,7 +1,7 @@
 from app import db
 import face_recognition
 from sqlalchemy import Float
-
+from app.models.bang_cap_chung_chi_model import BangCapChungChi
 class NhanVien(db.Model):
     __tablename__ = 'nhan_vien'
 
@@ -32,7 +32,7 @@ class NhanVien(db.Model):
     hopdong_nv = db.relationship("HopDongLaoDong", back_populates="hopdong_nv", lazy=True)
     bang_luong_nhan_vien = db.relationship('BangLuong', back_populates='bang_luong_nhan_vien', lazy=True)
     NguoiPhuThuoc_nv = db.relationship("NguoiPhuThuoc", back_populates="NguoiPhuThuoc_nv", lazy=True)
-
+    chung_chi_list = db.relationship("BangCapChungChi", back_populates="nhan_vien",cascade="all, delete-orphan",lazy=True)
     # Các đánh giá nhận và tạo (2 quan hệ khác nhau đến cùng một bảng)
     danh_gias_nhan = db.relationship(
         'DanhGia',

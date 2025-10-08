@@ -12,9 +12,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { getNhanVienInfo } from "../../utils/auth";
 
-// ⬇️ dùng service mới
 import { getAllNhanVien, deleteNhanVien as apiDeleteNhanVien } from "../../services/nhanSuApi";
-
+import ChungChiModal from "../../components/nhansu/ChungChiModal";
 const QuanLyNhanSu = () => {
   const [nhanSuList, setNhanSuList] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -26,7 +25,8 @@ const QuanLyNhanSu = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const currentUser = getNhanVienInfo(); // {id, ho_ten, phong_ban_id, ...}
-
+  const [showCCModal, setShowCCModal] = useState(false);
+  const [selectedNV, setSelectedNV] = useState(null);
   const HR_DEPARTMENT_ID = 2; // bạn có thể thay = id thật trong DB
   const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
   const itemsPerPage = 5;
@@ -46,7 +46,14 @@ const QuanLyNhanSu = () => {
       setLoading(false);
     }
   }, []);
-
+  const openChungChi = (nv) => {
+    setSelectedNV(nv);
+    setShowCCModal(true);
+  };
+  const closeChungChi = () => {
+    setShowCCModal(false);
+    setSelectedNV(null);
+  };
   useEffect(() => {
     fetchNhanSu();
     (async () => {
@@ -215,12 +222,12 @@ const QuanLyNhanSu = () => {
                 <>
                   <OverlayTrigger placement="top" overlay={<Tooltip>Thêm mới nhân sự</Tooltip>}>
                     <Button variant="outline-primary" className="me-2" onClick={handleAdd}>
-                      ➕ Thêm nhân sự
+                      Thêm nhân sự
                     </Button>
                   </OverlayTrigger>
 
                   <Button variant="outline-success" onClick={handleExportExcel}>
-                    ⬇️ Xuất Excel
+                    Xuất Excel
                   </Button>
                 </>
               )}
@@ -296,8 +303,16 @@ const QuanLyNhanSu = () => {
                       <td>{nv.trang_thai}</td>
                       {isHR && (
                         <td className="text-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="outline-warning" size="sm" className="me-2" onClick={() => handleEdit(nv)}>✏️ Sửa</Button>
-                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(nv.id)}>🗑️ Xóa</Button>
+                          <Button
+                            variant="outline-info"
+                            size="sm"
+                            className="me-2"
+                            onClick={() => openChungChi(nv)}
+                          >
+                            Chứng chỉ
+                          </Button>
+                          <Button variant="outline-warning" size="sm" className="me-2" onClick={() => handleEdit(nv)}> Sửa</Button>
+                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(nv.id)}> Xóa</Button>
                         </td>
                       )}
                     </tr>
@@ -344,6 +359,15 @@ const QuanLyNhanSu = () => {
               <Button variant="secondary" onClick={handleModalClose}>Đóng</Button>
             </Modal.Footer>
           </Modal>
+          {/* Modal quản lý chứng chỉ */}
+          {showCCModal && selectedNV && (
+            <ChungChiModal
+              show={showCCModal}
+              onHide={closeChungChi}
+              nhanVien={selectedNV}
+              onChanged={fetchNhanSu} // nếu muốn reload NV sau khi cập nhật CC (optional)
+            />
+          )}
         </div>
       </div>
 

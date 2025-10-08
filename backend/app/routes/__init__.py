@@ -55,6 +55,7 @@ from .tinh_luong_routers import tinhluong_bp
 from .giay_phep_routers import giayphep_bp
 from .chi_tiet_luong_routers import chitietluong_bp
 from .facecheckin import facecheckin_bp
+from .chung_chi_routes import chung_chi_bp
 def register_routes(app):
     app.register_blueprint(facecheckin_bp)
     app.register_blueprint(chitietluong_bp, url_prefix='/api')
@@ -74,4 +75,5 @@ def register_routes(app):
     app.register_blueprint(nhan_vien_bp, url_prefix='/api')
     app.register_blueprint(dao_tao_bp, url_prefix='/api')
     app.register_blueprint(loai_nghi_phep_bp, url_prefix='/api')
+    app.register_blueprint(chung_chi_bp, url_prefix='/api')
 
