@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "r
 import TrangChu from "./pages/TrangChu";
 import QuanLyNhanSu from "./pages/modules/QuanLyNhanSu";
 import QuanlyNghiPhep from "./pages/modules/QuanLyNghiPhep";
-import QuanLyDaoTao from "./pages/modules/QuanLyDaoTao";
 import QuanLyPhucLoi from "./pages/modules/QuanLyPhucLoi";
 import QuanLyPhongBan from "./pages/modules/QuanLyPhongBan";
 import NhanSuDetail from "./pages/modules/NhanSuDetail";
@@ -13,7 +12,6 @@ import QuanLyChamCong from "./pages/modules/QuanLyChamCong";
 import ChamCongForm from './components/chamcong/ChamCongForm';
 import FaceCheckIn from "./pages/modules/FaceCheckIn";
 import DanhSachNhanVien from "./components/phongban/DanhSachNhanVien";
-import QuanLyNguoiDung from "./pages/modules/QuanLyNguoiDung";
 import QuanLyDanhGia from "./pages/modules/QuanLyDanhGia";
 import DangNhap from "./pages/dangNhap";
 import PrivateRoute from "./pages/PrivateRoute";
@@ -50,7 +48,6 @@ const AppLayout = () => {
           <Route path="/" element={<PrivateRoute><TrangChu /></PrivateRoute>} />
           <Route path="/nhan-su" element={<PrivateRoute><QuanLyNhanSu /></PrivateRoute>} />
           <Route path="/nghi-phep" element={<PrivateRoute><QuanlyNghiPhep /></PrivateRoute>} />
-          {/* <Route path="/dao-tao" element={<PrivateRoute><QuanLyDaoTao /></PrivateRoute>} /> */}
           <Route path="/phuc-loi" element={<PrivateRoute><QuanLyPhucLoi /></PrivateRoute>} />
           <Route path="/cham-cong" element={<PrivateRoute><ChamCong /></PrivateRoute>} />
           <Route path="/phong-ban" element={<PrivateRoute><QuanLyPhongBan /></PrivateRoute>} />
@@ -61,7 +58,6 @@ const AppLayout = () => {
           <Route path="/get-phong-ban-by-id/:id" element={<PrivateRoute><DanhSachNhanVien /></PrivateRoute>} />
           {/* <Route path="/cham-cong-list" element={<PrivateRoute><ChamCongList /></PrivateRoute>} /> */}
           <Route path="/cham-cong-form" element={<PrivateRoute><ChamCongForm /></PrivateRoute>} />
-          <Route path="/quan-ly-nguoi-dung" element={<PrivateRoute><QuanLyNguoiDung /></PrivateRoute>} />
           <Route path="/cham-cong-nhan-vien/:id" element={<PrivateRoute><ChamCongNhanVien /></PrivateRoute>} />
           <Route path="/quan-ly-giay-phep" element={<PrivateRoute><QuanLyGiayPhep /></PrivateRoute>} />
 

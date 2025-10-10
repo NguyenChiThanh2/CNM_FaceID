@@ -165,7 +165,7 @@ const QuanLyLuong = () => {
       const monthMatch =
         selectedMonthNumber && selectedYear
           ? luong.thang === parseInt(selectedMonthNumber) &&
-            luong.nam === parseInt(selectedYear)
+          luong.nam === parseInt(selectedYear)
           : true;
       return searchMatch && monthMatch;
     })
@@ -214,9 +214,9 @@ const QuanLyLuong = () => {
       <ToastContainer />
       <Loading />
     </div>
-    
-      
-  ); 
+
+
+  );
 
   return (
     <div className="container min-vh-100">
@@ -384,7 +384,7 @@ const QuanLyLuong = () => {
                   <th>Tổng lương</th>
 
                   <th>Trừ đi trễ, về sớm</th>
-                  
+
                   <th>Trừ vi phạm</th>
                   <th>Trừ tạm ứng</th>
                   <th>Trừ khác</th>
@@ -510,29 +510,29 @@ const QuanLyLuong = () => {
                           ? formatCurrency(thamNien.so_tien)
                           : formatCurrency(0)}
                       </td>
-                      
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={
-                            <Popover>
-                              <Popover.Header as="h5">
-                                Phụ cấp khác
-                              </Popover.Header>
-                              <Popover.Body>
-                                <small>
-                                  {phucapkhac?.ghi_chu || "Không có ghi chú"}
-                                </small>
-                              </Popover.Body>
-                            </Popover>
-                          }
-                        ><td className="text-success bg-success-subtle">
+
+                      <OverlayTrigger
+                        placement="top"
+                        overlay={
+                          <Popover>
+                            <Popover.Header as="h5">
+                              Phụ cấp khác
+                            </Popover.Header>
+                            <Popover.Body>
+                              <small>
+                                {phucapkhac?.ghi_chu || "Không có ghi chú"}
+                              </small>
+                            </Popover.Body>
+                          </Popover>
+                        }
+                      ><td className="text-success bg-success-subtle">
                           <span style={{ cursor: "pointer" }}>
                             {phucapkhac
                               ? formatCurrency(phucapkhac.so_tien)
                               : formatCurrency(0)}
                           </span></td>
-                        </OverlayTrigger>
-                      
+                      </OverlayTrigger>
+
                       <td className="text-success bg-success bg-opacity-50">
                         <b>{formatCurrency(luong.tong_phu_cap)}</b>
                       </td>
@@ -544,7 +544,7 @@ const QuanLyLuong = () => {
                           ? formatCurrency(diTreVeSom.so_tien)
                           : formatCurrency(0)}
                       </td>
-                      
+
                       <td className="text-danger bg-danger-subtle">
                         {viPhamNoiQuy
                           ? formatCurrency(viPhamNoiQuy.so_tien)
@@ -555,29 +555,29 @@ const QuanLyLuong = () => {
                           ? formatCurrency(tamUng.so_tien)
                           : formatCurrency(0)}
                       </td>
-                      
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={
-                            <Popover>
-                              <Popover.Header as="h5">
-                                Trừ khác
-                              </Popover.Header>
-                              <Popover.Body>
-                                <small>
-                                  {truKhac?.ghi_chu || "Không có ghi chú"}
-                                </small>
-                              </Popover.Body>
-                            </Popover>
-                          }
-                        ><td className="text-danger bg-danger-subtle">
+
+                      <OverlayTrigger
+                        placement="top"
+                        overlay={
+                          <Popover>
+                            <Popover.Header as="h5">
+                              Trừ khác
+                            </Popover.Header>
+                            <Popover.Body>
+                              <small>
+                                {truKhac?.ghi_chu || "Không có ghi chú"}
+                              </small>
+                            </Popover.Body>
+                          </Popover>
+                        }
+                      ><td className="text-danger bg-danger-subtle">
                           <span style={{ cursor: "pointer" }}>
                             {truKhac
                               ? formatCurrency(truKhac.so_tien)
                               : formatCurrency(0)}
                           </span></td>
-                        </OverlayTrigger>
-                      
+                      </OverlayTrigger>
+
                       <td className="text-danger bg-danger bg-opacity-50 ">
                         <b>{formatCurrency(luong.tong_khau_tru)}</b>
                       </td>

@@ -32,6 +32,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
     (async () => {
       try {
         const [cv, pb] = await Promise.all([getAllChucVu(), getAllPhongBan()]);
+        if (!alive) return;
         setDsChucVu(Array.isArray(cv) ? cv : []);
         setDsPhongBan(Array.isArray(pb) ? pb : []);
       } catch (err) {
@@ -39,6 +40,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
         // để trang cha bắn toast, form không bắn
       }
     })();
+    return () => { alive = false; };
   }, []);
 
   useEffect(() => {
@@ -46,6 +48,8 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
       setFormData({
         ...editingNhanSu,
         avatar: null, // tránh gửi lại file cũ
+        chuc_vu_id: editingNhanSu.chuc_vu_id ? String(editingNhanSu.chuc_vu_id) : "",
+        phong_ban_id: editingNhanSu.phong_ban_id ? String(editingNhanSu.phong_ban_id) : "",
       });
     } else {
       resetForm();
@@ -217,7 +221,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
           >
             <option value="">-- Chọn chức vụ --</option>
             {dsChucVu.map((cv) => (
-              <option key={cv.id} value={cv.id}>
+              <option key={cv.id} value={String(cv.id)}>
                 {cv.ten_chuc_vu}
               </option>
             ))}

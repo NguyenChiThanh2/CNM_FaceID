@@ -27,7 +27,6 @@ class NhanVien(db.Model):
     cham_cong_nv = db.relationship('ChamCong', back_populates='cham_cong_nv', lazy=True)
     nghi_phep = db.relationship('NghiPhep', back_populates='nhan_vien', lazy=True)
     luong_nv = db.relationship('Luong', back_populates='luong_nv', lazy=True)
-    dao_taos = db.relationship('DaoTaoNhanVien', back_populates='nhan_vien', lazy=True)
     phuc_lois = db.relationship('NhanVienPhucLoi', back_populates='nhan_vien', lazy=True)
     hopdong_nv = db.relationship("HopDongLaoDong", back_populates="hopdong_nv", lazy=True)
     bang_luong_nhan_vien = db.relationship('BangLuong', back_populates='bang_luong_nhan_vien', lazy=True)

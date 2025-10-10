@@ -1,67 +1,25 @@
-// src/api/chucVuApi.js
-import axios from "axios";
+// src/services/chucVuApi.js
+import axiosInstance from "./axiosInstance";
 
-const API_BASE_URL = "http://localhost:5000/api";
+// Trả thẳng data, nếu lỗi sẽ ném ra normalizeError đã qua interceptor
+const unwrap = (p) => p.then((r) => r.data);
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 5000,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Lấy tất cả chức vụ
-export const getAllChucVu = async () => {
-  try {
-    const response = await api.get("/get-all-chuc-vu");
-    return response.data;
-  } catch (error) {
-    console.error("❌ Lỗi khi lấy danh sách chức vụ:", error);
-    throw error.response?.data || { message: "Lỗi không xác định" };
-  }
-};
+// Lấy tất cả chức vụ (hỗ trợ query/pagination nếu BE có)
+export const getAllChucVu = (params) =>
+  unwrap(axiosInstance.get("/get-all-chuc-vu", { params }));
 
 // Lấy chức vụ theo ID
-export const getChucVuById = async (id) => {
-  try {
-    const response = await api.get(`/get-chuc-vu-by-id/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error(`❌ Lỗi khi lấy chức vụ ID ${id}:`, error);
-    throw error.response?.data || { message: "Lỗi không xác định" };
-  }
-};
+export const getChucVuById = (id) =>
+  unwrap(axiosInstance.get(`/get-chuc-vu-by-id/${id}`));
 
 // Tạo mới chức vụ
-export const createChucVu = async (data) => {
-  try {
-    const response = await api.post("/add-chuc-vu", data);
-    return response.data;
-  } catch (error) {
-    console.error("❌ Lỗi khi tạo chức vụ:", error);
-    throw error.response?.data || { message: "Lỗi không xác định" };
-  }
-};
+export const createChucVu = (payload) =>
+  unwrap(axiosInstance.post("/add-chuc-vu", payload));
 
 // Cập nhật chức vụ theo ID
-export const updateChucVu = async (id, data) => {
-  try {
-    const response = await api.put(`/edit-chuc-vu/${id}`, data);
-    return response.data;
-  } catch (error) {
-    console.error(`❌ Lỗi khi cập nhật chức vụ ID ${id}:`, error);
-    throw error.response?.data || { message: "Lỗi không xác định" };
-  }
-};
+export const updateChucVu = (id, payload) =>
+  unwrap(axiosInstance.put(`/edit-chuc-vu/${id}`, payload));
 
 // Xóa chức vụ theo ID
-export const deleteChucVu = async (id) => {
-  try {
-    const response = await api.delete(`/delete-chuc-vu/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error(`❌ Lỗi khi xóa chức vụ ID ${id}:`, error);
-    throw error.response?.data || { message: "Lỗi không xác định" };
-  }
-};
+export const deleteChucVu = (id) =>
+  unwrap(axiosInstance.delete(`/delete-chuc-vu/${id}`));
