@@ -23,5 +23,18 @@ def get_bang_luong_1nv_router():
         return jsonify({'error': 'Thiếu thông tin bắt buộc'}), 400
     return tinh_luong_cho_1nv_controller(nhan_vien_id,thang,nam)
 
+@tinhluong_bp.route('/get-tinh-luong-tat-ca', methods=['POST'])
+def get_tinh_luong_tat_ca_router():
+    print("Đang tính lương cho tất cả nhân viên...")
+    data = request.json
+    thang = data.get('thang')  # dạng int: 1-12
+    nam = data.get('nam')      # dạng int
+
+    if not all([thang, nam]):
+        return jsonify({'error': 'Thiếu thông tin tháng hoặc năm'}), 400
+
+    danh_sach_luong = tinh_luong_cho_tat_ca_nhan_vien_controller(thang, nam)
+    return jsonify({'message': 'Đã xử lý lương cho tất cả nhân viên', 'data': danh_sach_luong}), 200
+
 
      

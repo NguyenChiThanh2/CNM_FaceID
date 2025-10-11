@@ -33,6 +33,7 @@ const Sidebar = () => {
     { title: "Thưởng", icon: "🎁", path: "/thuong" },
     { title: "Khấu trừ", icon: "❌", path: "/khau-tru" },
     { title: "Phúc lợi", icon: "⚜️", path: "/phuc-loi" },
+    { title: "QL nghỉ có lương", icon: "🎆", path: "/ngay-nghi-le" },
     { title: "Đào tạo", icon: "📚", path: "/dao-tao" },
     { title: "Đánh giá", icon: "📈", path: "/danh-gia" },
     { title: "Phòng ban", icon: "🏢", path: "/phong-ban", roles: ["admin"] },

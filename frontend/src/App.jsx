@@ -26,6 +26,7 @@ import ChamCongNhanVien from "./pages/modules/ChamCongNhanVien";
 import QuanLyGiayPhep from "./pages/modules/QuanLyGiayPhep";
 import Thuong from "./pages/modules/QuanLyThuong";
 import KhauTru from "./pages/modules/QuanLyKhauTru";
+import NgayNghiLe from "./pages/modules/QuanLyNgayNghiLe";
 
 import PublicIPGuard from "./pages/PublicIPGuard";
 const AppLayout = () => {
@@ -69,6 +70,7 @@ const AppLayout = () => {
           <Route path="/khau-tru" element={<PrivateRoute><KhauTru /></PrivateRoute>} />
           <Route path="/cham-cong-nhan-vien/:id" element={<PrivateRoute><ChamCongNhanVien /></PrivateRoute>} />
           <Route path="/quan-ly-giay-phep" element={<PrivateRoute><QuanLyGiayPhep /></PrivateRoute>} />
+          <Route path="/ngay-nghi-le" element={<PrivateRoute><NgayNghiLe /></PrivateRoute>} />
 
           {/* Trang 404 */}
           <Route path="/404" element={<NotFound />} />

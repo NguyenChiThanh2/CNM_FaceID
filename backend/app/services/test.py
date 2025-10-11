@@ -94,34 +94,116 @@
 
 # tre, som = tinh_tre_som(vao, ra)
 # print(f"Đi trễ: {tre} phút, Về sớm: {som} phút")
+
+
+
+
+
+# sinh sữ liệu 1 nhân viên
+# ====================================================================
+# from datetime import datetime, date, timedelta
+# import calendar
+# import random
+
+# thang = 4
+# nam = 2025
+# nhan_vien_id = 5
+
+# ngay_dau_thang = date(nam, thang, 1)
+# so_ngay_trong_thang = calendar.monthrange(nam, thang)[1]
+
+# values = []
+# for i in range(so_ngay_trong_thang):
+#     ngay = ngay_dau_thang + timedelta(days=i)
+#     if ngay.weekday() < 5:  # chỉ lấy thứ 2 - thứ 6
+#         gio_vao_gio = 7 if random.random() < 0.5 else 8
+#         gio_vao_phut = random.randint(30, 59) if gio_vao_gio == 7 else random.randint(0, 5)
+#         thoi_gian_vao = datetime(nam, thang, ngay.day, gio_vao_gio, gio_vao_phut)
+
+#         gio_ra = 17  # chỉ trong giờ 17h
+#         phut_ra = random.randint(0, 59)
+#         thoi_gian_ra = datetime(nam, thang, ngay.day, gio_ra, phut_ra)
+
+#         values.append(
+#             f"({nhan_vien_id}, '{thoi_gian_vao}', '{thoi_gian_ra}', '{ngay}', NULL, NULL)"
+#         )
+
+# sql = "INSERT INTO cham_cong (nhan_vien_id, thoi_gian_vao, thoi_gian_ra, ngay, hinh_anh_vao, hinh_anh_ra) VALUES\n"
+# sql += ",\n".join(values) + ";"
+
+# print(sql)
+
+
 from datetime import datetime, date, timedelta
 import calendar
 import random
 
-thang = 4
-nam = 2026
-nhan_vien_id = 1
+def generate_cham_cong_data(start_nhan_vien_id, end_nhan_vien_id, thang, nam):
+    """
+    Tạo dữ liệu chấm công cho nhiều nhân viên trong khoảng ID chỉ định
+    
+    Args:
+        start_nhan_vien_id (int): ID nhân viên bắt đầu
+        end_nhan_vien_id (int): ID nhân viên kết thúc
+        thang (int): Tháng cần tạo dữ liệu
+        nam (int): Năm cần tạo dữ liệu
+    """
+    
+    ngay_dau_thang = date(nam, thang, 1)
+    so_ngay_trong_thang = calendar.monthrange(nam, thang)[1]
+    
+    all_values = []
+    
+    # Duyệt qua từng nhân viên trong khoảng ID
+    for nhan_vien_id in range(start_nhan_vien_id, end_nhan_vien_id + 1):
+        nhan_vien_values = []
+        
+        for i in range(so_ngay_trong_thang):
+            ngay = ngay_dau_thang + timedelta(days=i)
+            
+            # Chỉ tạo dữ liệu cho ngày làm việc (thứ 2 - thứ 6)
+            if ngay.weekday() < 5:
+                # Tạo thời gian vào ngẫu nhiên
+                gio_vao_gio = 7 if random.random() < 0.5 else 8
+                gio_vao_phut = random.randint(30, 59) if gio_vao_gio == 7 else random.randint(0, 5)
+                thoi_gian_vao = datetime(nam, thang, ngay.day, gio_vao_gio, gio_vao_phut)
 
-ngay_dau_thang = date(nam, thang, 1)
-so_ngay_trong_thang = calendar.monthrange(nam, thang)[1]
+                # Tạo thời gian ra ngẫu nhiên
+                gio_ra = 17  # chỉ trong giờ 17h
+                phut_ra = random.randint(0, 59)
+                thoi_gian_ra = datetime(nam, thang, ngay.day, gio_ra, phut_ra)
 
-values = []
-for i in range(so_ngay_trong_thang):
-    ngay = ngay_dau_thang + timedelta(days=i)
-    if ngay.weekday() < 5:  # chỉ lấy thứ 2 - thứ 6
-        gio_vao_gio = 7 if random.random() < 0.5 else 8
-        gio_vao_phut = random.randint(30, 59) if gio_vao_gio == 7 else random.randint(0, 5)
-        thoi_gian_vao = datetime(nam, thang, ngay.day, gio_vao_gio, gio_vao_phut)
+                nhan_vien_values.append(
+                    f"({nhan_vien_id}, '{thoi_gian_vao}', '{thoi_gian_ra}', '{ngay}', NULL, NULL)"
+                )
+        
+        all_values.extend(nhan_vien_values)
+    
+    # Tạo câu lệnh SQL
+    if all_values:
+        sql = "INSERT INTO cham_cong (nhan_vien_id, thoi_gian_vao, thoi_gian_ra, ngay, hinh_anh_vao, hinh_anh_ra) VALUES\n"
+        sql += ",\n".join(all_values) + ";"
+        return sql
+    else:
+        return "-- Không có dữ liệu để chèn"
 
-        gio_ra = 17  # chỉ trong giờ 17h
-        phut_ra = random.randint(0, 59)
-        thoi_gian_ra = datetime(nam, thang, ngay.day, gio_ra, phut_ra)
-
-        values.append(
-            f"({nhan_vien_id}, '{thoi_gian_vao}', '{thoi_gian_ra}', '{ngay}', NULL, NULL)"
-        )
-
-sql = "INSERT INTO cham_cong (nhan_vien_id, thoi_gian_vao, thoi_gian_ra, ngay, hinh_anh_vao, hinh_anh_ra) VALUES\n"
-sql += ",\n".join(values) + ";"
-
-print(sql)
+# Ví dụ sử dụng:
+if __name__ == "__main__":
+    # Ví dụ 1: Tạo dữ liệu cho nhân viên từ 2 đến 30
+    print("=== Dữ liệu cho nhân viên 2-30 ===")
+    sql_1 = generate_cham_cong_data(4, 30, 4, 2025)
+    print(sql_1)
+    
+    print("\n" + "="*50 + "\n")
+    
+    # # Ví dụ 2: Tạo dữ liệu cho nhân viên từ 5 đến 10
+    # print("=== Dữ liệu cho nhân viên 5-10 ===")
+    # sql_2 = generate_cham_cong_data(5, 10, 4, 2025)
+    # print(sql_2)
+    
+    # print("\n" + "="*50 + "\n")
+    
+    # # Ví dụ 3: Tạo dữ liệu cho 1 nhân viên duy nhất
+    # print("=== Dữ liệu cho nhân viên 15 ===")
+    # sql_3 = generate_cham_cong_data(15, 15, 4, 2025)
+    # print(sql_3)

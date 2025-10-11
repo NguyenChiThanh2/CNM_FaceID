@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import extract, func, or_
 from decimal import Decimal
 from typing import Optional
-# from models.nhan_vien_model import NhanVien
+from app.models.nhan_vien_model import NhanVien
 from app.models.cham_cong_model import ChamCong
 from app.models.hopdong_laodong_model import HopDongLaoDong
 from app.models.quyche_congty_model import QuyCheCongTy
@@ -804,4 +804,15 @@ def get_tinhsocong_theogiayphep_service(id):
         return  Decimal("1.00")
     elif giay_phep.so_gio == 4:
         return Decimal("0.50")
+    
+def tinh_luong_cho_tat_ca_nhan_vien(thang,nam):
+    nhan_viens = NhanVien.query.all()
+    ket_qua = []
+    for nv in nhan_viens:
+        try: 
+            bangluong_1nv = tinh_luong_cho_1nv(nv.id,thang,nam)
+            ket_qua.append(bangluong_1nv.to_dict())
+        except Exception as e:
+            raise Exception({str(e)})
+    return ket_qua
     
