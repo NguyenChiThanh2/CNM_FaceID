@@ -32,8 +32,8 @@ const NgayNghiLe = () => {
       const response = await axios.get(`${API_URL}/get-all-ngay-nghi-le`);
       setNgayNghiLeList(response.data);
     } catch (error) {
-      console.error("Lỗi khi gọi API ngày nghỉ lễ:", error);
-      toast.error("Không có ngày nghỉ lễ nào được tìm thấy!");
+      console.error("Lỗi khi gọi API ngày nghỉ có lương:", error);
+      toast.error("Không có ngày nghỉ có lương nào được tìm thấy!");
     } finally {
       setLoading(false);
     }
@@ -50,15 +50,15 @@ const NgayNghiLe = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Bạn có chắc muốn xóa ngày nghỉ lễ này không?")) {
+    if (window.confirm("Bạn có chắc muốn xóa ngày nghỉ có lương này không?")) {
       setLoading(true);
       try {
         await axios.delete(`${API_URL}/delete-ngay-nghi-le/${id}`);
         fetchNgayNghiLe();
-        toast.success("Đã xóa ngày nghỉ lễ thành công!");
+        toast.success("Đã xóa ngày nghỉ có lương thành công!");
       } catch (error) {
-        console.error("Lỗi khi xóa ngày nghỉ lễ:", error);
-        toast.error("Có lỗi xảy ra khi xóa ngày nghỉ lễ!");
+        console.error("Lỗi khi xóa ngày nghỉ có lương:", error);
+        toast.error("Có lỗi xảy ra khi xóa ngày nghỉ có lương!");
       } finally {
         setLoading(false);
       }
@@ -111,7 +111,7 @@ const NgayNghiLe = () => {
             <Breadcrumb.Item onClick={() => navigate("/")}>
               Trang chủ
             </Breadcrumb.Item>
-            <Breadcrumb.Item active>Quản lý ngày nghỉ lễ</Breadcrumb.Item>
+            <Breadcrumb.Item active>Quản lý ngày nghỉ có lương</Breadcrumb.Item>
           </Breadcrumb>
 
           <Button variant="secondary" onClick={() => navigate("/")}>
@@ -119,7 +119,7 @@ const NgayNghiLe = () => {
           </Button>
 
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h2 className="text-center flex-grow-1">Quản lý ngày nghỉ lễ</h2>
+            <h2 className="text-center flex-grow-1">Quản lý ngày nghỉ có lương</h2>
           </div>
 
           <div className="row mb-3">
@@ -127,7 +127,7 @@ const NgayNghiLe = () => {
               <input
                 type="text"
                 className="form-control"
-                placeholder="🔍 Tìm theo tên hoặc mô tả ngày nghỉ lễ..."
+                placeholder="🔍 Tìm theo tên hoặc mô tả ngày nghỉ có lương..."
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
               />
@@ -139,7 +139,7 @@ const NgayNghiLe = () => {
               className="btn btn-outline-success px-4"
               onClick={handleAdd}
             >
-              + Thêm ngày nghỉ lễ
+              + Thêm ngày nghỉ có lương
             </button>
           </div>
 
@@ -148,7 +148,7 @@ const NgayNghiLe = () => {
               <thead className="table-dark text-center">
                 <tr>
                   <th>ID</th>
-                  <th>Tên ngày lễ</th>
+                  <th>Ngày nghỉ</th>
                   <th>Từ ngày</th>
                   <th>Đến ngày</th>
                   <th>Mô tả</th>
@@ -189,7 +189,7 @@ const NgayNghiLe = () => {
                 ) : (
                   <tr>
                     <td colSpan="6" className="text-center text-muted">
-                      Không có ngày nghỉ lễ nào phù hợp
+                      Không có ngày nghỉ có lương nào phù hợp
                     </td>
                   </tr>
                 )}
@@ -224,7 +224,7 @@ const NgayNghiLe = () => {
           <Modal show={showModal} onHide={handleModalClose} size="lg">
             <Modal.Header closeButton>
               <Modal.Title>
-                {editingNgayNghiLe ? "Chỉnh sửa ngày nghỉ lễ" : "Thêm ngày nghỉ lễ"}
+                {editingNgayNghiLe ? "Chỉnh sửa ngày nghỉ có lương" : "Thêm ngày nghỉ có lương"}
               </Modal.Title>
             </Modal.Header>
             <Modal.Body>

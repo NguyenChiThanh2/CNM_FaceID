@@ -110,7 +110,7 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
             ten_file_moi = f"nghiphepnam_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
             file.save(os.path.join(UPLOAD_FOLDER_PHEPNAM, ten_file_moi))
         elif loai_nghi_phep_id == "2":
-            ten_file_moi = f"nghiphepkhongluong_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+            ten_file_moi = f"nghiphepcoluong_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
             file.save(os.path.join(UPLOAD_FOLDER_PHEPKL, ten_file_moi))
         else:
             ten_file_moi = f"nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
@@ -265,7 +265,7 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
         # Đổi tên file để rõ ràng hơn
         ext = os.path.splitext(filename)[1]
         prefix = "nghiphepnam" if loai_nghi_phep_id == "1" else \
-                "nghiphepkhongluong" if loai_nghi_phep_id == "2" else \
+                "nghiphepcoluong" if loai_nghi_phep_id == "2" else \
                 "nghiphepthaisan"
 
         new_filename = f"{prefix}_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"

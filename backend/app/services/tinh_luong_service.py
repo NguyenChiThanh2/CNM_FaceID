@@ -101,7 +101,6 @@ def tinh_tre_som(thoigianvao: datetime, thoigianra: datetime):
             som_phut = int(diff.total_seconds() // 60)
     except Exception as e:
         print(f"Lỗi tính về sớm: {e}")
-        
     return tre_phut, som_phut
 
 # ======= TÍNH THUẾ TNCN =======
