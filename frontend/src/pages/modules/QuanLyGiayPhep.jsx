@@ -6,6 +6,25 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const API_URL = "http://127.0.0.1:5000/api";
+const HR_DEPARTMENT_ID = 1; // ⚠️ sửa thành ID thật của phòng Nhân sự trong DB
+
+const getUserInfo = () => {
+  try {
+    const saved = localStorage.getItem("user");
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    const nv = parsed.nhan_vien || {};
+    return {
+      id: nv.id,
+      ho_ten: nv.ho_ten,
+      phong_ban_id: nv.phong_ban_id,
+      ten_phong_ban: nv.ten_phong_ban || "",
+      role: parsed.role?.ma_vai_tro || "user",
+    };
+  } catch {
+    return null;
+  }
+};
 
 const QuanLyGiayPhep = () => {
   const [giayPhepList, setGiayPhepList] = useState([]);
@@ -18,6 +37,8 @@ const QuanLyGiayPhep = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const navigate = useNavigate();
+  const userInfo = getUserInfo();
+  const isHR = !!userInfo && userInfo.phong_ban_id === HR_DEPARTMENT_ID;
 
   useEffect(() => {
     fetchGiayPhep();
@@ -32,13 +53,18 @@ const QuanLyGiayPhep = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-giay-phep`);
-      setGiayPhepList(response.data);
+      let list = response.data || [];
+      if (userInfo && !isHR) {
+        list = list.filter((gp) => gp.nhan_vien_id === userInfo.id);
+      }
+      setGiayPhepList(list);
+
     } catch (error) {
       console.error("Lỗi khi gọi API giấy phép:", error);
       toast.error("Không có giấy phép nào được tìm thấy!");
     } finally {
       setLoading(false);
-      
+
     }
   };
 
@@ -221,7 +247,7 @@ const QuanLyGiayPhep = () => {
                 ) : currentItems.length > 0 ? (
                   currentItems.map((gp) => (
                     <tr key={gp.id}>
-                        <td>{gp.id}</td>
+                      <td>{gp.id}</td>
                       <td>
                         {nhanVienList.find((nv) => nv.id === gp.nhan_vien_id)
                           ?.ho_ten || "Không rõ"}
@@ -233,21 +259,21 @@ const QuanLyGiayPhep = () => {
                       <td>{gp.ly_do}</td>
                       <td className="text-center">
                         <span
-                          className={`badge ${
-                            gp.trang_thai === "Chưa duyệt"
-                              ? "bg-warning text-dark"
-                              : gp.trang_thai === "Đã duyệt"
+                          className={`badge ${gp.trang_thai === "Chưa duyệt"
+                            ? "bg-warning text-dark"
+                            : gp.trang_thai === "Đã duyệt"
                               ? "bg-success"
                               : gp.trang_thai === "Từ chối"
-                              ? "bg-danger"
-                              : "bg-secondary"
-                          }`}
+                                ? "bg-danger"
+                                : "bg-secondary"
+                            }`}
                         >
                           {gp.trang_thai}
                         </span>
                       </td>
                       <td>
-                        {gp.trang_thai === "Chưa duyệt" && (
+                        {/* ✅ HR được duyệt / từ chối / hủy / sửa khi Chưa duyệt */}
+                        {isHR && gp.trang_thai === "Chưa duyệt" && (
                           <>
                             <button
                               className="btn btn-sm btn-outline-success me-1"
@@ -268,22 +294,53 @@ const QuanLyGiayPhep = () => {
                               🗑 Hủy
                             </button>
                             <button
-                            className="btn btn-sm btn-outline-warning"
-                            onClick={() => handleEdit(gp)}
+                              className="btn btn-sm btn-outline-warning"
+                              onClick={() => handleEdit(gp)}
                             >
                               ✏️ Sửa
                             </button>
                           </>
                         )}
-                        {["Từ chối"].includes(gp.trang_thai) && (
-                          <button
-                              className="btn btn-sm btn-outline-danger me-1"
+
+                        {/* 👷 Nhân viên thường: chỉ được sửa/hủy giấy phép của chính mình khi Chưa duyệt */}
+                        {!isHR && gp.nhan_vien_id === userInfo?.id && gp.trang_thai === "Chưa duyệt" && (
+                          <>
+                            <button
+                              className="btn btn-sm btn-outline-warning me-1"
+                              onClick={() => handleEdit(gp)}
+                            >
+                              ✏️ Sửa
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
                               onClick={() => handleDelete(gp.id)}
                             >
                               🗑 Hủy
                             </button>
+                          </>
+                        )}
+
+                        {/* HR có thể hủy sau khi bị từ chối */}
+                        {isHR && gp.trang_thai === "Từ chối" && (
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleDelete(gp.id)}
+                          >
+                            🗑 Hủy
+                          </button>
+                        )}
+
+                        {/* Nhân viên chỉ hủy nếu là người tạo và trạng thái bị từ chối */}
+                        {!isHR && gp.nhan_vien_id === userInfo?.id && gp.trang_thai === "Từ chối" && (
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleDelete(gp.id)}
+                          >
+                            🗑 Hủy
+                          </button>
                         )}
                       </td>
+
                     </tr>
                   ))
                 ) : (

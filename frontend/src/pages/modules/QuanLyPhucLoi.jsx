@@ -1,11 +1,13 @@
-// src/pages/modules/QuanLyPhucLoi.jsx
-import React, { useState, useEffect } from "react";
-import { Row, Col, Button, Table, Modal, Breadcrumb } from "react-bootstrap";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Row, Col, Button, Table, Modal, Breadcrumb, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import PhucLoiForm from "../../components/phucloi/PhucLoiForm";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { ToastContainer, toast } from "react-toastify";
+import { getAllPhucLoi, deletePhucLoi as apiDeletePhucLoi } from "../../services/phucLoiApi";
+
+const ITEMS_PER_PAGE = 5;
 
 const QuanLyPhucLoi = () => {
   const [phucLoiList, setPhucLoiList] = useState([]);
@@ -13,36 +15,48 @@ const QuanLyPhucLoi = () => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  const fetchPhucLoiList = async () => {
+  const fetchPhucLoiList = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/get-all-phuc-loi");
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setPhucLoiList(data);
+      const data = await getAllPhucLoi();
+      setPhucLoiList(data || []);
     } catch (err) {
       console.error("Lỗi khi tải phúc lợi:", err);
-      toast.error("Không thể tải danh sách phúc lợi!");
+      toast.error(err?.message || "Không thể tải danh sách phúc lợi!");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPhucLoiList();
-  }, []);
+  }, [fetchPhucLoiList]);
 
-  const filteredList = phucLoiList.filter((pl) =>
-    (pl.ten_phuc_loi || "").toLowerCase().includes(searchKeyword.toLowerCase()) ||
-    (pl.mo_ta || "").toLowerCase().includes(searchKeyword.toLowerCase())
+  const normalizedKeyword = searchKeyword.trim().toLowerCase();
+
+  // Tối ưu lọc bằng useMemo (tránh tính lại mỗi render)
+  const filteredList = useMemo(() => {
+    if (!normalizedKeyword) return phucLoiList;
+    return phucLoiList.filter((pl) => {
+      const ten = (pl.ten_phuc_loi || "").toLowerCase();
+      const moTa = (pl.mo_ta || "").toLowerCase();
+      return ten.includes(normalizedKeyword) || moTa.includes(normalizedKeyword);
+    });
+  }, [phucLoiList, normalizedKeyword]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredList.length / ITEMS_PER_PAGE)),
+    [filteredList.length]
   );
 
-  const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
-  const currentItems = filteredList.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const currentItems = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredList.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredList, currentPage]);
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
@@ -61,21 +75,22 @@ const QuanLyPhucLoi = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa không?")) {
       try {
-        const res = await fetch(`http://localhost:5000/api/delete-phuc-loi/${id}`, {
-          method: "DELETE",
+        await toast.promise(apiDeletePhucLoi(id), {
+          pending: "Đang xóa phúc lợi...",
+          success: "Xóa phúc lợi thành công!",
+          error: "❌ Lỗi khi xóa phúc lợi!",
         });
-        if (!res.ok) throw new Error();
-        await fetchPhucLoiList();
-        toast.success("Xóa phúc lợi thành công!");
+        // Optimistic: xoá ngay trong state cho mượt
+        setPhucLoiList((prev) => prev.filter((x) => x.id !== id));
         setCurrentPage(1);
       } catch (err) {
         console.error("Lỗi xóa:", err);
-        toast.error("❌ Lỗi khi xóa phúc lợi!");
       }
     }
   };
 
   const handleFormSubmit = (message) => {
+    // Reload sau khi thêm/sửa
     fetchPhucLoiList();
     setShowModal(false);
     toast.success(message || "Cập nhật phúc lợi thành công!");
@@ -99,7 +114,7 @@ const QuanLyPhucLoi = () => {
       const file = new Blob([excelBuffer], { type: "application/octet-stream" });
       saveAs(file, "DanhSachPhucLoi.xlsx");
       toast.success("📤 Đã xuất Excel!");
-    } catch (e) {
+    } catch {
       toast.error("❌ Xuất Excel thất bại!");
     }
   };
@@ -139,7 +154,12 @@ const QuanLyPhucLoi = () => {
             </Col>
           </Row>
 
-          {currentItems.length === 0 ? (
+          {loading ? (
+            <div className="text-center my-5">
+              <Spinner animation="border" />
+              <div className="mt-2">Đang tải dữ liệu...</div>
+            </div>
+          ) : currentItems.length === 0 ? (
             <div className="text-center py-3">Không có dữ liệu phù hợp</div>
           ) : (
             <Table striped bordered hover responsive className="align-middle">
@@ -182,7 +202,7 @@ const QuanLyPhucLoi = () => {
             </Table>
           )}
 
-          {totalPages > 1 && (
+          {totalPages > 1 && !loading && (
             <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap">
               <Button
                 variant="outline-secondary"

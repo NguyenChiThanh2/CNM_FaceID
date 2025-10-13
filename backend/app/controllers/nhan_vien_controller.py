@@ -10,7 +10,7 @@ from app.utils.file_utils import generate_unique_filename
 import face_recognition
 import numpy as np
 import cv2
-
+from werkzeug.security import generate_password_hash
 from PIL import Image, UnidentifiedImageError
 
 logging.basicConfig(level=logging.INFO)
@@ -83,7 +83,8 @@ def create_nhan_vien_controller():
     else:
         data['avatar'] = None
         data['face_encoding'] = None
-
+    raw_pw = data.get('password') or '123456'  # mặc định nếu không gửi lên
+    data['password'] = generate_password_hash(raw_pw) 
     nhan_vien = nhan_vien_service.create_nhan_vien_service(**data)
     if isinstance(nhan_vien, dict) and 'error' in nhan_vien:
         return jsonify({'message': nhan_vien['error']}), 400
@@ -143,7 +144,12 @@ def update_nhan_vien_controller(nhan_vien_id):
             except Exception as e:
                 logger.error(f"Lỗi khi lưu file ảnh mới: {str(e)}")
                 return jsonify({'message': f'Lỗi khi lưu file ảnh mới: {str(e)}'}), 500
-
+        if 'password' in data:
+            if data['password']:  # nếu có truyền giá trị mới
+                data['password'] = generate_password_hash(data['password'])
+            else:
+                # Nếu gửi key nhưng rỗng, tránh ghi đè password hiện tại
+                del data['password']
         # Cập nhật nhân viên
         nhan_vien = nhan_vien_service.update_nhan_vien_service(nhan_vien_id, **data)
         if isinstance(nhan_vien, dict) and 'error' in nhan_vien:

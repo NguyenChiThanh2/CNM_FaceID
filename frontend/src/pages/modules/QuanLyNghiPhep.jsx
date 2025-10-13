@@ -8,6 +8,25 @@ import { ToastContainer, toast } from "react-toastify";
 
 const API_URL = "http://127.0.0.1:5000/api";
 const API_URL_FILE = "http://127.0.0.1:5000/uploads/nghi_phep/thaisan/";
+const HR_DEPARTMENT_ID = 2; // 👈 ĐỔI thành ID thật của phòng Nhân sự
+
+const getUserInfo = () => {
+  try {
+    const saved = localStorage.getItem("user");
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    const nv = parsed.nhan_vien || {};
+    return {
+      id: nv.id,
+      ho_ten: nv.ho_ten,
+      phong_ban_id: nv.phong_ban_id,
+      ten_phong_ban: nv.ten_phong_ban || "",
+      role: parsed.role?.ma_vai_tro || "user",
+    };
+  } catch {
+    return null;
+  }
+};
 
 const QuanLyNghiPhep = () => {
   const [nghiPhepList, setNghiPhepList] = useState([]);
@@ -34,7 +53,14 @@ const QuanLyNghiPhep = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-nghi-phep`);
-      setNghiPhepList(response.data || []);
+      let list = response.data || [];
+
+      // 👇 Nếu KHÔNG phải HR → chỉ giữ lại đơn của chính người dùng
+      if (userInfo && !isHR) {
+        list = list.filter((np) => np.nhan_vien_id === userInfo.id);
+      }
+
+      setNghiPhepList(list);
     } catch (error) {
       console.error("Lỗi khi gọi API nghỉ phép:", error);
       toast.error("Có lỗi xảy ra khi tải danh sách nghỉ phép!");
@@ -42,6 +68,7 @@ const QuanLyNghiPhep = () => {
       setLoading(false);
     }
   };
+
 
   const fetchNhanVien = async () => {
     try {
@@ -142,6 +169,8 @@ const QuanLyNghiPhep = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
+  const userInfo = getUserInfo();
+  const isHR = !!userInfo && userInfo.phong_ban_id === HR_DEPARTMENT_ID;
 
   return (
     <div className="container min-vh-100">
@@ -183,11 +212,14 @@ const QuanLyNghiPhep = () => {
             </div>
           </div>
 
-          <div className="d-flex justify-content-end mb-3">
-            <button className="btn btn-outline-success px-4" onClick={handleAdd}>
-              + Thêm đơn nghỉ phép
-            </button>
-          </div>
+          {isHR && (
+            <div className="d-flex justify-content-end mb-3">
+              <button className="btn btn-outline-success px-4" onClick={handleAdd}>
+                + Thêm đơn nghỉ phép
+              </button>
+            </div>
+          )}
+
 
           <div className="table-responsive">
             <Table bordered hover striped className="rounded">
@@ -210,42 +242,47 @@ const QuanLyNghiPhep = () => {
                   </tr>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((nghiPhep) => (
-                    (nghiPhep.loai_nghi_phep_id != 3) ?(
-                    <tr key={nghiPhep.id}>
-                      <td>{nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
-                      <td>{formatDate(nghiPhep.tu_ngay)}</td>
-                      <td>{formatDate(nghiPhep.den_ngay)}</td>
-                      <td>{nghiPhep.loai_nghi_phep}</td>
-                      <td>{nghiPhep.so_ngay_nghi}</td>
-                      <td>{nghiPhep.ly_do}</td>
-                      <td className="text-center">
-                        <span
-                          className={`badge ${nghiPhep.trang_thai === "Chờ duyệt"
-                            ? "bg-warning text-dark"
-                            : nghiPhep.trang_thai === "Đã duyệt"
-                              ? "bg-success"
-                              : nghiPhep.trang_thai === "Từ chối"
-                                ? "bg-danger"
-                                : "bg-secondary"
-                            }`}
-                        >
-                          {nghiPhep.trang_thai}
-                        </span>
-                      </td>
-                      <td>
-                        {nghiPhep.trang_thai === "Chờ duyệt" && (
-                          <>
-                            <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>✔ Duyệt</button>
-                            <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>✖ Từ chối</button>
-                            <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
-                          </>
-                        )}
-                        {["Chờ duyệt", "Từ chối"].includes(nghiPhep.trang_thai) && (
-                          <button className="btn btn-sm btn-outline-warning" onClick={() => handleEdit(nghiPhep)}>✏️ Sửa</button>
-                        )}
-                      </td>
-                    </tr>) : ("")
-                 ))
+                    (nghiPhep.loai_nghi_phep_id != 3) ? (
+                      <tr key={nghiPhep.id}>
+                        <td>{nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
+                        <td>{formatDate(nghiPhep.tu_ngay)}</td>
+                        <td>{formatDate(nghiPhep.den_ngay)}</td>
+                        <td>{nghiPhep.loai_nghi_phep}</td>
+                        <td>{nghiPhep.so_ngay_nghi}</td>
+                        <td>{nghiPhep.ly_do}</td>
+                        <td className="text-center">
+                          <span
+                            className={`badge ${nghiPhep.trang_thai === "Chờ duyệt"
+                              ? "bg-warning text-dark"
+                              : nghiPhep.trang_thai === "Đã duyệt"
+                                ? "bg-success"
+                                : nghiPhep.trang_thai === "Từ chối"
+                                  ? "bg-danger"
+                                  : "bg-secondary"
+                              }`}
+                          >
+                            {nghiPhep.trang_thai}
+                          </span>
+                        </td>
+                        <td>
+                          {isHR && nghiPhep.trang_thai === "Chờ duyệt" && (
+                            <>
+                              <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>✔ Duyệt</button>
+                              <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>✖ Từ chối</button>
+                              <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
+                            </>
+                          )}
+
+                          {!isHR && nghiPhep.nhan_vien_id === userInfo?.id && nghiPhep.trang_thai === "Chờ duyệt" && (
+                            <>
+                              <button className="btn btn-sm btn-outline-warning me-1" onClick={() => handleEdit(nghiPhep)}>✏️ Sửa</button>
+                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
+                            </>
+                          )}
+                        </td>
+
+                      </tr>) : ("")
+                  ))
                 ) : (
                   <tr>
                     <td colSpan="7" className="text-center text-muted">
@@ -322,17 +359,24 @@ const QuanLyNghiPhep = () => {
                           </span>
                         </td>
                         <td>
-                          {nghiPhep.trang_thai === "Chờ duyệt" && (
+                          {/* HR: được duyệt / từ chối / hủy khi Chờ duyệt */}
+                          {isHR && nghiPhep.trang_thai === "Chờ duyệt" && (
                             <>
                               <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>✔ Duyệt</button>
                               <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>✖ Từ chối</button>
                               <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
                             </>
                           )}
-                          {["Chờ duyệt", "Từ chối"].includes(nghiPhep.trang_thai) && (
-                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleEdit(nghiPhep)}>✏️ Sửa</button>
+
+                          {/* Non-HR: chỉ được Sửa/Hủy đơn của CHÍNH MÌNH khi Chờ duyệt */}
+                          {!isHR && nghiPhep.nhan_vien_id === userInfo?.id && nghiPhep.trang_thai === "Chờ duyệt" && (
+                            <>
+                              <button className="btn btn-sm btn-outline-warning me-1" onClick={() => handleEdit(nghiPhep)}>✏️ Sửa</button>
+                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
+                            </>
                           )}
                         </td>
+
                       </tr>) : ("")
                   ))
                 ) : (

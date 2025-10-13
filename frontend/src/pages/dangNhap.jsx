@@ -1,3 +1,4 @@
+// src/pages/dangNhap.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -5,20 +6,22 @@ import { FaUser, FaLock } from "react-icons/fa";
 import { loginApi } from "../services/authService";
 
 const DangNhap = () => {
-  const [username, setUsername] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false); // ✅ chống double submit
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const saved = localStorage.getItem("user");
-    if (saved) {
-      navigate("/", { replace: true });
-    }
+    if (saved) navigate("/", { replace: true });
   }, [navigate]);
 
   const handleLogin = async () => {
-    if (loading) return; // chống double click
+    if (loading) return;
+    if (!emailOrPhone.trim() || !password.trim()) {
+      toast.error("Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
     if (!username.trim() || !password.trim()) {
       toast.error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu");
       return;
@@ -30,19 +33,36 @@ const DangNhap = () => {
 
     try {
       setLoading(true);
-      const response = await loginApi(username, password);
-      const { access_token, role } = response.data;
+      const res = await loginApi(emailOrPhone.trim(), password.trim());
+      const { access_token, nhan_vien } = res.data || {};
+      if (!access_token || !nhan_vien) {
+        toast.error("Phản hồi đăng nhập không hợp lệ");
+        return;
+      }
 
-      localStorage.setItem("user", JSON.stringify({
-        username,
-        role,
-        token: access_token,
-      }));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          token: access_token,
+          nhan_vien: {
+            id: nhan_vien.id,
+            ho_ten: nhan_vien.ho_ten,
+            email: nhan_vien.email,
+            so_dien_thoai: nhan_vien.so_dien_thoai,
+            chuc_vu_id: nhan_vien.chuc_vu_id,
+            phong_ban_id: nhan_vien.phong_ban_id,
+            avatar: nhan_vien.avatar,
+          },
+        })
+      );
 
-      toast.success(`Đăng nhập thành công với vai trò: ${role?.ma_vai_tro || "N/A"}`);
-      navigate("/", { replace: true }); // ✅ dùng replace
+
+      navigate("/", { replace: true });
     } catch (error) {
-      const msg = error?.response?.data?.message || "Tên đăng nhập hoặc mật khẩu không đúng!";
+      const msg =
+        error?.response?.data?.msg ||
+        error?.response?.data?.message ||
+        "Email/SĐT hoặc mật khẩu không đúng!";
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -52,10 +72,10 @@ const DangNhap = () => {
   return (
     <div
       className="d-flex align-items-center justify-content-center vh-100"
-      style={{ background: "linear-gradient(135deg, #1c1f24 0%,rgb(54, 57, 61) 100%)" }}
-      onKeyDown={(e) => e.key === "Enter" && handleLogin()} // ✅ Enter để submit
+      style={{ background: "linear-gradient(135deg, #1c1f24 0%, rgb(54,57,61) 100%)" }}
+      onKeyDown={(e) => e.key === "Enter" && handleLogin()}
     >
-      <div className="shadow p-5 rounded-4" style={{ width: "100%", maxWidth: "400px", backgroundColor: "#f8f9fa" }}>
+      <div className="shadow p-5 rounded-4" style={{ width: "100%", maxWidth: 400, backgroundColor: "#f8f9fa" }}>
         <h3 className="text-center mb-4 fw-bold text-dark">Đăng nhập hệ thống</h3>
 
         <div className="mb-3 input-group">
@@ -63,9 +83,9 @@ const DangNhap = () => {
           <input
             type="text"
             className="form-control"
-            placeholder="Tên đăng nhập"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Email hoặc SĐT"
+            value={emailOrPhone}
+            onChange={(e) => setEmailOrPhone(e.target.value)}
           />
         </div>
 
@@ -82,7 +102,7 @@ const DangNhap = () => {
 
         <button
           className="btn w-100 fw-semibold py-2"
-          disabled={loading} // ✅
+          disabled={loading}
           style={{
             background: "linear-gradient(90deg, #343a40 0%, #212529 100%)",
             color: "#fff",
@@ -90,14 +110,16 @@ const DangNhap = () => {
             opacity: loading ? 0.8 : 1,
             cursor: loading ? "not-allowed" : "pointer",
           }}
-          onMouseEnter={e => e.currentTarget.style.background = "linear-gradient(90deg, #495057 0%, #343a40 100%)"}
-          onMouseLeave={e => e.currentTarget.style.background = "linear-gradient(90deg, #343a40 0%, #212529 100%)"}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "linear-gradient(90deg, #495057 0%, #343a40 100%)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "linear-gradient(90deg, #343a40 0%, #212529 100%)")}
           onClick={handleLogin}
         >
           {loading ? "Đang đăng nhập..." : "Đăng nhập"}
         </button>
 
-        <p className="text-center text-muted mt-3" style={{ fontSize: "0.9rem" }}>© 2025 Công ty TNHH TK</p>
+        <p className="text-center text-muted mt-3" style={{ fontSize: "0.9rem" }}>
+          © 2025 Công ty TNHH TK
+        </p>
       </div>
     </div>
   );

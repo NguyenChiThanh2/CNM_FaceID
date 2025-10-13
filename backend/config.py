@@ -5,7 +5,11 @@ UPLOAD_FOLDER = os.path.join(basedir, "uploads/nghi_phep/thaisan")
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
-
+# danh sách MAC cho phép
+# danh sách MAC cho phép
+ALLOWED_MACS = [
+    m.strip() for m in os.getenv("ALLOWED_MACS", "").split(",") if m.strip()
+]
 class Config:
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'db_qlns.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 const getUserInfo = () => {
@@ -9,20 +9,24 @@ const getUserInfo = () => {
     const parsedUser = JSON.parse(storedUser);
     console.log("🔍 Full user object từ localStorage:", parsedUser);
 
-    const { username, role } = parsedUser;
-
+    const nv = parsedUser.nhan_vien || {};
     return {
-      username,
-      role: role?.ma_vai_tro || "user" // admin, nhansu, nhanvien, ...
+      username: nv.ho_ten || parsedUser.username || "Người dùng",
+      role: parsedUser.role?.ma_vai_tro || "user",
+      phong_ban_id: nv.phong_ban_id,
+      ten_phong_ban: nv.ten_phong_ban || "",
     };
   }
-  console.warn("⚠️ Không tìm thấy user trong localStorage.");
-  return { username: "Người dùng", role: "user" };
+  return { username: "Người dùng", role: "user", phong_ban_id: null };
 };
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // 👈 lấy route hiện tại
   const userInfo = getUserInfo();
+
+  const HR_DEPARTMENT_ID = 2;
+  const restrictedPaths = ["/tinh-luong", "/phuc-loi", "/dao-tao"];
 
   const modules = [
     { title: "Quản lý nhân sự", icon: "👤", path: "/nhan-su" },
@@ -31,52 +35,32 @@ const Sidebar = () => {
     { title: "Giấy phép", icon: "📜", path: "/quan-ly-giay-phep" },
     { title: "Tính lương", icon: "💰", path: "/tinh-luong" },
     { title: "Phúc lợi", icon: "🎁", path: "/phuc-loi" },
-    { title: "Đào tạo", icon: "📚", path: "/dao-tao" },
     { title: "Đánh giá", icon: "📈", path: "/danh-gia" },
-    { title: "Phòng ban", icon: "🏢", path: "/phong-ban", roles: ["admin"] },
-    { title: "Quản lý người dùng", icon: "👥", path: "/quan-ly-nguoi-dung", roles: ["admin"] },
+    { title: "Phòng ban", icon: "🏢", path: "/phong-ban" },
   ];
 
   const visibleModules = modules.filter((module) => {
-    if (module.roles) {
-      return module.roles.includes(userInfo.role);
-    }
+    if (module.roles && !module.roles.includes(userInfo.role)) return false;
+    if (userInfo.phong_ban_id !== HR_DEPARTMENT_ID && restrictedPaths.includes(module.path)) return false;
     return true;
   });
 
   const handleLogout = async () => {
     const token = localStorage.getItem("access_token");
-
     try {
       if (token) {
-        await axios.post(
-          "/api/auth/logout",
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        await axios.post("/api/auth/logout", {}, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
       }
-
-      // Xóa tất cả thông tin liên quan đến người dùng
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("user");
-
-      // Điều hướng đến trang đăng nhập
-      navigate("/dang-nhap");
     } catch (error) {
       console.error("Lỗi khi đăng xuất:", error);
-
-      // Vẫn xóa dữ liệu trong mọi trường hợp
+    } finally {
       localStorage.removeItem("access_token");
       localStorage.removeItem("user");
-
       navigate("/dang-nhap");
     }
   };
-
 
   return (
     <div
@@ -89,7 +73,7 @@ const Sidebar = () => {
         bottom: 0,
         fontSize: "16px",
         lineHeight: "1.6",
-        overflowY: "auto"
+        overflowY: "auto",
       }}
     >
       <h4 className="text-center text-light mb-4 fw-bold">Quản lý Nhân sự</h4>
@@ -99,25 +83,36 @@ const Sidebar = () => {
       </Button>
 
       <ul className="nav flex-column">
-        {visibleModules.map((module, index) => (
-          <li className="nav-item mb-2" key={index}>
-            <Button
-              variant="link"
-              className="text-white w-100 text-start p-3 fw-semibold"
-              onClick={() => navigate(module.path)}
-              style={{
-                backgroundColor: "#495057",
-                borderRadius: "8px",
-                textDecoration: "none",
-                transition: "background-color 0.3s"
-              }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#6c757d"}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#495057"}
-            >
-              {module.icon} {module.title}
-            </Button>
-          </li>
-        ))}
+        {visibleModules.map((module, index) => {
+          const isActive = location.pathname === module.path; // 👈 kiểm tra active
+          return (
+            <li className="nav-item mb-2" key={index}>
+              <Button
+                variant="link"
+                className={`text-white w-100 text-start p-3 fw-semibold ${
+                  isActive ? "active-sidebar" : ""
+                }`}
+                onClick={() => navigate(module.path)}
+                style={{
+                  backgroundColor: isActive ? "#275191ff" : "#495057",
+                  borderRadius: "8px",
+                  textDecoration: "none",
+                  transition: "background-color 0.3s",
+                }}
+                onMouseOver={(e) =>
+                  !isActive &&
+                  (e.currentTarget.style.backgroundColor = "#6c757d")
+                }
+                onMouseOut={(e) =>
+                  !isActive &&
+                  (e.currentTarget.style.backgroundColor = "#495057")
+                }
+              >
+                {module.icon} {module.title}
+              </Button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

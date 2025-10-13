@@ -1,7 +1,7 @@
 from app import db
 import face_recognition
 from sqlalchemy import Float
-
+from app.models.bang_cap_chung_chi_model import BangCapChungChi
 class NhanVien(db.Model):
     __tablename__ = 'nhan_vien'
 
@@ -18,6 +18,7 @@ class NhanVien(db.Model):
     avatar = db.Column(db.String(255), nullable=True)
     trang_thai = db.Column(db.String(50))
     so_ngay_phep_con_lai = db.Column(db.Integer, default=12)
+    password = db.Column(db.String(120), nullable=False)
     face_encoding = db.Column(db.PickleType, nullable=True)
 
     # Relationships
@@ -26,12 +27,11 @@ class NhanVien(db.Model):
     cham_cong_nv = db.relationship('ChamCong', back_populates='cham_cong_nv', lazy=True)
     nghi_phep = db.relationship('NghiPhep', back_populates='nhan_vien', lazy=True)
     luong_nv = db.relationship('Luong', back_populates='luong_nv', lazy=True)
-    dao_taos = db.relationship('DaoTaoNhanVien', back_populates='nhan_vien', lazy=True)
     phuc_lois = db.relationship('NhanVienPhucLoi', back_populates='nhan_vien', lazy=True)
     hopdong_nv = db.relationship("HopDongLaoDong", back_populates="hopdong_nv", lazy=True)
     bang_luong_nhan_vien = db.relationship('BangLuong', back_populates='bang_luong_nhan_vien', lazy=True)
     NguoiPhuThuoc_nv = db.relationship("NguoiPhuThuoc", back_populates="NguoiPhuThuoc_nv", lazy=True)
-
+    chung_chi_list = db.relationship("BangCapChungChi", back_populates="nhan_vien",cascade="all, delete-orphan",lazy=True)
     # Các đánh giá nhận và tạo (2 quan hệ khác nhau đến cùng một bảng)
     danh_gias_nhan = db.relationship(
         'DanhGia',
@@ -75,3 +75,8 @@ class NhanVien(db.Model):
         if not self.face_encoding:
             return False
         return face_recognition.compare_faces([self.face_encoding], face_encoding, tolerance=tolerance)[0]
+    def set_password(self, raw_pw: str):
+        self.password = generate_password_hash(raw_pw)
+
+    def check_password(self, raw_pw: str) -> bool:
+        return check_password_hash(self.password, raw_pw)
