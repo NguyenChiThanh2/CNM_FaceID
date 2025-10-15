@@ -13,7 +13,7 @@ import {
 import { getChucVuById } from "../../services/chucVuApi";
 import { getPhongBanById } from "../../services/phongBanApi";
 import { getPhucLoiByNhanVienId } from "../../services/phucLoiApi";
-import { getHopDongByNhanVienId } from "../../services/hopDongLaoDongAPI";
+import { getHopDongByNhanVienId, createHopDongForNhanVien, updateHopDong } from "../../services/hopDongLaoDongAPI";
 import { Button, Modal, Breadcrumb, Spinner, Alert } from "react-bootstrap";
 import { jsPDF } from "jspdf";
 import domtoimage from "dom-to-image";
@@ -21,12 +21,16 @@ import * as XLSX from "xlsx";
 import { Document, Packer, Paragraph } from "docx";
 import { saveAs } from "file-saver";
 import { fmtVND, fmtDate } from "../../utils/format";
+import { getNhanVienInfo } from "../../utils/auth";
 
 const BASE_URL = "http://127.0.0.1:5000";
 
 const NhanSuDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const currentUser = getNhanVienInfo();
+  const HR_DEPARTMENT_ID = 2; // ID thật trong DB (bạn có thể sửa)
+  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,6 +44,35 @@ const NhanSuDetail = () => {
   const [exporting, setExporting] = useState(false);
 
   const printRef = useRef(null);
+  const [showHDModal, setShowHDModal] = useState(null); // null | "edit" | "new"
+
+  const [savingHD, setSavingHD] = useState(false);
+  const isEditingHD = !!hopDong; // có HĐ -> sửa; chưa có -> thêm mới
+
+  const openCreateHD = () => setShowHDModal("new");   // thêm mới
+  const openEditHD = () => setShowHDModal("edit");    // sửa hợp đồng hiện tại
+  const closeHD = () => setShowHDModal(null);
+
+
+  const handleSubmitHD = async (payload) => {
+    try {
+      setSavingHD(true);
+      if (showHDModal === "edit" && hopDong?.id) {
+        await updateHopDong(hopDong.id, payload); // sửa hợp đồng hiện tại
+      } else {
+        await createHopDongForNhanVien(Number(id), payload); // ký mới
+      }
+      const fresh = await getHopDongByNhanVienId(Number(id));
+      setHopDong(fresh || null);
+      setShowHDModal(null);
+    } catch (e) {
+      console.error(e);
+      alert("Lưu hợp đồng thất bại.");
+    } finally {
+      setSavingHD(false);
+    }
+  };
+
 
   useEffect(() => {
     let abort = new AbortController();
@@ -292,6 +325,28 @@ const NhanSuDetail = () => {
 
         <div className="mt-4" data-noexport="true">
           <h6>📄 Hợp đồng lao động</h6>
+          <div className="d-flex gap-2" data-noexport="true">
+            {isHR ? (
+              hopDong ? (
+                <>
+                  <Button size="sm" variant="outline-warning" onClick={openEditHD}>
+                    ✏️ Sửa hợp đồng hiện tại
+                  </Button>
+                  <Button size="sm" variant="outline-success" onClick={() => setShowHDModal("new")}>
+                    📝 Ký hợp đồng mới
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" variant="outline-success" onClick={() => openCreateHD("new")}>
+                  ➕ Thêm hợp đồng
+                </Button>
+              )
+            ) : (
+              <p className="text-muted fst-italic">🔒 Chỉ phòng nhân sự được phép chỉnh sửa hợp đồng.</p>
+            )}
+          </div>
+
+
           {hopDong ? (
             <div className="card border-0 shadow-sm p-3">
               <div className="row">
@@ -299,17 +354,22 @@ const NhanSuDetail = () => {
                   <p><strong>Loại hợp đồng:</strong> {hopDong.loai_hop_dong ?? "—"}</p>
                   <p><strong>Ngày bắt đầu:</strong> {fmtDate(hopDong.ngay_bat_dau)}</p>
                   <p><strong>Ngày kết thúc:</strong> {fmtDate(hopDong.ngay_ket_thuc)}</p>
+                  <p><strong>Phép năm:</strong> {hopDong.phep_nam ?? 0} ngày</p>
                   <p><strong>Trạng thái:</strong> {hopDong.trang_thai ? "Đang hiệu lực / Hiển thị" : "Ngừng hiệu lực"}</p>
                 </div>
                 <div className="col-md-6">
                   <p><strong>Mức lương cơ bản:</strong> {fmtVND(hopDong.muc_luong_co_ban)}</p>
                   <p><strong>Phụ cấp ăn trưa:</strong> {fmtVND(hopDong.phu_cap_an_trua)}</p>
                   <p><strong>Phụ cấp xăng xe:</strong> {fmtVND(hopDong.phu_cap_xang_xe)}</p>
+                  <p><strong>Phụ cấp độc hại:</strong> {fmtVND(hopDong.phu_cap_doc_hai)}</p>
+                  <p><strong>Phụ cấp trách nhiệm:</strong> {fmtVND(hopDong.phu_cap_trach_nhiem)}</p>
                   <p><strong>Phụ cấp chức vụ:</strong> {fmtVND(hopDong.phu_cap_chuc_vu)}</p>
+                  <p><strong>Phụ cấp thâm niên:</strong> {fmtVND(hopDong.phu_cap_tham_nien)}</p>
                 </div>
               </div>
 
               <hr />
+
               <div className="row">
                 <div className="col-md-6">
                   <p><strong>Phạt đi trễ (VNĐ/phút):</strong> {hopDong.di_tre_phat ?? "—"}</p>
@@ -317,23 +377,44 @@ const NhanSuDetail = () => {
                 </div>
                 <div className="col-md-6">
                   <p><strong>Hệ số tăng ca:</strong> {hopDong.tang_ca_heso ?? "—"}</p>
-                  <p><strong>Hệ số ngày lễ/cuối tuần:</strong> {(hopDong.luong_ngay_le_heso ?? "—") + " / " + (hopDong.luong_cuoi_tuan_heso ?? "—")}</p>
+                  <p><strong>Hệ số ngày lễ:</strong> {hopDong.luong_ngay_le_heso ?? "—"}</p>
+                  <p><strong>Hệ số cuối tuần:</strong> {hopDong.luong_cuoi_tuan_heso ?? "—"}</p>
                 </div>
               </div>
-              {(Array.isArray(hopDong.dieu_khoan_khac) || (hopDong.dieu_khoan_khac && typeof hopDong.dieu_khoan_khac === "object")) && (
-                <div data-noexport="true">
-                  <hr />
-                  <p className="mb-1"><strong>Điều khoản khác:</strong></p>
-                  <pre className="bg-light p-2 rounded" style={{ whiteSpace: "pre-wrap" }}>
-                    {JSON.stringify(hopDong.dieu_khoan_khac, null, 2)}
-                  </pre>
-                </div>
-              )}
+
+              <hr />
+              {/* <div className="row">
+                  <div className="col-md-6">
+                    <p><strong>Ngày tạo:</strong> {fmtDate(hopDong.created_at)}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Cập nhật gần nhất:</strong> {fmtDate(hopDong.updated_at)}</p>
+                  </div>
+                </div> */}
+
+              {/* 
+        🔒 Tạm ẩn phần điều khoản khác, giữ lại để dùng sau:
+        {(Array.isArray(hopDong.dieu_khoan_khac) ||
+          (hopDong.dieu_khoan_khac && typeof hopDong.dieu_khoan_khac === "object")) && (
+          <div data-noexport="true">
+            <hr />
+            <p className="mb-1"><strong>Điều khoản khác:</strong></p>
+            <pre
+              className="bg-light p-2 rounded"
+              style={{ whiteSpace: "pre-wrap", maxHeight: "300px", overflowY: "auto" }}
+            >
+              {JSON.stringify(hopDong.dieu_khoan_khac, null, 2)}
+            </pre>
+          </div>
+        )}
+        */}
             </div>
           ) : (
             <p>Chưa có hợp đồng lao động.</p>
           )}
         </div>
+
+
 
         <div className="d-flex justify-content-end mt-4 gap-2"
           data-noexport="true">
@@ -362,9 +443,217 @@ const NhanSuDetail = () => {
             </Button>
           </Modal.Body>
         </Modal>
+        <HopDongFormModal
+          show={!!showHDModal}
+          mode={showHDModal} // "edit" hoặc "new"
+          onHide={() => setShowHDModal(null)}
+          initial={showHDModal === "edit" ? hopDong : null}
+          onSubmit={handleSubmitHD}
+          disabled={savingHD}
+        />
+
+
       </div>
     </div>
   );
 };
+function HopDongFormModal({ show, onHide, initial, onSubmit, disabled }) {
+  useEffect(() => {
+    setForm({
+      loai_hop_dong: initial?.loai_hop_dong || "",
+      ngay_bat_dau: initial?.ngay_bat_dau?.slice(0, 10) || "",
+      ngay_ket_thuc: initial?.ngay_ket_thuc?.slice(0, 10) || "",
+      muc_luong_co_ban: initial?.muc_luong_co_ban ?? "",
+      di_tre_phat: initial?.di_tre_phat ?? "",
+      ve_som_phat: initial?.ve_som_phat ?? "",
+      tang_ca_heso: initial?.tang_ca_heso ?? "",
+      luong_ngay_le_heso: initial?.luong_ngay_le_heso ?? "",
+      luong_cuoi_tuan_heso: initial?.luong_cuoi_tuan_heso ?? "",
+      phu_cap_an_trua: initial?.phu_cap_an_trua ?? "",
+      phu_cap_xang_xe: initial?.phu_cap_xang_xe ?? "",
+      phu_cap_doc_hai: initial?.phu_cap_doc_hai ?? "",
+      phu_cap_trach_nhiem: initial?.phu_cap_trach_nhiem ?? "",
+      phu_cap_chuc_vu: initial?.phu_cap_chuc_vu ?? "",
+      phu_cap_tham_nien: initial?.phu_cap_tham_nien ?? "",
+      phep_nam: initial?.phep_nam ?? 0,
+      trang_thai: initial?.trang_thai ?? true,
+    });
+  }, [initial, show]);
+
+  const [form, setForm] = useState(() => ({
+    loai_hop_dong: initial?.loai_hop_dong || "",
+    ngay_bat_dau: initial?.ngay_bat_dau || "",
+    ngay_ket_thuc: initial?.ngay_ket_thuc || "",
+    muc_luong_co_ban: initial?.muc_luong_co_ban ?? "",
+    di_tre_phat: initial?.di_tre_phat ?? "",
+    ve_som_phat: initial?.ve_som_phat ?? "",
+    tang_ca_heso: initial?.tang_ca_heso ?? "",
+    luong_ngay_le_heso: initial?.luong_ngay_le_heso ?? "",
+    luong_cuoi_tuan_heso: initial?.luong_cuoi_tuan_heso ?? "",
+    phu_cap_an_trua: initial?.phu_cap_an_trua ?? "",
+    phu_cap_xang_xe: initial?.phu_cap_xang_xe ?? "",
+    phu_cap_doc_hai: initial?.phu_cap_doc_hai ?? "",
+    phu_cap_trach_nhiem: initial?.phu_cap_trach_nhiem ?? "",
+    phu_cap_chuc_vu: initial?.phu_cap_chuc_vu ?? "",
+    phu_cap_tham_nien: initial?.phu_cap_tham_nien ?? "",
+    phep_nam: initial?.phep_nam ?? 0,
+    trang_thai: initial?.trang_thai ?? true,
+    dieu_khoan_khac_text: initial?.dieu_khoan_khac
+      ? JSON.stringify(initial.dieu_khoan_khac, null, 2)
+      : "",
+  }));
+
+  const onChange = (e) => {
+    const { name, type, value, checked } = e.target;
+    setForm((s) => ({
+      ...s,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+
+    // biến đổi kiểu dữ liệu hợp lý
+    const toNum = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
+    if (!form.loai_hop_dong || !form.ngay_bat_dau || !form.muc_luong_co_ban) {
+      alert("Vui lòng nhập Loại HĐ, Ngày bắt đầu và Lương cơ bản.");
+      return;
+    }
+
+    const payload = {
+      loai_hop_dong: form.loai_hop_dong,
+      ngay_bat_dau: form.ngay_bat_dau,
+      ngay_ket_thuc: form.ngay_ket_thuc || null,
+      muc_luong_co_ban: Number(form.muc_luong_co_ban),
+      di_tre_phat: toNum(form.di_tre_phat),
+      ve_som_phat: toNum(form.ve_som_phat),
+      tang_ca_heso: toNum(form.tang_ca_heso),
+      luong_ngay_le_heso: toNum(form.luong_ngay_le_heso),
+      luong_cuoi_tuan_heso: toNum(form.luong_cuoi_tuan_heso),
+      phu_cap_an_trua: toNum(form.phu_cap_an_trua),
+      phu_cap_xang_xe: toNum(form.phu_cap_xang_xe),
+      phu_cap_doc_hai: toNum(form.phu_cap_doc_hai),
+      phu_cap_trach_nhiem: toNum(form.phu_cap_trach_nhiem),
+      phu_cap_chuc_vu: toNum(form.phu_cap_chuc_vu),
+      phu_cap_tham_nien: toNum(form.phu_cap_tham_nien),
+      phep_nam: Number(form.phep_nam || 0),
+      trang_thai: !!form.trang_thai,
+    };
+
+    onSubmit?.(payload);
+  };
+
+  return (
+    <Modal show={show} onHide={onHide} centered data-noexport="true">
+      <Modal.Header closeButton>
+        <Modal.Title>{initial ? "Cập nhật HĐ lao động" : "Thêm HĐ lao động mới"}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <form onSubmit={submit}>
+          <div className="row">
+            <div className="col-md-6 mb-2">
+              <label>Loại hợp đồng</label>
+              <input name="loai_hop_dong" className="form-control"
+                value={form.loai_hop_dong} onChange={onChange} required />
+            </div>
+            <div className="col-md-6 mb-2">
+              <label>Lương cơ bản</label>
+              <input type="number" name="muc_luong_co_ban" className="form-control"
+                value={form.muc_luong_co_ban} onChange={onChange} min="0" step="1000" required />
+            </div>
+            <div className="col-md-6 mb-2">
+              <label>Ngày bắt đầu</label>
+              <input type="date" name="ngay_bat_dau" className="form-control"
+                value={form.ngay_bat_dau} onChange={onChange} required />
+            </div>
+            <div className="col-md-6 mb-2">
+              <label>Ngày kết thúc</label>
+              <input type="date" name="ngay_ket_thuc" className="form-control"
+                value={form.ngay_ket_thuc} onChange={onChange} />
+            </div>
+
+            <div className="col-md-6 mb-2">
+              <label>Phép năm</label>
+              <input type="number" name="phep_nam" className="form-control"
+                value={form.phep_nam} onChange={onChange} min="0" />
+            </div>
+            <div className="col-md-6 mb-2 d-flex align-items-end">
+              <div className="form-check">
+                <input className="form-check-input" type="checkbox"
+                  name="trang_thai" id="hd-trang-thai"
+                  checked={form.trang_thai} onChange={onChange} />
+                <label className="form-check-label" htmlFor="hd-trang-thai">
+                  Đang hiệu lực / hiển thị
+                </label>
+              </div>
+            </div>
+
+            {/* Hệ số & phạt */}
+            <div className="col-md-6 mb-2">
+              <label>Phạt đi trễ (VNĐ/phút)</label>
+              <input type="number" name="di_tre_phat" className="form-control"
+                value={form.di_tre_phat} onChange={onChange} step="1000" />
+            </div>
+            <div className="col-md-6 mb-2">
+              <label>Phạt về sớm (VNĐ/phút)</label>
+              <input type="number" name="ve_som_phat" className="form-control"
+                value={form.ve_som_phat} onChange={onChange} step="1000" />
+            </div>
+            <div className="col-md-4 mb-2">
+              <label>HS tăng ca</label>
+              <input type="number" name="tang_ca_heso" className="form-control"
+                value={form.tang_ca_heso} onChange={onChange} step="0.1" />
+            </div>
+            <div className="col-md-4 mb-2">
+              <label>HS ngày lễ</label>
+              <input type="number" name="luong_ngay_le_heso" className="form-control"
+                value={form.luong_ngay_le_heso} onChange={onChange} step="0.1" />
+            </div>
+            <div className="col-md-4 mb-2">
+              <label>HS cuối tuần</label>
+              <input type="number" name="luong_cuoi_tuan_heso" className="form-control"
+                value={form.luong_cuoi_tuan_heso} onChange={onChange} step="0.1" />
+            </div>
+
+            {/* Phụ cấp */}
+            {[
+              ["phu_cap_an_trua", "Ăn trưa"],
+              ["phu_cap_xang_xe", "Xăng xe"],
+              ["phu_cap_doc_hai", "Độc hại"],
+              ["phu_cap_trach_nhiem", "Trách nhiệm"],
+              ["phu_cap_chuc_vu", "Chức vụ"],
+              ["phu_cap_tham_nien", "Thâm niên"],
+            ].map(([name, label]) => (
+              <div className="col-md-4 mb-2" key={name}>
+                <label>{`Phụ cấp ${label}`}</label>
+                <input type="number" name={name} className="form-control"
+                  value={form[name]} onChange={onChange} step="1000" />
+              </div>
+            ))}
+
+            {/* Điều khoản khác (JSON) */}
+            {/* <div className="col-12 mb-2">
+              <label>Điều khoản khác (JSON)</label>
+              <textarea name="dieu_khoan_khac_text" className="form-control"
+                value={form.dieu_khoan_khac_text} onChange={onChange}
+                placeholder='Ví dụ: {"ghi_chu":"...","phu_luc":[...]}'
+                rows={4} />
+            </div> */}
+          </div>
+
+          <div className="d-flex gap-2 mt-3">
+            <Button type="submit" variant="success" disabled={disabled}>
+              {disabled ? "Đang lưu..." : (initial ? "Cập nhật" : "Thêm mới")}
+            </Button>
+            <Button variant="outline-secondary" onClick={onHide} disabled={disabled}>
+              Hủy
+            </Button>
+          </div>
+        </form>
+      </Modal.Body>
+    </Modal>
+  );
+}
 
 export default NhanSuDetail;

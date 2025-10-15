@@ -14,7 +14,6 @@ class NhanVien(db.Model):
     dia_chi = db.Column(db.String(255))
     phong_ban_id = db.Column(db.Integer, db.ForeignKey('phong_ban.id'))
     chuc_vu_id = db.Column(db.Integer, db.ForeignKey('chuc_vu.id'))
-    luong_co_ban = db.Column(Float, nullable=True)
     avatar = db.Column(db.String(255), nullable=True)
     trang_thai = db.Column(db.String(50))
     so_ngay_phep_con_lai = db.Column(db.Integer, default=12)
@@ -63,7 +62,6 @@ class NhanVien(db.Model):
             'dia_chi': self.dia_chi,
             'phong_ban_id': self.phong_ban_id,
             'chuc_vu_id': self.chuc_vu_id,
-            'luong_co_ban': self.luong_co_ban,
             'avatar': self.avatar,
             'trang_thai': self.trang_thai,
             'so_ngay_phep_con_lai': self.so_ngay_phep_con_lai,
