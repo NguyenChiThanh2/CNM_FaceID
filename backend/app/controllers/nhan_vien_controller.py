@@ -49,15 +49,16 @@ def create_nhan_vien_controller():
     file = request.files.get('avatar')
     logger.info(f"Dữ liệu nhận được khi tạo mới: {data}, File: {file}")
 
-    if 'ho_ten' not in data or not data['ho_ten']:
+    if not data.get('ho_ten'):
         return jsonify({'message': 'Họ tên là bắt buộc'}), 400
 
-    if 'ngay_sinh' in data and data['ngay_sinh']:
+    if data.get('ngay_sinh'):
         try:
             data['ngay_sinh'] = datetime.strptime(data['ngay_sinh'], '%Y-%m-%d').date()
         except ValueError:
             return jsonify({'message': 'Ngày sinh không hợp lệ, định dạng phải là YYYY-MM-DD'}), 400
 
+    # --- xử lý ảnh (giữ logic của bạn) ---
     if file and file.filename:
         if not allowed_file(file.filename):
             return jsonify({'message': 'File không hợp lệ. Chỉ chấp nhận jpg, jpeg, png.'}), 400
@@ -71,11 +72,9 @@ def create_nhan_vien_controller():
             file.save(file_path)
             data['avatar'] = filename
 
-            # Xử lý ảnh
             face_encoding, error_message = handle_uploaded_image(file_path)
             if error_message:
                 return jsonify({'message': error_message}), 400
-
             data['face_encoding'] = face_encoding
         except Exception as e:
             logger.error(f"Lỗi khi xử lý ảnh: {str(e)}")
@@ -83,43 +82,53 @@ def create_nhan_vien_controller():
     else:
         data['avatar'] = None
         data['face_encoding'] = None
-    raw_pw = data.get('password') or '123456'  # mặc định nếu không gửi lên
-    data['password'] = generate_password_hash(raw_pw) 
-    nhan_vien = nhan_vien_service.create_nhan_vien_service(**data)
-    if isinstance(nhan_vien, dict) and 'error' in nhan_vien:
-        return jsonify({'message': nhan_vien['error']}), 400
 
-    return jsonify(nhan_vien.to_dict()), 201
+    # --- mật khẩu mặc định khi tạo mới ---
+    raw_pw = data.get('password') or '123456'
+    data['password'] = generate_password_hash(raw_pw)
+
+    # --- gọi service & chuẩn hóa phản hồi ---
+    res = nhan_vien_service.create_nhan_vien_service(**data)
+
+    # service có thể trả model, hoặc tuple (dict_error, code) / (model, code)
+    if isinstance(res, tuple):
+        payload, code = res
+        if isinstance(payload, dict) and payload.get('error'):
+            return jsonify({'message': payload['error']}), code
+        # trường hợp service trả (model, 201)
+        return jsonify(payload.to_dict() if hasattr(payload, 'to_dict') else payload), code
+
+    if isinstance(res, dict) and res.get('error'):
+        # fallback nếu service không trả tuple
+        return jsonify({'message': res['error']}), 400
+
+    return jsonify(res.to_dict()), 201
 
 
+# ---------------------- UPDATE ----------------------
 def update_nhan_vien_controller(nhan_vien_id):
     try:
-        # Nhận dữ liệu từ form và file
         data = request.form.to_dict()
         file = request.files.get('avatar')
         logger.info(f"Dữ liệu cập nhật cho nhân viên ID {nhan_vien_id}: {data}, File: {file}")
 
-        # Xóa ID khỏi data nếu có
-        if 'id' in data:
-            del data['id']
+        data.pop('id', None)
 
-        # Kiểm tra và chuyển đổi ngày sinh nếu có
-        if 'ngay_sinh' in data and data['ngay_sinh']:
+        if data.get('ngay_sinh'):
             try:
                 data['ngay_sinh'] = datetime.strptime(data['ngay_sinh'], '%Y-%m-%d').date()
             except ValueError:
                 return jsonify({'message': 'Ngày sinh không hợp lệ, định dạng phải là YYYY-MM-DD'}), 400
 
-        # Lấy nhân viên cũ từ ID
         nhan_vien_cu = nhan_vien_service.get_nhan_vien_by_id_service(nhan_vien_id)
         if not nhan_vien_cu:
             return jsonify({'message': 'Không tìm thấy nhân viên'}), 404
 
-        # Xử lý ảnh nếu có file mới
         upload_folder = current_app.config.get('UPLOAD_FOLDER')
         if not upload_folder or not os.path.exists(upload_folder):
             return jsonify({'message': 'Thư mục upload không tồn tại hoặc chưa cấu hình'}), 500
 
+        # --- xử lý ảnh nếu có ---
         if file and file.filename:
             if not allowed_file(file.filename):
                 return jsonify({'message': 'File không hợp lệ. Chỉ chấp nhận jpg, jpeg, png.'}), 400
@@ -131,10 +140,8 @@ def update_nhan_vien_controller(nhan_vien_id):
                 face_encoding, error_message = handle_uploaded_image(file_path)
                 if error_message:
                     return jsonify({'message': error_message}), 400
-
                 data['face_encoding'] = face_encoding
 
-                # Xóa ảnh cũ nếu có
                 if nhan_vien_cu.avatar:
                     old_avatar_path = os.path.join(upload_folder, nhan_vien_cu.avatar)
                     if os.path.exists(old_avatar_path):
@@ -144,28 +151,36 @@ def update_nhan_vien_controller(nhan_vien_id):
             except Exception as e:
                 logger.error(f"Lỗi khi lưu file ảnh mới: {str(e)}")
                 return jsonify({'message': f'Lỗi khi lưu file ảnh mới: {str(e)}'}), 500
-        if 'password' in data:
-            if data['password']:  # nếu có truyền giá trị mới
-                data['password'] = generate_password_hash(data['password'])
-            else:
-                # Nếu gửi key nhưng rỗng, tránh ghi đè password hiện tại
-                del data['password']
-        # Cập nhật nhân viên
-        nhan_vien = nhan_vien_service.update_nhan_vien_service(nhan_vien_id, **data)
-        if isinstance(nhan_vien, dict) and 'error' in nhan_vien:
-            return jsonify({'message': nhan_vien['error']}), 400
 
-        return jsonify(nhan_vien.to_dict()), 200
+        # --- QUAN TRỌNG: xử lý password khi UPDATE ---
+        # 1) Nếu FE gửi reset_password=1 -> reset về 123456
+        if data.get('reset_password') == '1':
+            data['password'] = generate_password_hash('123456')
+            data.pop('reset_password', None)
+        # 2) Nếu FE gửi password rỗng -> không đụng password hiện tại
+        elif 'password' in data and not data['password']:
+            data.pop('password')
+        # 3) Nếu FE gửi password có giá trị -> hash
+        elif data.get('password'):
+            data['password'] = generate_password_hash(data['password'])
+
+        # --- gọi service update ---
+        res = nhan_vien_service.update_nhan_vien_service(nhan_vien_id, **data)
+
+        if isinstance(res, tuple):
+            payload, code = res
+            if isinstance(payload, dict) and payload.get('error'):
+                return jsonify({'message': payload['error']}), code
+            return jsonify(payload.to_dict() if hasattr(payload, 'to_dict') else payload), code
+
+        if isinstance(res, dict) and res.get('error'):
+            return jsonify({'message': res['error']}), 400
+
+        return jsonify(res.to_dict()), 200
 
     except Exception as e:
         logger.error(f"Lỗi hệ thống khi cập nhật nhân viên: {str(e)}")
         return jsonify({'message': f'Lỗi hệ thống: {str(e)}'}), 500
-
-
-
-
-
-
 # ========================== DELETE ==========================
 def delete_nhan_vien_controller(id):
     result = nhan_vien_service.delete_nhan_vien_service(id)
