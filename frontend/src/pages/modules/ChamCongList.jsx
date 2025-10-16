@@ -114,12 +114,20 @@ const ChamCongList = () => {
     navigate(`/cham-cong/${chamCong.id}`);
   };
 
+
+  const getTenNhanVien = (id) => {
+    const item = dsNhanVien.find((nv) => nv.id === id);
+    return item ? item.ho_ten : "Không rõ";
+  };
+
+  
   // --- Tìm kiếm theo ngày (chuỗi) hoặc tên NV
   const filteredList = chamCongList.filter((cc) => {
     const ngayStr = formatDate(cc.ngay);
     const tenNhanVien = getTenNhanVien(cc.nhan_vien_id).toLowerCase();
     const key = (searchKeyword || "").toLowerCase();
     return ngayStr.toLowerCase().includes(key) || tenNhanVien.includes(key);
+
   });
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
