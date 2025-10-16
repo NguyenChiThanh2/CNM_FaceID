@@ -23,14 +23,9 @@ const QuanLyChamCong = () => {
   // Bảng chấm công
   const [chamCongList, setChamCongList] = useState([]);
   const [dsNhanVien, setDsNhanVien] = useState([]);
-<<<<<<< HEAD:frontend/src/pages/modules/ChamCongList.jsx
-  const [searchKeyword, setSearchKeyword] = useState("");
-=======
   const [searchKeyword, setSearchKeyword] = useState(""); // filter trong bảng
   const [loadingTable, setLoadingTable] = useState(false);
 
-  // Phân trang
->>>>>>> 40f5f9fdbc66900cb30cbceb5d156e3014d2fc0d:frontend/src/pages/modules/QuanLyChamCong.jsx
   const [currentPage, setCurrentPage] = useState(1);
 
   const navigate = useNavigate();
@@ -128,30 +123,29 @@ const QuanLyChamCong = () => {
 
   const getImgUrl = (file) => (file ? `${API_BASE}/checkin_images/${file}` : "");
 
-<<<<<<< HEAD:frontend/src/pages/modules/ChamCongList.jsx
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa chấm công này không?")) return;
-    try {
-      await toast.promise(
-        axios.delete(`http://127.0.0.1:5000/api/delete-cham-cong/${id}`),
-        {
-          pending: "Đang xóa chấm công...",
-          success: "Đã xóa chấm công!",
-          error: "Xóa chấm công thất bại!",
-        }
-      );
-      // làm mới dữ liệu & về trang 1 để tránh trang trống
-      await fetchChamCong();
-      setCurrentPage(1);
-    } catch (error) {
-      // lỗi đã được toast.promise hiển thị
-      console.error("Lỗi khi xóa chấm công:", error);
-    }
-  };
+  // const handleDelete = async (id) => {
+  //   if (!window.confirm("Bạn có chắc muốn xóa chấm công này không?")) return;
+  //   try {
+  //     await toast.promise(
+  //       axios.delete(`http://127.0.0.1:5000/api/delete-cham-cong/${id}`),
+  //       {
+  //         pending: "Đang xóa chấm công...",
+  //         success: "Đã xóa chấm công!",
+  //         error: "Xóa chấm công thất bại!",
+  //       }
+  //     );
+  //     // làm mới dữ liệu & về trang 1 để tránh trang trống
+  //     await fetchChamCong();
+  //     setCurrentPage(1);
+  //   } catch (error) {
+  //     // lỗi đã được toast.promise hiển thị
+  //     console.error("Lỗi khi xóa chấm công:", error);
+  //   }
+  // };
 
-  const handleRowClick = (chamCong) => {
-    navigate(`/cham-cong/${chamCong.id}`);
-  };
+  // const handleRowClick = (chamCong) => {
+  //   navigate(`/cham-cong/${chamCong.id}`);
+  // };
 
   // --- Tìm kiếm theo ngày (chuỗi) hoặc tên NV
   const filteredList = chamCongList.filter((cc) => {
@@ -160,18 +154,16 @@ const QuanLyChamCong = () => {
     const key = (searchKeyword || "").toLowerCase();
     return ngayStr.toLowerCase().includes(key) || tenNhanVien.includes(key);
   });
-=======
   // ====== Lọc & phân trang tối ưu ======
-  const filteredList = useMemo(() => {
-    const key = (searchKeyword || "").toLowerCase();
-    return chamCongList.filter((cc) => {
-      const ngayStr = formatDate(cc.ngay).toLowerCase();
-      const tenNhanVien = getTenNhanVien(cc.nhan_vien_id).toLowerCase();
-      return ngayStr.includes(key) || tenNhanVien.includes(key);
-    });
-  }, [chamCongList, dsNhanVien, searchKeyword]);
+  // const filteredList = useMemo(() => {
+  //   const key = (searchKeyword || "").toLowerCase();
+  //   return chamCongList.filter((cc) => {
+  //     const ngayStr = formatDate(cc.ngay).toLowerCase();
+  //     const tenNhanVien = getTenNhanVien(cc.nhan_vien_id).toLowerCase();
+  //     return ngayStr.includes(key) || tenNhanVien.includes(key);
+  //   });
+  // }, [chamCongList, dsNhanVien, searchKeyword]);
 
->>>>>>> 40f5f9fdbc66900cb30cbceb5d156e3014d2fc0d:frontend/src/pages/modules/QuanLyChamCong.jsx
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / ITEMS_PER_PAGE));
 
@@ -184,14 +176,12 @@ const QuanLyChamCong = () => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   };
-<<<<<<< HEAD:frontend/src/pages/modules/ChamCongList.jsx
-  const handleRowClick_tennv = (nv) => {
-    navigate(`/cham-cong-nhan-vien/${nv.id}`); 
-  };
+  // const handleRowClick_tennv = (nv) => {
+  //   navigate(`/cham-cong-nhan-vien/${nv.id}`); 
+  // };
 
-=======
 
-  // ====== Actions ======
+
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa chấm công này không?")) return;
     try {
@@ -216,7 +206,6 @@ const QuanLyChamCong = () => {
   const handleRowClick_tennv = (nv) => navigate(`/cham-cong-nhan-vien/${nv.id}`);
 
   // ====== Render ======
->>>>>>> 40f5f9fdbc66900cb30cbceb5d156e3014d2fc0d:frontend/src/pages/modules/QuanLyChamCong.jsx
   return (
     <div className="container min-vh-100">
       <div className="row">
