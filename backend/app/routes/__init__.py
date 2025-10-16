@@ -16,8 +16,9 @@ from .giay_phep_routers import giayphep_bp
 from .chi_tiet_luong_routers import chitietluong_bp
 from .thuong_routes import thuong_bp
 from .khau_tru_routes import khau_tru_bp
-from .ngay_nghi_le_routers import ngay_nghi_le_bp
-from .facecheckin import facecheckin_bp
+from .ngay_nghi_le_routers 
+import ngay_nghi_le_bpfrom .facecheckin 
+import facecheckin_bp
 from .chung_chi_routes import chung_chi_bp
 from .hopdong_routes import hopdong_bp
 def register_routes(app):
