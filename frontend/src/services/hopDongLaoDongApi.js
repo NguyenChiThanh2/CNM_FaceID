@@ -48,7 +48,7 @@ export const createHopDongForNhanVien = (nhanVienId, payload = {}) => {
     ngay_bat_dau: toYMD(payload.ngay_bat_dau),
   };
   delete body.ngay_ket_thuc;
-  return unwrap(axiosInstance.post(`/api/hop-dong`, body));
+  return unwrap(axiosInstance.post(`/hop-dong`, body));
 };
 
 /** Cập nhật HĐ theo id (BE tự tính lại ngày kết thúc nếu cần) */
@@ -56,13 +56,13 @@ export const updateHopDong = (id, payload = {}) => {
   const body = { ...payload };
   if ("ngay_bat_dau" in body) body.ngay_bat_dau = toYMD(body.ngay_bat_dau);
   if ("ngay_ket_thuc" in body) delete body.ngay_ket_thuc;
-  return unwrap(axiosInstance.put(`/api/hop-dong/${id}`, body));
+  return unwrap(axiosInstance.put(`/hop-dong/${id}`, body));
 };
 
 /** Lấy nhiều HĐ theo danh sách NV (nếu có dùng) */
 export const getHopDongBatchByNhanVienIds = (ids) =>
-  unwrap(axiosInstance.post(`/api/hop-dong/by-nhan-vien/batch`, { ids }));
+  unwrap(axiosInstance.post(`/hop-dong/by-nhan-vien/batch`, { ids }));
 
 /** (Tuỳ chọn) Xoá HĐ */
 export const deleteHopDong = (id) =>
-  unwrap(axiosInstance.delete(`/api/hop-dong/${id}`));
+  unwrap(axiosInstance.delete(`/hop-dong/${id}`));

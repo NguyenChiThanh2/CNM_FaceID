@@ -110,7 +110,7 @@ def get_active_contract_by_nhan_vien(nv_id):
     return jsonify(latest.to_dict() if latest else None), 200
 
 # ============== CREATE: tính auto ngay_ket_thuc từ thoi_gian_hop_dong ==============
-@hopdong_bp.route("/api/hop-dong", methods=["POST"])
+@hopdong_bp.route("/hop-dong", methods=["POST"])
 def create_hop_dong():
     data = request.get_json() or {}
     if "nhan_vien_id" not in data:
@@ -174,7 +174,7 @@ def create_hop_dong():
         return jsonify({"message": "Tạo hợp đồng thất bại", "error": str(e)}), 500
 
 # ============== UPDATE: nếu đổi start/duration -> tính lại end ==============
-@hopdong_bp.route("/api/hop-dong/<int:id>", methods=["PUT"])
+@hopdong_bp.route("/hop-dong/<int:id>", methods=["PUT"])
 def update_hop_dong(id):
     hopdong = HopDongLaoDong.query.get(id)
     if not hopdong:
