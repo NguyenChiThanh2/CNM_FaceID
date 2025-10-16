@@ -126,9 +126,7 @@ def cancle_nghi_phep(id):
 
 # Xóa nghỉ phép theo ID
 def delete_nghi_phep(id):
-    existing = get_nghi_phep_by_id_service(id)
+    existing = delete_nghi_phep_service(id)
     if not existing:
         return jsonify({'message': 'Không tìm thấy nghỉ phép'}), 404
-
-    delete_nghi_phep_service(id)
-    return jsonify({'message': 'Xóa nghỉ phép thành công'}), 200
+    return jsonify({"success": True, "message": f"Bảng lương {id} đã được xóa thành công"}), 200

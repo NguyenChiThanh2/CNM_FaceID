@@ -3,7 +3,7 @@ from app.routes import register_routes  # bạn cần có 1 file routes/__init__
 from flask import send_file, abort
 import os
 from flask_cors import CORS
-from config import UPLOAD_FOLDER
+from config import UPLOAD_FOLDER, UPLOAD_FOLDER_KHAUTRU, UPLOAD_FOLDER_PHEPKL, UPLOAD_FOLDER_PHEPNAM
 
 app = create_app()
 register_routes(app)  # đăng ký blueprint
@@ -38,6 +38,21 @@ def get_checkin_image(filename):
 @app.route('/api/can_cu_phap_ly_thai_san/<filename>')
 def get_can_cu_phap_ly_thai_san(filename):
     image_path = os.path.join(UPLOAD_FOLDER, filename)
+    return send_file(image_path)
+
+@app.route('/api/can_cu_phap_ly_phep_nam/<filename>')
+def get_can_cu_phap_ly_phep_nam(filename):
+    image_path = os.path.join(UPLOAD_FOLDER_PHEPNAM, filename)
+    return send_file(image_path)
+
+@app.route('/api/can_cu_phap_ly_phep_kl/<filename>')
+def get_can_cu_phap_ly_phep_kl(filename):
+    image_path = os.path.join(UPLOAD_FOLDER_PHEPKL, filename)
+    return send_file(image_path)
+
+@app.route('/api/file_dinh_kem_khau_tru/<filename>')
+def get_file_dinh_kem_khau_tru(filename):
+    image_path = os.path.join(UPLOAD_FOLDER_KHAUTRU, filename)
     return send_file(image_path)
     
 

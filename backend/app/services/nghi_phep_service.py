@@ -6,7 +6,9 @@ from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime, date, timedelta
-from config import UPLOAD_FOLDER
+from config import UPLOAD_FOLDER, UPLOAD_FOLDER_PHEPNAM, UPLOAD_FOLDER_PHEPKL
+import shutil
+
 # Utility function to convert date string to datetime object
 def convert_to_datetime(date_string):
     try:
@@ -87,6 +89,7 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
         .filter(
             NghiPhep.nhan_vien_id == nhan_vien_id,
             NghiPhep.trang_thai == "Đã duyệt",
+            NghiPhep.loai_nghi_phep_id != 3,
             db.extract('year', NghiPhep.tu_ngay) == nam
         ).scalar() or 0
 
@@ -99,12 +102,19 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
 
     # Xử lý file upload
     filename = None
-    # ten_file_moi = None 
+    ten_file_moi = None 
     if file:
         filename = secure_filename(file.filename)
         ext = os.path.splitext(filename)[1]
-        ten_file_moi = f"nghiphep_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
-        file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
+        if loai_nghi_phep_id == "1":
+            ten_file_moi = f"nghiphepnam_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+            file.save(os.path.join(UPLOAD_FOLDER_PHEPNAM, ten_file_moi))
+        elif loai_nghi_phep_id == "2":
+            ten_file_moi = f"nghiphepcoluong_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+            file.save(os.path.join(UPLOAD_FOLDER_PHEPKL, ten_file_moi))
+        else:
+            ten_file_moi = f"nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+            file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
     # Tạo đơn nghỉ phép mới
     new_nghi_phep = NghiPhep(
         nhan_vien_id=nhan_vien_id,
@@ -136,6 +146,8 @@ def parse_date(date_str):
             return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
         except ValueError:
             raise ValueError(f"Định dạng ngày không hợp lệ: {date_str}")
+
+
     
 def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay, ly_do, trang_thai, 
                                                                                                 file=None,  # thêm file upload
@@ -146,7 +158,7 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
     nghi_phep = NghiPhep.query.get(id)
     if not nghi_phep:
         raise ValueError("Không tìm thấy đơn nghỉ phép")
-    
+    lnp_bandau = nghi_phep.loai_nghi_phep_id
     tu_ngay = parse_date(tu_ngay)
     den_ngay = parse_date(den_ngay)
     validate_dates(tu_ngay, den_ngay)
@@ -187,6 +199,7 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
         .filter(
             NghiPhep.nhan_vien_id == nhan_vien_id,
             NghiPhep.trang_thai == "Đã duyệt",
+            NghiPhep.loai_nghi_phep_id != 3,
             db.extract('year', NghiPhep.tu_ngay) == nam
         ).scalar() or 0
 
@@ -206,28 +219,95 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
     nghi_phep.trang_thai = trang_thai
     nghi_phep.so_ngay_nghi = so_ngay_nghi
     
+    if loai_nghi_phep_id == "3":
+        if isinstance(ngay_du_kien_sinh, str):
+            ngay_du_kien_sinh = parse_date(ngay_du_kien_sinh).date()
+        elif isinstance(ngay_du_kien_sinh, datetime):
+            ngay_du_kien_sinh = ngay_du_kien_sinh.date()
+        elif isinstance(ngay_du_kien_sinh, date):
+            pass  # đã đúng kiểu, giữ nguyên
+    else:
+        ngay_du_kien_sinh = None
+        
     nghi_phep.ngay_du_kien_sinh = ngay_du_kien_sinh
     nghi_phep.so_con = so_con
     nghi_phep.phuong_phap_sinh = phuong_phap_sinh
 
+    if lnp_bandau != loai_nghi_phep_id and nghi_phep.can_cu_phap_ly_file:
+        filename = nghi_phep.can_cu_phap_ly_file
+        if not filename:
+            return
+        LOAI_NGHI_PHEP_FOLDER = {
+            "1": UPLOAD_FOLDER_PHEPNAM,
+            "2": UPLOAD_FOLDER_PHEPKL,
+            "3": UPLOAD_FOLDER,  # Thai sản
+        }
+
+        # Đảm bảo thư mục tồn tại
+        for folder in LOAI_NGHI_PHEP_FOLDER.values():
+            os.makedirs(folder, exist_ok=True)
+            
+        old_folder = LOAI_NGHI_PHEP_FOLDER.get(str(lnp_bandau))
+        new_folder = LOAI_NGHI_PHEP_FOLDER.get(str(loai_nghi_phep_id))
+
+        if not old_folder or not new_folder:
+            print("❌ Loại nghỉ phép không hợp lệ")
+            return
+
+        old_path = os.path.join(old_folder, filename)
+        new_path = os.path.join(new_folder, filename)
+
+        # Nếu thay đổi loại nghỉ phép -> move file
+        if old_folder != new_folder and os.path.exists(old_path):
+            os.makedirs(new_folder, exist_ok=True)
+            shutil.move(old_path, new_path)
+
+        # Đổi tên file để rõ ràng hơn
+        ext = os.path.splitext(filename)[1]
+        prefix = "nghiphepnam" if loai_nghi_phep_id == "1" else \
+                "nghiphepcoluong" if loai_nghi_phep_id == "2" else \
+                "nghiphepthaisan"
+
+        new_filename = f"{prefix}_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
+
+        final_path = os.path.join(new_folder, new_filename)
+        os.rename(new_path, final_path)
+
+        nghi_phep.can_cu_phap_ly_file = new_filename
     # Xử lý file
     if file:  # Nếu có file mới
         # Xoá file cũ
         if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file)):
             os.remove(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file))
+        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER_PHEPNAM, nghi_phep.can_cu_phap_ly_file)):
+            os.remove(os.path.join(UPLOAD_FOLDER_PHEPNAM, nghi_phep.can_cu_phap_ly_file)) 
+        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file)):
+            os.remove(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file)) 
 
         # Lưu file mới
         filename = secure_filename(file.filename)
         ext = os.path.splitext(filename)[1]
-        ten_file_moi = f"nghiphep_nv{nghi_phep.nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
-        file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
+        
+        if loai_nghi_phep_id == "1":
+            ten_file_moi = f"nghiphepnam_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+            file.save(os.path.join(UPLOAD_FOLDER_PHEPNAM, ten_file_moi))
+        elif loai_nghi_phep_id == "2":
+            ten_file_moi = f"nghiphepkhongluong_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+            file.save(os.path.join(UPLOAD_FOLDER_PHEPKL, ten_file_moi))
+        else:
+            ten_file_moi = f"nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+            file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
+            
         nghi_phep.can_cu_phap_ly_file=ten_file_moi
 
     elif file_status == "keep":
         pass  # giữ nguyên file cũ
-
-    db.session.commit()
-    return nghi_phep
+    try:
+        db.session.commit()
+        return nghi_phep
+    except Exception as e:
+        print(f"Error in approve_nghi_phep_service: {str(e)}")
+        raise e  # Ném lại lỗi để có thể xử lý ở controller
 
 def approve_nghi_phep_service(id):
     try:
@@ -275,14 +355,23 @@ def reject_nghi_phep_service(id):
         raise e
 
 def delete_nghi_phep_service(id):
-    nghi_phep = NghiPhep.query.get(id)
-    if not nghi_phep:
-        raise ValueError("Nghỉ phép không tồn tại")
-    
-    # Xóa đơn nghỉ phép
-    db.session.delete(nghi_phep)
-    db.session.commit()
-    return nghi_phep
+    try:
+        nghi_phep = NghiPhep.query.get(id)
+        if not nghi_phep:
+            raise ValueError("Nghỉ phép không tồn tại")
+        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file)):
+            os.remove(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file))
+        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER_PHEPNAM, nghi_phep.can_cu_phap_ly_file)):
+            os.remove(os.path.join(UPLOAD_FOLDER_PHEPNAM, nghi_phep.can_cu_phap_ly_file))
+        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file)):
+            os.remove(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file))
+        # Xóa đơn nghỉ phép
+        db.session.delete(nghi_phep)
+        db.session.commit()
+        return True
+    except Exception as e:
+        print(f"Error in reject_nghi_phep_service: {str(e)}")
+        raise e
 
 
 def cancle_nghi_phep_service(id):

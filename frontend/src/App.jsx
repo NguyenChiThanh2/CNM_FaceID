@@ -21,6 +21,9 @@ import Sidebar from "./components/sidebar/sidebar";
 import NotFound from "./pages/NotFound";
 import ChamCongNhanVien from "./pages/modules/ChamCongNhanVien";
 import QuanLyGiayPhep from "./pages/modules/QuanLyGiayPhep";
+import Thuong from "./pages/modules/QuanLyThuong";
+import KhauTru from "./pages/modules/QuanLyKhauTru";
+import NgayNghiLe from "./pages/modules/QuanLyNgayNghiLe";
 import MacGuard from "./pages/MacGuard";
 const AppLayout = () => {
   const location = useLocation();
@@ -58,8 +61,12 @@ const AppLayout = () => {
           <Route path="/get-phong-ban-by-id/:id" element={<PrivateRoute><DanhSachNhanVien /></PrivateRoute>} />
           {/* <Route path="/cham-cong-list" element={<PrivateRoute><ChamCongList /></PrivateRoute>} /> */}
           <Route path="/cham-cong-form" element={<PrivateRoute><ChamCongForm /></PrivateRoute>} />
+          <Route path="/quan-ly-nguoi-dung" element={<PrivateRoute><QuanLyNguoiDung /></PrivateRoute>} />
+          <Route path="/thuong" element={<PrivateRoute><Thuong /></PrivateRoute>} />
+          <Route path="/khau-tru" element={<PrivateRoute><KhauTru /></PrivateRoute>} />
           <Route path="/cham-cong-nhan-vien/:id" element={<PrivateRoute><ChamCongNhanVien /></PrivateRoute>} />
           <Route path="/quan-ly-giay-phep" element={<PrivateRoute><QuanLyGiayPhep /></PrivateRoute>} />
+          <Route path="/ngay-nghi-le" element={<PrivateRoute><NgayNghiLe /></PrivateRoute>} />
 
           {/* Trang 404 */}
           <Route path="/404" element={<NotFound />} />

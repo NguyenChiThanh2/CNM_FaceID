@@ -13,3 +13,11 @@ def get_all_luong():
         return jsonify(luongs), 200
     else:
         return jsonify({'message': 'Không có dữ liệu lương'}), 404
+    
+# Xóa lương theo ID
+def delete_bangluong(id):
+    result = delete_bangluong_service(id)
+    if result:
+        return jsonify({'message': 'Xóa lương thành công'})
+    else:
+        return jsonify({'message': 'Không tìm thấy lương'}), 404

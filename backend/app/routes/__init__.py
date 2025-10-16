@@ -14,10 +14,17 @@ from .bang_luong_routers import bangluong_bp
 from .tinh_luong_routers import tinhluong_bp
 from .giay_phep_routers import giayphep_bp
 from .chi_tiet_luong_routers import chitietluong_bp
-from .facecheckin import facecheckin_bp
+from .thuong_routes import thuong_bp
+from .khau_tru_routes import khau_tru_bp
+from .ngay_nghi_le_routers 
+import ngay_nghi_le_bpfrom .facecheckin 
+import facecheckin_bp
 from .chung_chi_routes import chung_chi_bp
 from .hopdong_routes import hopdong_bp
 def register_routes(app):
+    app.register_blueprint(ngay_nghi_le_bp, url_prefix='/api')
+    app.register_blueprint(khau_tru_bp, url_prefix='/api')
+    app.register_blueprint(thuong_bp, url_prefix='/api')
     app.register_blueprint(facecheckin_bp)
     app.register_blueprint(chitietluong_bp, url_prefix='/api')
     app.register_blueprint(giayphep_bp, url_prefix='/api')

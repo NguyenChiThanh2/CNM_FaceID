@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
   Table,
@@ -9,14 +9,15 @@ import {
   Breadcrumb,
   Row,
   Col,
-  Popover, Spinner
+  Popover,
+  Spinner,
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import "react-toastify/dist/ReactToastify.css";
-import Loading from '../../../src/components/Loading';
+import Loading from "../../../src/components/Loading";
 
 const API_URL = "http://127.0.0.1:5000/api";
 
@@ -31,7 +32,6 @@ const QuanLyLuong = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [loading, setLoading] = useState(true);
-  // const hasFetched = useRef(false);
 
   const [formData, setFormData] = useState({
     nhan_vien_id: "",
@@ -61,34 +61,40 @@ const QuanLyLuong = () => {
   }, [showModal]);
 
   const fetchLuong = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      // const response = await axios.get(`${API_URL}/get-all-luong`);
       const response = await axios.get(`${API_URL}/get-all-bang-luong`);
       setLuongList(response.data);
-      setLoading(false);
     } catch (error) {
-      toast.error("Không thể tải dữ liệu lương!");
+      toast.error("Không thể tải dữ liệu lương!", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchNhanVien = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
       setNhanVienList(response.data);
     } catch (error) {
-      toast.error("Không thể tải danh sách nhân viên!");
+      toast.error("Không thể tải danh sách nhân viên!", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDeleteLuong = async (luongId) => {
     if (!window.confirm("Bạn có chắc chắn muốn xoá dòng lương này?")) return;
+    setLoading(true);
     try {
-      await axios.delete(`${API_URL}/delete-luong/${luongId}`);
+      await axios.delete(`${API_URL}/delete-bangluong/${luongId}`);
       toast.success("Xoá lương thành công!");
       fetchLuong();
     } catch (error) {
-      toast.error("Không thể xoá lương.");
+      toast.error("Không thể xoá lương.", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,8 +107,9 @@ const QuanLyLuong = () => {
     }
 
     if (isTinhTatCa) {
+      setLoading(true);
       try {
-        const response = await axios.post(`${API_URL}/tinh-luong-tat-ca`, {
+        const response = await axios.post(`${API_URL}/get-tinh-luong-tat-ca`, {
           thang: parseInt(thang),
           nam: parseInt(nam),
         });
@@ -110,41 +117,32 @@ const QuanLyLuong = () => {
           toast.success("Đã tính lương cho tất cả nhân viên.");
           setShowModal(false);
           fetchLuong();
-        } else {
-          toast.error("Không thể tính lương.");
         }
       } catch (error) {
-        toast.error("Lỗi khi tính lương cho tất cả nhân viên.");
+        toast.error("Lỗi khi tính lương cho tất cả nhân viên.", error);
+      } finally {
+        setLoading(false);
       }
     } else {
       if (!nhan_vien_id) {
         toast.warning("Vui lòng chọn nhân viên.");
         return;
       }
-
+      setLoading(true);
       try {
-        setLoading(true);
-        // const response = await axios.post(`${API_URL}/tinh-luong`, {
-        //   nhan_vien_id: parseInt(nhan_vien_id),
-        //   thang: parseInt(thang),
-        //   nam: parseInt(nam),
-        // });
         const response = await axios.post(`${API_URL}/get-tinh-luong-1nv`, {
           nhan_vien_id: parseInt(nhan_vien_id),
           thang: parseInt(thang),
           nam: parseInt(nam),
         });
-        setLoading(false);
         if (response.data) {
           toast.success("Tính lương thành công!");
           setShowModal(false);
           fetchLuong();
-        } else {
-          toast.error("Không thể tính lương.");
-          setLoading(false);
         }
       } catch (error) {
-        toast.error("Lỗi khi tính lương!");
+        toast.error("Lỗi khi tính lương!", error);
+      } finally {
         setLoading(false);
       }
     }
@@ -178,49 +176,142 @@ const QuanLyLuong = () => {
   );
 
   const exportToExcel = () => {
-    const dataToExport = filteredList.map((luong) => {
+    if (filteredList.length === 0) {
+      toast.warning("Không có dữ liệu để xuất!");
+      return;
+    }
+
+    const dataToExport = filteredList.map((luong, index) => {
       const nv = nhanVienList.find((nv) => nv.id === luong.nhan_vien_id);
       return {
+        STT: index + 1,
+        "Ghi chú": luong.ghi_chu || "",
         "Nhân viên": nv?.ho_ten || "Không rõ",
         Tháng: `${luong.thang}/${luong.nam}`,
+
         "Ngày công chuẩn": luong.ngay_cong_chuan,
         "Số ngày công": luong.so_ngay_cong,
-        "Giờ tăng ca": luong.tong_gio_tang_ca,
-        "Phụ cấp": luong.tong_phu_cap,
-        "Khấu trừ": luong.tong_khau_tru,
-        "Bảo hiểm xã hội": luong.bhxh,
-        "Bảo hiểm thất nghiệp": luong.bhtn,
-        "Bảo hiểm y tế": luong.bhyt,
-        "Thuế thu nhập cá nhân": luong.thue_tncn,
+        "Ngày phép": luong?.ngay_phep || 0,
+        "Trừ nghỉ không phép": luong?.tru_nghi_khong_phep || 0,
+        "Ngày làm lễ": luong?.ngay_lam_le || 0,
+        "Tiền làm lễ": luong?.tien_lam_le || 0,
+
+        "Phụ cấp ăn trưa": luong?.phu_cap_an_trua || 0,
+        "Phụ cấp xăng, xe": luong?.phu_cap_xang_xe || 0,
+        "Phụ cấp độc hại": luong?.phu_cap_doc_hai || 0,
+        "Phụ cấp trách nhiệm": luong?.phu_cap_trach_nhiem || 0,
+        "Phụ cấp chức vụ": luong?.phu_cap_chuc_vu || 0,
+        "Phụ cấp thâm niên": luong?.phu_cap_tham_nien || 0,
+        "Phụ cấp khác": luong?.phu_cap_khac || 0,
+        "Tổng phụ cấp": luong.tong_phu_cap,
+
+        "Thưởng nóng": luong?.thuong_nong || 0,
+        "Thưởng lễ": luong?.thuong_le || 0,
+        "Thưởng khác": luong?.thuong_khac || 0,
+        "Tổng thưởng": luong.tong_thuong,
+
         "Tổng lương": luong.tong_luong,
+
+        "Trừ đi trễ, về sớm": luong?.tru_di_tre_ve_som || 0,
+        "Trừ vi phạm": luong?.tru_vi_pham || 0,
+        "Trừ tạm ứng": luong?.tru_tam_ung || 0,
+        "Trừ khác": luong?.tru_khac || 0,
+        "Tổng khấu trừ": luong.tong_khau_tru,
+
+        BHXH: luong.bhxh,
+        BHTN: luong.bhtn,
+        BHYT: luong.bhyt,
+        "Thuế TNCN": luong.thue_tncn,
+
         "Thực nhận": luong.thuc_nhan,
       };
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport, { origin: "A3" });
+
+    // Thêm tiêu đề chính
+    const title = [["BẢNG LƯƠNG NHÂN VIÊN"]];
+    const subTitle = [
+      [`Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`],
+    ];
+    XLSX.utils.sheet_add_aoa(worksheet, title, { origin: "A1" });
+    XLSX.utils.sheet_add_aoa(worksheet, subTitle, { origin: "A2" });
+
+    // Merge tiêu đề
+    const totalCols = Object.keys(dataToExport[0]).length;
+    worksheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } },
+    ];
+
+    // Tự điều chỉnh độ rộng cột
+    worksheet["!cols"] = Object.keys(dataToExport[0]).map((key) => ({
+      wch: Math.max(
+        key.length + 2,
+        ...dataToExport.map((r) => (r[key] ? r[key].toString().length + 2 : 10))
+      ),
+    }));
+
+    // Tạo workbook và style
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Bảng Lương");
+
+    // Style (cần plugin xlsx-style hoặc sheetjs Pro để áp dụng hoàn toàn)
+    const titleCell = worksheet["A1"];
+    if (titleCell) {
+      titleCell.s = {
+        font: { bold: true, sz: 16, color: { rgb: "1F497D" } },
+        alignment: { horizontal: "center", vertical: "center" },
+      };
+    }
+
+    const headerRowIndex = 2;
+    for (let c = 0; c < totalCols; c++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex, c });
+      const cell = worksheet[cellAddress];
+      if (cell) {
+        cell.s = {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "4F81BD" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: {
+            top: { style: "thin", color: { rgb: "999999" } },
+            bottom: { style: "thin", color: { rgb: "999999" } },
+            left: { style: "thin", color: { rgb: "999999" } },
+            right: { style: "thin", color: { rgb: "999999" } },
+          },
+        };
+      }
+    }
+
     const excelBuffer = XLSX.write(workbook, {
       bookType: "xlsx",
       type: "array",
+      cellStyles: true,
     });
-    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-    saveAs(blob, "bang_luong.xlsx");
+
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    saveAs(
+      blob,
+      `BangLuong_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`
+    );
     toast.success("Xuất file Excel thành công!");
   };
 
-  if (loading) return (
-    <div>
-      <ToastContainer />
-      <Loading />
-    </div>
-
-
-  );
+  if (loading)
+    return (
+      <div>
+        <ToastContainer position="top-right" autoClose={2000} />
+        <Loading />
+      </div>
+    );
 
   return (
     <div className="container min-vh-100">
-      <ToastContainer />
+      <ToastContainer position="top-right" autoClose={2000} />
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
@@ -350,6 +441,17 @@ const QuanLyLuong = () => {
                       position: "sticky",
                       left: 0,
                       zIndex: 4,
+                      minWidth: "50px", // icon
+                      background: "#212529", // cùng màu header
+                    }}
+                  ></th>
+                  <th
+                    style={{
+                      position: "sticky",
+                      left: "49px",
+                      zIndex: 4,
+                      minWidth: "180px", // tên NV
+                      background: "#212529",
                     }}
                   >
                     Nhân viên
@@ -357,8 +459,10 @@ const QuanLyLuong = () => {
                   <th
                     style={{
                       position: "sticky",
-                      left: "149px",
+                      left: "228px", // = 50px + 180px
                       zIndex: 4,
+                      minWidth: "120px",
+                      background: "#212529",
                     }}
                   >
                     Tháng
@@ -381,6 +485,11 @@ const QuanLyLuong = () => {
                   <th>Phụ cấp khác</th>
                   <th>Tổng phụ cấp</th>
 
+                  <th>Thưởng nóng</th>
+                  <th>Thưởng lễ</th>
+                  <th>Thưởng khác</th>
+                  <th>Tổng Thưởng</th>
+
                   <th>Tổng lương</th>
 
                   <th>Trừ đi trễ, về sớm</th>
@@ -399,170 +508,280 @@ const QuanLyLuong = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedList.map((luong) => {
-                  const nv = nhanVienList.find(
-                    (nv) => nv.id === luong.nhan_vien_id
-                  );
-                  const anUong = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "AN_UONG"
-                  );
-                  const xangXe = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "XANG_XE"
-                  );
-                  const docHai = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "DOC_HAI"
-                  );
-                  const trachNhiem = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "TRACH_NHIEM"
-                  );
-                  const chucVu = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "CHUC_VU"
-                  );
-                  const thamNien = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "THAM_NIEN"
-                  );
-                  const phucapkhac = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "PHU_CAP_KHAC"
-                  );
+                {loading ? (
+                  <tr>
+                    <td colSpan="9" className="text-center">
+                      Đang tải dữ liệu...
+                    </td>
+                  </tr>
+                ) : paginatedList.length > 0 ? (
+                  paginatedList.map((luong) => {
+                    const nv = nhanVienList.find(
+                      (nv) => nv.id === luong.nhan_vien_id
+                    );
+                    const anUong = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "AN_UONG"
+                    );
+                    const xangXe = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "XANG_XE"
+                    );
+                    const docHai = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "DOC_HAI"
+                    );
+                    const trachNhiem = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "TRACH_NHIEM"
+                    );
+                    const chucVu = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "CHUC_VU"
+                    );
+                    const thamNien = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "THAM_NIEN"
+                    );
+                    const phucapkhac = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "PHU_CAP_KHAC"
+                    );
 
-                  const diTreVeSom = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "DI_TRE_VE_SOM"
-                  );
-                  const nghiKhongPhep = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "NGHI_KHONG_PHEP"
-                  );
-                  const viPhamNoiQuy = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "VI_PHAM_NOI_QUY"
-                  );
-                  const tamUng = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "TAM_UNG"
-                  );
-                  const truKhac = luong.chi_tiet_luong?.find(
-                    (ct) => ct.loai === "TRU_KHAC"
-                  );
+                    const diTreVeSom = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "DI_TRE_VE_SOM"
+                    );
+                    const nghiKhongPhep = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "NGHI_KHONG_PHEP"
+                    );
+                    const viPhamNoiQuy = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "VI_PHAM"
+                    );
+                    const tamUng = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "UNG_LUONG"
+                    );
+                    const truKhacList =
+                      luong.chi_tiet_luong?.filter(
+                        (ct) => ct.loai === "TRU_KHAC"
+                      ) || [];
 
-                  return (
-                    <tr key={luong.id}>
-                      <td
-                        style={{
-                          position: "sticky",
-                          left: 0,
-                          zIndex: 2,
-                          minWidth: "150px", // đảm bảo width cố định
-                        }}
-                      >
-                        {nv?.ho_ten || "Không rõ"}
-                      </td>
-                      <td
-                        style={{
-                          position: "sticky",
-                          left: "149px",
-                          zIndex: 2,
-                          minWidth: "100px",
-                        }}
-                      >
-                        {`${luong.thang}/${luong.nam}`}
-                      </td>
-                      <td>{luong.ngay_cong_chuan}</td>
-                      <td>{luong.so_ngay_cong}</td>
-                      <td align="center">{luong.nghi_phep > 0 ? luong.nghi_phep : " "}</td>
-                      <td className="text-danger bg-danger-subtle">
-                        {nghiKhongPhep
-                          ? formatCurrency(nghiKhongPhep.so_tien)
-                          : formatCurrency(0)}
-                      </td>
-                      <td>{luong.tong_ngay_lam_le}</td>
-                      <td className="text-success bg-success-subtle">
-                        {formatCurrency(luong.tong_tien_lam_le)}
-                      </td>
-                      <td>{luong.tong_gio_tang_ca}</td>
-                      <td className="text-success bg-success-subtle">
-                        {formatCurrency(luong.tong_tien_tang_ca)}
-                      </td>
+                    const thuongNong = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "NONG"
+                    );
+                    const thuongLe = luong.chi_tiet_luong?.find(
+                      (ct) => ct.loai === "LE"
+                    );
+                    const thuongKhacList =
+                      luong.chi_tiet_luong?.filter(
+                        (ct) => ct.loai === "THUONG_KHAC"
+                      ) || [];
 
-                      <td className="text-success bg-success-subtle">
-                        {anUong
-                          ? formatCurrency(anUong.so_tien)
-                          : formatCurrency(0)}
-                      </td>
-                      <td className="text-success bg-success-subtle">
-                        {xangXe
-                          ? formatCurrency(xangXe.so_tien)
-                          : formatCurrency(0)}
-                      </td>
-                      <td className="text-success bg-success-subtle">
-                        {docHai
-                          ? formatCurrency(docHai.so_tien)
-                          : formatCurrency(0)}
-                      </td>
-                      <td className="text-success bg-success-subtle">
-                        {trachNhiem
-                          ? formatCurrency(trachNhiem.so_tien)
-                          : formatCurrency(0)}
-                      </td>
-                      <td className="text-success bg-success-subtle">
-                        {chucVu
-                          ? formatCurrency(chucVu.so_tien)
-                          : formatCurrency(0)}
-                      </td>
-                      <td className="text-success bg-success-subtle">
-                        {thamNien
-                          ? formatCurrency(thamNien.so_tien)
-                          : formatCurrency(0)}
-                      </td>
+                    return (
+                      <tr key={luong.id}>
+                        <td
+                          style={{
+                            position: "sticky",
+                            left: 0,
+                            zIndex: 2,
+                            minWidth: "50px",
+                            background: "#fff",
+                            textAlign: "center",
+                          }}
+                        >
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={
+                              <Popover className="bg-primary-subtle text-white">
+                                <Popover.Body as="h5">
+                                  <small>{luong?.ghi_chu || ""}</small>
+                                </Popover.Body>
+                              </Popover>
+                            }
+                          >
+                            <h3>
+                              {luong.ghi_chu === "Nghỉ thai sản" ? "🤰" : ""}
+                            </h3>
+                          </OverlayTrigger>
+                        </td>
 
-                      <OverlayTrigger
+                        <td
+                          style={{
+                            position: "sticky",
+                            left: "49px",
+                            zIndex: 2,
+                            minWidth: "180px",
+                            background: "#fff",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {nv?.ho_ten || "Không rõ"}
+                        </td>
+                        <td
+                          style={{
+                            position: "sticky",
+                            left: "228px", // 50px + 180px
+                            zIndex: 2,
+                            minWidth: "120px",
+                            background: "#fff",
+                          }}
+                        >
+                          {`${luong.thang}/${luong.nam}`}
+                        </td>
+                        <td>{luong.ngay_cong_chuan}</td>
+                        <td>{luong.so_ngay_cong}</td>
+                        <td align="center">
+                          {luong.nghi_phep > 0 ? luong.nghi_phep : " "}
+                        </td>
+                        <td className="text-danger bg-danger-subtle">
+                          {nghiKhongPhep
+                            ? formatCurrency(nghiKhongPhep.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+                        <td>{luong.tong_ngay_lam_le}</td>
+                        <td className="text-success bg-success-subtle">
+                          {formatCurrency(luong.tong_tien_lam_le)}
+                        </td>
+                        <td>{luong.tong_gio_tang_ca}</td>
+                        <td className="text-success bg-success-subtle">
+                          {formatCurrency(luong.tong_tien_tang_ca)}
+                        </td>
+
+                        <td className="text-success bg-success-subtle">
+                          {anUong
+                            ? formatCurrency(anUong.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+                        <td className="text-success bg-success-subtle">
+                          {xangXe
+                            ? formatCurrency(xangXe.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+                        <td className="text-success bg-success-subtle">
+                          {docHai
+                            ? formatCurrency(docHai.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+                        <td className="text-success bg-success-subtle">
+                          {trachNhiem
+                            ? formatCurrency(trachNhiem.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+                        <td className="text-success bg-success-subtle">
+                          {chucVu
+                            ? formatCurrency(chucVu.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+                        <td className="text-success bg-success-subtle">
+                          {thamNien
+                            ? formatCurrency(thamNien.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={
+                            <Popover>
+                              <Popover.Header as="h5">
+                                Phụ cấp khác
+                              </Popover.Header>
+                              <Popover.Body>
+                                <small>
+                                  {phucapkhac?.ghi_chu || "Không có ghi chú"}
+                                </small>
+                              </Popover.Body>
+                            </Popover>
+                          }
+                        >
+                          <td className="text-success bg-success-subtle">
+                            <span style={{ cursor: "pointer" }}>
+                              {phucapkhac
+                                ? formatCurrency(phucapkhac.so_tien)
+                                : formatCurrency(0)}
+                            </span>
+                          </td>
+                        </OverlayTrigger>
+
+                        <td className="text-success bg-success bg-opacity-50">
+                          <b>{formatCurrency(luong.tong_phu_cap)}</b>
+                        </td>
+
+                        <td className="bg-warning-subtle">
+                          {thuongNong
+                            ? formatCurrency(thuongNong.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+                        <td className="bg-warning-subtle">
+                          {thuongLe
+                            ? formatCurrency(thuongLe.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={
+                            <Popover>
+                              <Popover.Header as="h5">
+                                Thưởng khác
+                              </Popover.Header>
+                              <Popover.Body>
+                                {thuongKhacList.length > 0 ? (
+                                  <ul className="mb-0 ps-3">
+                                    {thuongKhacList.map((tk, index) => (
+                                      <li key={index}>
+                                        <div>
+                                          <strong>
+                                            {tk.ghi_chu || "Thưởng khác"}
+                                          </strong>
+                                        </div>
+                                        <div>
+                                          Số tiền: {formatCurrency(tk.so_tien)}
+                                        </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <small>Không có thưởng khác</small>
+                                )}
+                              </Popover.Body>
+                            </Popover>
+                          }
+                        >
+                          <td className="bg-warning-subtle">
+                            <span style={{ cursor: "pointer" }}>
+                              {thuongKhacList.length > 0
+                                ? formatCurrency(
+                                    thuongKhacList.reduce(
+                                      (sum, tk) => sum + (tk.so_tien || 0),
+                                      0
+                                    )
+                                  )
+                                : formatCurrency(0)}
+                            </span>
+                          </td>
+                        </OverlayTrigger>
+
+                        <td className="bg-warning bg-opacity-50">
+                          <b>{formatCurrency(luong.tong_thuong)}</b>
+                        </td>
+
+                        <td>
+                          <b>{formatCurrency(luong.tong_luong)}</b>
+                        </td>
+                        <td className="text-danger bg-danger-subtle">
+                          {diTreVeSom
+                            ? formatCurrency(diTreVeSom.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+
+                        <td className="text-danger bg-danger-subtle">
+                          {viPhamNoiQuy
+                            ? formatCurrency(viPhamNoiQuy.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+                        <td className="text-danger bg-danger-subtle">
+                          {tamUng
+                            ? formatCurrency(tamUng.so_tien)
+                            : formatCurrency(0)}
+                        </td>
+
+                        {/* <OverlayTrigger
                         placement="top"
                         overlay={
                           <Popover>
-                            <Popover.Header as="h5">
-                              Phụ cấp khác
-                            </Popover.Header>
-                            <Popover.Body>
-                              <small>
-                                {phucapkhac?.ghi_chu || "Không có ghi chú"}
-                              </small>
-                            </Popover.Body>
-                          </Popover>
-                        }
-                      ><td className="text-success bg-success-subtle">
-                          <span style={{ cursor: "pointer" }}>
-                            {phucapkhac
-                              ? formatCurrency(phucapkhac.so_tien)
-                              : formatCurrency(0)}
-                          </span></td>
-                      </OverlayTrigger>
-
-                      <td className="text-success bg-success bg-opacity-50">
-                        <b>{formatCurrency(luong.tong_phu_cap)}</b>
-                      </td>
-                      <td>
-                        <b>{formatCurrency(luong.tong_luong)}</b>
-                      </td>
-                      <td className="text-danger bg-danger-subtle">
-                        {diTreVeSom
-                          ? formatCurrency(diTreVeSom.so_tien)
-                          : formatCurrency(0)}
-                      </td>
-
-                      <td className="text-danger bg-danger-subtle">
-                        {viPhamNoiQuy
-                          ? formatCurrency(viPhamNoiQuy.so_tien)
-                          : formatCurrency(0)}
-                      </td>
-                      <td className="text-danger bg-danger-subtle">
-                        {tamUng
-                          ? formatCurrency(tamUng.so_tien)
-                          : formatCurrency(0)}
-                      </td>
-
-                      <OverlayTrigger
-                        placement="top"
-                        overlay={
-                          <Popover>
-                            <Popover.Header as="h5">
-                              Trừ khác
-                            </Popover.Header>
+                            <Popover.Header as="h5">Trừ khác</Popover.Header>
                             <Popover.Body>
                               <small>
                                 {truKhac?.ghi_chu || "Không có ghi chú"}
@@ -570,49 +789,101 @@ const QuanLyLuong = () => {
                             </Popover.Body>
                           </Popover>
                         }
-                      ><td className="text-danger bg-danger-subtle">
+                      >
+                        <td className="text-danger bg-danger-subtle">
                           <span style={{ cursor: "pointer" }}>
                             {truKhac
                               ? formatCurrency(truKhac.so_tien)
                               : formatCurrency(0)}
-                          </span></td>
-                      </OverlayTrigger>
-
-                      <td className="text-danger bg-danger bg-opacity-50 ">
-                        <b>{formatCurrency(luong.tong_khau_tru)}</b>
-                      </td>
-                      <td className="text-danger">
-                        {formatCurrency(luong.bhxh)}
-                      </td>
-                      <td className="text-danger">
-                        {formatCurrency(luong.bhtn)}
-                      </td>
-                      <td className="text-danger">
-                        {formatCurrency(luong.bhyt)}
-                      </td>
-                      <td className="text-danger">
-                        {formatCurrency(luong.thue_tncn)}
-                      </td>
-                      <td className="bg-primary bg-opacity-25">
-                        <b>{formatCurrency(luong.thuc_nhan)}</b>
-                      </td>
-                      <td>
+                          </span>
+                        </td>
+                      </OverlayTrigger> */}
                         <OverlayTrigger
                           placement="top"
-                          overlay={<Tooltip>Xoá dòng lương này</Tooltip>}
+                          overlay={
+                            <Popover>
+                              <Popover.Header as="h5">
+                                Khấu trừ khác
+                              </Popover.Header>
+                              <Popover.Body>
+                                {truKhacList.length > 0 ? (
+                                  <ul className="mb-0 ps-3">
+                                    {truKhacList.map((kt, index) => (
+                                      <li key={index}>
+                                        <div>
+                                          <strong>
+                                            {kt.ghi_chu || "Khấu trừ khác"}
+                                          </strong>
+                                        </div>
+                                        <div>
+                                          Số tiền: {formatCurrency(kt.so_tien)}
+                                        </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <small>Không có khấu trừ</small>
+                                )}
+                              </Popover.Body>
+                            </Popover>
+                          }
                         >
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleDeleteLuong(luong.id)}
-                          >
-                            Xoá
-                          </Button>
+                          <td className="text-danger bg-danger-subtle">
+                            <span style={{ cursor: "pointer" }}>
+                              {truKhacList.length > 0
+                                ? formatCurrency(
+                                    truKhacList.reduce(
+                                      (sum, kt) => sum + (kt.so_tien || 0),
+                                      0
+                                    )
+                                  )
+                                : formatCurrency(0)}
+                            </span>
+                          </td>
                         </OverlayTrigger>
-                      </td>
-                    </tr>
-                  );
-                })}
+
+                        <td className="text-danger bg-danger bg-opacity-50 ">
+                          <b>{formatCurrency(luong.tong_khau_tru)}</b>
+                        </td>
+                        <td className="text-danger">
+                          {formatCurrency(luong.bhxh)}
+                        </td>
+                        <td className="text-danger">
+                          {formatCurrency(luong.bhtn)}
+                        </td>
+                        <td className="text-danger">
+                          {formatCurrency(luong.bhyt)}
+                        </td>
+                        <td className="text-danger">
+                          {formatCurrency(luong.thue_tncn)}
+                        </td>
+                        <td className="bg-primary bg-opacity-25">
+                          <b>{formatCurrency(luong.thuc_nhan)}</b>
+                        </td>
+                        <td>
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={<Tooltip>Xoá dòng lương này</Tooltip>}
+                          >
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleDeleteLuong(luong.id)}
+                            >
+                              Xoá
+                            </Button>
+                          </OverlayTrigger>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="11" className="text-center text-muted">
+                      Không có bảng lương
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </Table>
           </div>

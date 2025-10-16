@@ -245,7 +245,10 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
               </select>
             </div>
 
-            <div className="mb-3">
+            
+          </>
+        )}
+        <div className="mb-3">
               <label className="form-label">
                 Căn cứ pháp lý (đính kèm file)
               </label>
@@ -258,9 +261,6 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
                   <small className="text-muted">File hiện tại: {editingNghiPhep.can_cu_phap_ly_file}</small>
                 )}
             </div>
-          </>
-        )}
-
         <div className="row mb-3">
           <div className="col-md-2">
             <label className="form-label">Từ ngày</label>

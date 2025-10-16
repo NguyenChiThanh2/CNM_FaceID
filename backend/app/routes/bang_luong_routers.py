@@ -11,3 +11,8 @@ def get_all_luong_router():
 # @bangluong_bp.route('/get-bang-luong-1nv/<int:nhan_vien_id>', methods=['GET'])
 # def get_bang_luong_1nv_router(nhan_vien_id):
 #     return get_bang_luong_1nv(nhan_vien_id)
+
+# Xóa lương theo ID
+@bangluong_bp.route('/delete-bangluong/<int:id>', methods=['DELETE'])
+def delete_bangluong_router(id):
+    return delete_bangluong(id)

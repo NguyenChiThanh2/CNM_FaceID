@@ -34,7 +34,10 @@ const Sidebar = () => {
     { title: "Nghỉ phép", icon: "📆", path: "/nghi-phep" },
     { title: "Giấy phép", icon: "📜", path: "/quan-ly-giay-phep" },
     { title: "Tính lương", icon: "💰", path: "/tinh-luong" },
-    { title: "Phúc lợi", icon: "🎁", path: "/phuc-loi" },
+    { title: "Thưởng", icon: "🎁", path: "/thuong" },
+    { title: "Khấu trừ", icon: "❌", path: "/khau-tru" },
+    { title: "Phúc lợi", icon: "⚜️", path: "/phuc-loi" },
+    { title: "QL nghỉ có lương", icon: "🎆", path: "/ngay-nghi-le" },
     { title: "Đánh giá", icon: "📈", path: "/danh-gia" },
     { title: "Phòng ban", icon: "🏢", path: "/phong-ban" },
   ];

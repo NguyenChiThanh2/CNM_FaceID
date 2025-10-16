@@ -30,6 +30,7 @@ class NhanVien(db.Model):
     hopdong_nv = db.relationship("HopDongLaoDong", back_populates="hopdong_nv", lazy=True)
     bang_luong_nhan_vien = db.relationship('BangLuong', back_populates='bang_luong_nhan_vien', lazy=True)
     NguoiPhuThuoc_nv = db.relationship("NguoiPhuThuoc", back_populates="NguoiPhuThuoc_nv", lazy=True)
+    thuong_nhanvien = db.relationship('ThuongNhanVien', back_populates='nhanvien', lazy=True)    
     chung_chi_list = db.relationship("BangCapChungChi", back_populates="nhan_vien",cascade="all, delete-orphan",lazy=True)
     # Các đánh giá nhận và tạo (2 quan hệ khác nhau đến cùng một bảng)
     danh_gias_nhan = db.relationship(
@@ -46,7 +47,14 @@ class NhanVien(db.Model):
         lazy=True
     )
     giayphep_nv = db.relationship("GiayPhep", foreign_keys='GiayPhep.nhan_vien_id', back_populates="giayphep_nv", lazy=True)
-    giayphep_nguoi_duyet = db.relationship("GiayPhep", foreign_keys='GiayPhep.nguoi_duyet_id', lazy=True)
+    giayphep_nguoi_duyet = db.relationship("GiayPhep", foreign_keys='GiayPhep.nguoi_duyet_id',back_populates="nguoi_duyet", lazy=True)
+    
+    khautru_list = db.relationship(
+        'KhauTru',
+        secondary='khautru_nhanvien',
+        back_populates='nhan_viens'
+    )
+    
 
     def __repr__(self):
         return f"<NhanVien {self.ho_ten}>"
@@ -61,6 +69,7 @@ class NhanVien(db.Model):
             'email': self.email,
             'dia_chi': self.dia_chi,
             'phong_ban_id': self.phong_ban_id,
+            'ten_phong_ban': self.phong_ban.ten_phong_ban  if self.phong_ban else None,
             'chuc_vu_id': self.chuc_vu_id,
             'avatar': self.avatar,
             'trang_thai': self.trang_thai,

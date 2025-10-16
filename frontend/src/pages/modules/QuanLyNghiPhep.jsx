@@ -5,9 +5,9 @@ import NghiPhepForm from "../../components/nghiphep/NghiPhepForm";
 import { Modal, Button, Table, Breadcrumb } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
+import Loading from "../../../src/components/Loading";
 
 const API_URL = "http://127.0.0.1:5000/api";
-const API_URL_FILE = "http://127.0.0.1:5000/uploads/nghi_phep/thaisan/";
 const HR_DEPARTMENT_ID = 2; // 👈 ĐỔI thành ID thật của phòng Nhân sự
 
 const getUserInfo = () => {
@@ -39,6 +39,7 @@ const QuanLyNghiPhep = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const navigate = useNavigate();
+  // const [loadingT, setLoadingT] = useState(true);
 
   useEffect(() => {
     fetchNghiPhep();
@@ -71,12 +72,15 @@ const QuanLyNghiPhep = () => {
 
 
   const fetchNhanVien = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
       setNhanVienList(response.data || []);
     } catch (error) {
       console.error("Lỗi khi gọi API nhân viên:", error);
       toast.error("Có lỗi xảy ra khi tải danh sách nhân viên!");
+    }finally{
+      setLoading(false);
     }
   };
 
@@ -91,43 +95,57 @@ const QuanLyNghiPhep = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn hủy đơn nghỉ phép này không?")) return;
+    if (!window.confirm("Bạn có chắc muốn hủy đơn nghỉ phép này không?"))
+      return;
+    setLoading(true);
     try {
-      await toast.promise(
-        axios.put(`${API_URL}/cancle-nghi-phep/${id}`),
-        { pending: "Đang hủy đơn...", success: "Đã hủy đơn nghỉ phép!", error: "Hủy đơn thất bại!" }
-      );
+      await toast.promise(axios.delete(`${API_URL}/delete-nghi-phep/${id}`), {
+        pending: "Đang hủy đơn...",
+        success: "Đã hủy đơn nghỉ phép!",
+        error: "Hủy đơn thất bại!",
+      });
       fetchNghiPhep();
     } catch (error) {
       console.error("Lỗi khi hủy đơn nghỉ phép:", error);
-      // lỗi đã hiển thị bởi toast.promise
+    }finally{
+      setLoading(false);
     }
   };
 
   const handleDuyet = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn duyệt đơn nghỉ phép này không?")) return;
+    if (!window.confirm("Bạn có chắc muốn duyệt đơn nghỉ phép này không?"))
+      return;
+    setLoading(true);
     try {
-      await toast.promise(
-        axios.put(`${API_URL}/approve-nghi-phep/${id}`),
-        { pending: "Đang duyệt...", success: "Đã duyệt đơn nghỉ phép!", error: "Duyệt đơn thất bại!" }
-      );
+      await toast.promise(axios.put(`${API_URL}/approve-nghi-phep/${id}`), {
+        pending: "Đang duyệt...",
+        success: "Đã duyệt đơn nghỉ phép!",
+        error: "Duyệt đơn thất bại!",
+      });
       fetchNghiPhep();
       fetchNhanVien();
     } catch (error) {
       console.error("Lỗi khi duyệt đơn nghỉ phép:", error);
+    }finally{
+      setLoading(false);
     }
   };
 
   const handleTuChoi = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn từ chối đơn nghỉ phép này không?")) return;
+    if (!window.confirm("Bạn có chắc muốn từ chối đơn nghỉ phép này không?"))
+      return;
+    setLoading(true);
     try {
-      await toast.promise(
-        axios.put(`${API_URL}/reject-nghi-phep/${id}`),
-        { pending: "Đang từ chối...", success: "Đã từ chối đơn nghỉ phép!", error: "Từ chối đơn thất bại!" }
-      );
+      await toast.promise(axios.put(`${API_URL}/reject-nghi-phep/${id}`), {
+        pending: "Đang từ chối...",
+        success: "Đã từ chối đơn nghỉ phép!",
+        error: "Từ chối đơn thất bại!",
+      });
       fetchNghiPhep();
     } catch (error) {
       console.error("Lỗi khi từ chối đơn nghỉ phép:", error);
+    }finally{
+      setLoading(false);
     }
   };
 
@@ -138,7 +156,11 @@ const QuanLyNghiPhep = () => {
 
   const handleFormSubmit = () => {
     fetchNghiPhep();
-    toast.success(editingNghiPhep ? "Cập nhật đơn nghỉ phép thành công!" : "Tạo đơn nghỉ phép thành công!");
+    toast.success(
+      editingNghiPhep
+        ? "Cập nhật đơn nghỉ phép thành công!"
+        : "Tạo đơn nghỉ phép thành công!"
+    );
     handleModalClose();
   };
 
@@ -160,8 +182,11 @@ const QuanLyNghiPhep = () => {
     const searchKey = (searchKeyword || "").toLowerCase();
     const searchMatch =
       lyDo.includes(searchKey) ||
-      (nhanVienMap[np.nhan_vien_id] && nhanVienMap[np.nhan_vien_id].includes(searchKey));
-    const statusMatch = filterTrangThai ? np.trang_thai === filterTrangThai : true;
+      (nhanVienMap[np.nhan_vien_id] &&
+        nhanVienMap[np.nhan_vien_id].includes(searchKey));
+    const statusMatch = filterTrangThai
+      ? np.trang_thai === filterTrangThai
+      : true;
     return searchMatch && statusMatch;
   });
 
@@ -172,16 +197,28 @@ const QuanLyNghiPhep = () => {
   const userInfo = getUserInfo();
   const isHR = !!userInfo && userInfo.phong_ban_id === HR_DEPARTMENT_ID;
 
+  if (loading)
+      return (
+        <div>
+          <ToastContainer position="top-right" autoClose={2000} />
+          <Loading />
+        </div>
+  );
   return (
     <div className="container min-vh-100">
+      <ToastContainer position="top-right" autoClose={2000} />
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
+            <Breadcrumb.Item onClick={() => navigate("/")}>
+              Trang chủ
+            </Breadcrumb.Item>
             <Breadcrumb.Item active>Quản lý nghỉ phép</Breadcrumb.Item>
           </Breadcrumb>
 
-          <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
+          <Button variant="secondary" onClick={() => navigate("/")}>
+            ← Trang chủ
+          </Button>
 
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h2 className="text-center flex-grow-1">Quản lý đơn nghỉ phép</h2>
@@ -214,15 +251,18 @@ const QuanLyNghiPhep = () => {
 
           {isHR && (
             <div className="d-flex justify-content-end mb-3">
-              <button className="btn btn-outline-success px-4" onClick={handleAdd}>
+              <button
+              className="btn btn-outline-success px-4"
+              onClick={handleAdd}
+            >
                 + Thêm đơn nghỉ phép
               </button>
             </div>
           )}
 
 
-          <div className="table-responsive">
-            <Table bordered hover striped className="rounded">
+          <div className="table-responsive" style={{ overflowX: "auto" }}>
+            <Table bordered hover striped className="rounded  text-nowrap">
               <thead className="table-dark text-center">
                 <tr>
                   <th>Nhân viên</th>
@@ -232,60 +272,130 @@ const QuanLyNghiPhep = () => {
                   <th>Tổng ngày nghỉ</th>
                   <th>Lý do</th>
                   <th>Trạng thái</th>
+                  <th>File giấy tờ</th>
                   <th>Hành động</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center">Đang tải dữ liệu...</td>
+                    <td colSpan="9" className="text-center">
+                      Đang tải dữ liệu...
+                    </td>
                   </tr>
                 ) : currentItems.length > 0 ? (
-                  currentItems.map((nghiPhep) => (
-                    (nghiPhep.loai_nghi_phep_id != 3) ? (
-                      <tr key={nghiPhep.id}>
-                        <td>{nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
-                        <td>{formatDate(nghiPhep.tu_ngay)}</td>
-                        <td>{formatDate(nghiPhep.den_ngay)}</td>
-                        <td>{nghiPhep.loai_nghi_phep}</td>
-                        <td>{nghiPhep.so_ngay_nghi}</td>
-                        <td>{nghiPhep.ly_do}</td>
-                        <td className="text-center">
-                          <span
-                            className={`badge ${nghiPhep.trang_thai === "Chờ duyệt"
-                              ? "bg-warning text-dark"
-                              : nghiPhep.trang_thai === "Đã duyệt"
-                                ? "bg-success"
-                                : nghiPhep.trang_thai === "Từ chối"
+                  currentItems.map((nghiPhep) =>
+                    nghiPhep.loai_nghi_phep_id != 3 ?  (
+                        <tr key={nghiPhep.id}>
+                          <td>
+                          {nhanVienList.find(
+                            (nv) => nv.id === nghiPhep.nhan_vien_id
+                          )?.ho_ten || "Không rõ"}
+                        </td>
+                          <td>{formatDate(nghiPhep.tu_ngay)}</td>
+                          <td>{formatDate(nghiPhep.den_ngay)}</td>
+                          <td>{nghiPhep.loai_nghi_phep}</td>
+                          <td>{nghiPhep.so_ngay_nghi}</td>
+                          <td>{nghiPhep.ly_do}</td>
+                          <td className="text-center">
+                            <span
+                              className={`badge ${
+                              nghiPhep.trang_thai === "Chờ duyệt"
+                                  ? "bg-warning text-dark"
+                                  : nghiPhep.trang_thai === "Đã duyệt"
+                                  ? "bg-success"
+                                  : nghiPhep.trang_thai === "Từ chối"
                                   ? "bg-danger"
                                   : "bg-secondary"
                               }`}
-                          >
-                            {nghiPhep.trang_thai}
-                          </span>
+                            >
+                              {nghiPhep.trang_thai}
+                            </span>
+                          </td>
+                          <td>
+                          {nghiPhep.can_cu_phap_ly_file ? (
+                            nghiPhep.loai_nghi_phep_id === 1 ? (
+                              <a
+                                href={`${API_URL}/can_cu_phap_ly_phep_nam/${nghiPhep.can_cu_phap_ly_file}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="link"
+                                style={{
+                                  textDecoration: "none",
+                                  color: "#0d6efd",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                📎 {nghiPhep.can_cu_phap_ly_file}
+                              </a>
+                            ) : nghiPhep.loai_nghi_phep_id === 2 ? (
+                              <a
+                                href={`${API_URL}/can_cu_phap_ly_phep_kl/${nghiPhep.can_cu_phap_ly_file}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="link"
+                                style={{
+                                  textDecoration: "none",
+                                  color: "#0d6efd",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                📎 {nghiPhep.can_cu_phap_ly_file}
+                              </a>
+                            ) : (
+                              <span className="text-muted">Không có</span>
+                            )
+                          ) : (
+                            <span className="text-muted">Không có</span>
+                          )}
                         </td>
                         <td>
-                          {isHR && nghiPhep.trang_thai === "Chờ duyệt" && (
-                            <>
-                              <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>✔ Duyệt</button>
-                              <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>✖ Từ chối</button>
-                              <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
-                            </>
-                          )}
+                            {isHR && nghiPhep.trang_thai === "Chờ duyệt" && (
+                              <>
+                                <button
+                                className="btn btn-sm btn-outline-success me-1"
+                                onClick={() => handleDuyet(nghiPhep.id)}
+                              >
+                                ✔ Duyệt
+                              </button>
+                                <button
+                                className="btn btn-sm btn-outline-danger me-1"
+                                onClick={() => handleTuChoi(nghiPhep.id)}
+                              >
+                                ✖ Từ chối
+                              </button>
+                                <button
+                                className="btn btn-sm btn-outline-danger me-1"
+                                onClick={() => handleDelete(nghiPhep.id)}
+                              >
+                                🗑 Hủy
+                              </button>
+                              </>
+                            )}
 
-                          {!isHR && nghiPhep.nhan_vien_id === userInfo?.id && nghiPhep.trang_thai === "Chờ duyệt" && (
+                            {!isHR && nghiPhep.nhan_vien_id === userInfo?.id && 
+                            nghiPhep.trang_thai
+                           === "Chờ duyệt" && (
                             <>
-                              <button className="btn btn-sm btn-outline-warning me-1" onClick={() => handleEdit(nghiPhep)}>✏️ Sửa</button>
+                                <button
+                              className="btn btn-sm btn-outline-warning me-1"
+                              onClick={() => handleEdit(nghiPhep)}
+                            >
+                              ✏️ Sửa
+                            </button>
                               <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
                             </>
-                          )}
-                        </td>
+                            )}
+                          </td>
 
-                      </tr>) : ("")
-                  ))
+                        </tr>
+                    ) : (
+                      ""
+                    )
+                   )
                 ) : (
                   <tr>
-                    <td colSpan="7" className="text-center text-muted">
+                    <td colSpan="9" className="text-center text-muted">
                       Không có đơn nghỉ phép nào phù hợp
                     </td>
                   </tr>
@@ -295,7 +405,7 @@ const QuanLyNghiPhep = () => {
           </div>
 
           <div className="table-responsive" style={{ overflowX: "auto" }}>
-            <h3 className="text-center mb-3">Nghỉ thai sản</h3>
+            <h3 className="text-center mb-3 mt-3">Nghỉ thai sản</h3>
             <Table bordered hover striped className="rounded text-nowrap">
               <thead className="table-dark text-center">
                 <tr>
@@ -316,13 +426,19 @@ const QuanLyNghiPhep = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center">Đang tải dữ liệu...</td>
+                    <td colSpan="12" className="text-center">
+                      Đang tải dữ liệu...
+                    </td>
                   </tr>
                 ) : currentItems.length > 0 ? (
-                  currentItems.map((nghiPhep) => (
-                    nghiPhep.loai_nghi_phep_id == 3 ?
-                      (<tr key={nghiPhep.id}>
-                        <td>{nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
+                  currentItems.map((nghiPhep) =>
+                    nghiPhep.loai_nghi_phep_id == 3 ? (
+                      <tr key={nghiPhep.id}>
+                        <td>
+                          {nhanVienList.find(
+                            (nv) => nv.id === nghiPhep.nhan_vien_id
+                          )?.ho_ten || "Không rõ"}
+                        </td>
                         <td>{nghiPhep.ngay_du_kien_sinh}</td>
                         <td>{formatDate(nghiPhep.tu_ngay)}</td>
                         <td>{formatDate(nghiPhep.den_ngay)}</td>
@@ -337,7 +453,11 @@ const QuanLyNghiPhep = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="link"
-                              style={{ textDecoration: "none", color: "#0d6efd", fontWeight: 500 }}
+                              style={{
+                                textDecoration: "none",
+                                color: "#0d6efd",
+                                fontWeight: 500,
+                              }}
                             >
                               📎{nghiPhep.can_cu_phap_ly_file}
                             </a>
@@ -347,14 +467,17 @@ const QuanLyNghiPhep = () => {
                         </td>
                         <td>{nghiPhep.ly_do}</td>
                         <td className="text-center">
-                          <span className={`badge ${nghiPhep.trang_thai === "Chờ duyệt"
-                            ? "bg-warning text-dark"
-                            : nghiPhep.trang_thai === "Đã duyệt"
-                              ? "bg-success"
-                              : nghiPhep.trang_thai === "Từ chối"
+                          <span
+                            className={`badge ${
+                              nghiPhep.trang_thai === "Chờ duyệt"
+                                ? "bg-warning text-dark"
+                                : nghiPhep.trang_thai === "Đã duyệt"
+                                ? "bg-success"
+                                : nghiPhep.trang_thai === "Từ chối"
                                 ? "bg-danger"
                                 : "bg-secondary"
-                            }`}>
+                            }`}
+                          >
                             {nghiPhep.trang_thai}
                           </span>
                         </td>
@@ -362,26 +485,51 @@ const QuanLyNghiPhep = () => {
                           {/* HR: được duyệt / từ chối / hủy khi Chờ duyệt */}
                           {isHR && nghiPhep.trang_thai === "Chờ duyệt" && (
                             <>
-                              <button className="btn btn-sm btn-outline-success me-1" onClick={() => handleDuyet(nghiPhep.id)}>✔ Duyệt</button>
-                              <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleTuChoi(nghiPhep.id)}>✖ Từ chối</button>
-                              <button className="btn btn-sm btn-outline-danger me-1" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
+                              <button
+                                className="btn btn-sm btn-outline-success me-1"
+                                onClick={() => handleDuyet(nghiPhep.id)}
+                              >
+                                ✔ Duyệt
+                              </button>
+                              <button
+                                className="btn btn-sm btn-outline-danger me-1"
+                                onClick={() => handleTuChoi(nghiPhep.id)}
+                              >
+                                ✖ Từ chối
+                              </button>
+                              <button
+                                className="btn btn-sm btn-outline-danger me-1"
+                                onClick={() => handleDelete(nghiPhep.id)}
+                              >
+                                🗑 Hủy
+                              </button>
                             </>
                           )}
 
                           {/* Non-HR: chỉ được Sửa/Hủy đơn của CHÍNH MÌNH khi Chờ duyệt */}
-                          {!isHR && nghiPhep.nhan_vien_id === userInfo?.id && nghiPhep.trang_thai === "Chờ duyệt" && (
+                          {!isHR && nghiPhep.nhan_vien_id === userInfo?.id && 
+                            nghiPhep.trang_thai
+                           === "Chờ duyệt" && (
                             <>
-                              <button className="btn btn-sm btn-outline-warning me-1" onClick={() => handleEdit(nghiPhep)}>✏️ Sửa</button>
+                              <button
+                              className="btn btn-sm btn-outline-warning me-1"
+                              onClick={() => handleEdit(nghiPhep)}
+                            >
+                              ✏️ Sửa
+                            </button>
                               <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
                             </>
                           )}
                         </td>
 
-                      </tr>) : ("")
-                  ))
+                      </tr>
+                    ) : (
+                      ""
+                    )
+                  )
                 ) : (
                   <tr>
-                    <td colSpan="7" className="text-center text-muted">
+                    <td colSpan="12" className="text-center text-muted">
                       Không có đơn nghỉ phép nào phù hợp
                     </td>
                   </tr>
@@ -417,7 +565,9 @@ const QuanLyNghiPhep = () => {
           <Modal show={showModal} onHide={handleModalClose} size="lg">
             <Modal.Header closeButton>
               <Modal.Title>
-                {editingNghiPhep ? "Chỉnh sửa đơn nghỉ phép" : "Thêm đơn nghỉ phép"}
+                {editingNghiPhep
+                  ? "Chỉnh sửa đơn nghỉ phép"
+                  : "Thêm đơn nghỉ phép"}
               </Modal.Title>
             </Modal.Header>
             <Modal.Body>
@@ -435,7 +585,7 @@ const QuanLyNghiPhep = () => {
           </Modal>
         </div>
       </div>
-      <ToastContainer position="top-right" autoClose={2000} />
+      
     </div>
   );
 };

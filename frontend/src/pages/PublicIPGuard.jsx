@@ -1,6 +1,7 @@
 // src/pages/PublicIPGuard.jsx
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import Loading from '../../src/components/Loading';
 
 // Cho phép cấu hình qua .env (Vite) hoặc hard-code tạm
 const ALLOWED_PUBLIC_ENTRIES = (import.meta.env.VITE_ALLOWED_PUBLIC_IPS || "")
