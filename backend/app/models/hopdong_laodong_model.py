@@ -1,4 +1,3 @@
-# models/hopdong_laodong_model.py
 from datetime import datetime
 from app import db
 
@@ -11,6 +10,9 @@ class HopDongLaoDong(db.Model):
 
     ngay_bat_dau = db.Column(db.Date, nullable=False)
     ngay_ket_thuc = db.Column(db.Date, nullable=True)
+    # 🆕 Thêm trường thời gian hợp đồng (ví dụ: 6 tháng, 12 tháng, Không thời hạn)
+    thoi_gian_hop_dong = db.Column(db.String(50), nullable=True)
+
     loai_hop_dong = db.Column(db.String(50), nullable=False)
     muc_luong_co_ban = db.Column(db.Float, nullable=False)
 
@@ -38,8 +40,7 @@ class HopDongLaoDong(db.Model):
     hopdong_quyche = db.relationship("QuyCheCongTy", back_populates="hopdong_quyche", lazy=True)
 
     def __repr__(self):
-        # Sửa nhầm tên field: nhanvien_id -> nhan_vien_id
-        return f"<HopDongLaoDong id={self.id} nv={self.nhan_vien_id} luong={self.muc_luong_co_ban}>"
+        return f"<HopDongLaoDong id={self.id} nv={self.nhan_vien_id} thoi_gian={self.thoi_gian_hop_dong}>"
 
     def to_dict(self):
         return {
@@ -48,6 +49,7 @@ class HopDongLaoDong(db.Model):
             "quyche_id": self.quyche_id,
             "ngay_bat_dau": self.ngay_bat_dau.isoformat() if self.ngay_bat_dau else None,
             "ngay_ket_thuc": self.ngay_ket_thuc.isoformat() if self.ngay_ket_thuc else None,
+            "thoi_gian_hop_dong": self.thoi_gian_hop_dong,  # 👈 thêm ở đây
             "loai_hop_dong": self.loai_hop_dong,
             "muc_luong_co_ban": self.muc_luong_co_ban,
             "di_tre_phat": self.di_tre_phat,

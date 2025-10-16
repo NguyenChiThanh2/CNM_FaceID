@@ -11,7 +11,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { getNhanVienInfo } from "../../utils/auth";
-
+import { getHopDongBatchByNhanVienIds } from "../../services/hopDongLaoDongAPI";
 import { getAllNhanVien, deleteNhanVien as apiDeleteNhanVien } from "../../services/nhanSuApi";
 import ChungChiModal from "../../components/nhansu/ChungChiModal";
 const QuanLyNhanSu = () => {
@@ -29,6 +29,8 @@ const QuanLyNhanSu = () => {
   const [selectedNV, setSelectedNV] = useState(null);
   const HR_DEPARTMENT_ID = 2; // bạn có thể thay = id thật trong DB
   const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const [contracts, setContracts] = useState({});
+
   const itemsPerPage = 5;
   const navigate = useNavigate();
 
@@ -67,6 +69,19 @@ const QuanLyNhanSu = () => {
       }
     })();
   }, [fetchNhanSu]);
+  useEffect(() => {
+    if (nhanSuList.length > 0) {
+      (async () => {
+        try {
+          const ids = nhanSuList.map((nv) => nv.id);
+          const batch = await getHopDongBatchByNhanVienIds(ids);
+          setContracts(batch || {});
+        } catch (err) {
+          console.error("Lỗi tải hợp đồng batch:", err);
+        }
+      })();
+    }
+  }, [nhanSuList]);
 
   const handleAdd = () => {
     setEditingNhanSu(null);
@@ -164,7 +179,6 @@ const QuanLyNhanSu = () => {
       "Chức vụ": getTenChucVu(nv.chuc_vu_id),
       "Phòng ban": getTenPhongBan(nv.phong_ban_id),
       "Địa chỉ": nv.dia_chi,
-      "Lương cơ bản": nv.luong_co_ban,
       "Trạng thái": nv.trang_thai,
     }));
 
@@ -176,6 +190,21 @@ const QuanLyNhanSu = () => {
     const data = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(data, `DanhSachNhanSu_${new Date().toLocaleDateString("vi-VN")}.xlsx`);
   };
+  function getHopDongBadge(hd) {
+    if (!hd) return null;
+    if (!hd.ngay_ket_thuc) return null; // HĐ vô thời hạn
+
+    const today = new Date();
+    const end = new Date(hd.ngay_ket_thuc);
+    const daysLeft = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+
+    if (daysLeft < 0)
+      return <span className="badge bg-danger ms-1">Hết hạn {Math.abs(daysLeft)} ngày</span>;
+    if (daysLeft <= 30)
+      return <span className="badge bg-warning text-dark ms-1">HĐ còn {daysLeft} ngày</span>;
+    return null;
+  }
+
 
   return (
     <div className="container min-vh-100">
@@ -256,7 +285,6 @@ const QuanLyNhanSu = () => {
                     <th>Chức vụ</th>
                     <th>Phòng ban</th>
                     <th>Địa chỉ</th>
-                    <th>Lương</th>
                     <th>Trạng thái</th>
                     <th>Hành động</th>
                   </tr>
@@ -291,7 +319,11 @@ const QuanLyNhanSu = () => {
                         )}
                       </td>
                       <td>{nv.id}</td>
-                      <td>{nv.ho_ten}</td>
+                      <td>
+                        {nv.ho_ten}
+                        {getHopDongBadge(contracts[nv.id])}
+                      </td>
+
                       <td>{nv.gioi_tinh}</td>
                       <td>{nv.ngay_sinh ? new Date(nv.ngay_sinh).toLocaleDateString("vi-VN") : ""}</td>
                       <td>{nv.email}</td>
@@ -299,7 +331,6 @@ const QuanLyNhanSu = () => {
                       <td>{getTenChucVu(nv.chuc_vu_id)}</td>
                       <td>{getTenPhongBan(nv.phong_ban_id)}</td>
                       <td>{nv.dia_chi}</td>
-                      <td>{nv.luong_co_ban}</td>
                       <td>{nv.trang_thai}</td>
                       {isHR && (
                         <td className="text-nowrap" onClick={(e) => e.stopPropagation()}>

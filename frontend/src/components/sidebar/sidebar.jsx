@@ -89,27 +89,27 @@ const Sidebar = () => {
             <li className="nav-item mb-2" key={index}>
               <Button
                 variant="link"
-                className={`text-white w-100 text-start p-3 fw-semibold ${
-                  isActive ? "active-sidebar" : ""
-                }`}
+                className={`text-white w-100 text-start p-3 fw-semibold ${isActive ? "active-sidebar" : ""
+                  }`}
                 onClick={() => navigate(module.path)}
                 style={{
-                  backgroundColor: isActive ? "#275191ff" : "#495057",
+                  backgroundColor: isActive ? "#e2e6eaf" : "#495057",
+                  color: isActive ? "#fff" : "#e2e6ea", // 🔥 chữ sáng hơn khi active
                   borderRadius: "8px",
                   textDecoration: "none",
-                  transition: "background-color 0.3s",
+                  transition: "all 0.3s",
+                  fontWeight: isActive ? "700" : "500",
                 }}
-                onMouseOver={(e) =>
-                  !isActive &&
-                  (e.currentTarget.style.backgroundColor = "#6c757d")
-                }
-                onMouseOut={(e) =>
-                  !isActive &&
-                  (e.currentTarget.style.backgroundColor = "#495057")
-                }
+                onMouseOver={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "#6c757d";
+                }}
+                onMouseOut={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "#495057";
+                }}
               >
                 {module.icon} {module.title}
               </Button>
+
             </li>
           );
         })}

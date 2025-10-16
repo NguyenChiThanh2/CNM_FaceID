@@ -77,16 +77,7 @@ function App() {
       <Router>
         <AppLayout />
       </Router>
-      {/* <ToastContainer
-        position="top-right"
-        autoClose={2000}
-        newestOnTop
-        closeOnClick
-        pauseOnFocusLoss={false}
-        pauseOnHover
-        draggable
-        containerStyle={{ zIndex: 999999 }}  
-      /> */}
+      <ToastContainer position="top-right" autoClose={2500} newestOnTop />
     </div>
   );
 }

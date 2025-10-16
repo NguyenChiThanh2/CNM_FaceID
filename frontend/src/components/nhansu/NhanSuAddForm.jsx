@@ -28,20 +28,25 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // preload dropdowns
+    const controller = new AbortController();
+
     (async () => {
       try {
-        const [cv, pb] = await Promise.all([getAllChucVu(), getAllPhongBan()]);
-        if (!alive) return;
+        const [cv, pb] = await Promise.all([
+          getAllChucVu({ signal: controller.signal }),
+          getAllPhongBan({ signal: controller.signal }),
+        ]);
         setDsChucVu(Array.isArray(cv) ? cv : []);
         setDsPhongBan(Array.isArray(pb) ? pb : []);
       } catch (err) {
-        console.error("Lỗi load danh mục:", err);
-        // để trang cha bắn toast, form không bắn
+        if (err.name !== "CanceledError" && err.name !== "AbortError")
+          console.error("Lỗi load danh mục:", err);
       }
     })();
-    return () => { alive = false; };
+
+    return () => controller.abort(); // Hủy request khi unmount
   }, []);
+
 
   useEffect(() => {
     if (editingNhanSu) {
@@ -82,9 +87,6 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
       return { ok: false, msg: "Số điện thoại không hợp lệ." };
     }
     const luong = Number(formData.luong_co_ban);
-    if (!(luong > 0)) {
-      return { ok: false, msg: "Lương cơ bản phải là số dương." };
-    }
     return { ok: true };
   };
 
@@ -269,20 +271,6 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
             className="form-control"
             accept="image/*"
             onChange={handleChange}
-          />
-        </div>
-
-        <div className="col-md-6 mb-3">
-          <label><strong>Lương cơ bản</strong></label>
-          <input
-            type="number"
-            name="luong_co_ban"
-            className="form-control"
-            value={formData.luong_co_ban}
-            onChange={handleChange}
-            required
-            min="0"
-            step="1000"
           />
         </div>
       </div>
