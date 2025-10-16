@@ -20,7 +20,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
     phong_ban_id: "",
     trang_thai: "Đang làm việc",
     avatar: null,
-    luong_co_ban: "",
+
   });
 
   const [dsChucVu, setDsChucVu] = useState([]);
@@ -73,14 +73,14 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
       phong_ban_id: "",
       trang_thai: "Đang làm việc",
       avatar: null,
-      luong_co_ban: "",
+
     });
   };
 
   const validatePhoneNumber = (phone) => /^(03|05|07|08|09)\d{8}$/.test(phone);
 
   const validateForm = () => {
-    if (!formData.ho_ten || !formData.email || !formData.so_dien_thoai || formData.luong_co_ban === "") {
+    if (!formData.ho_ten || !formData.email || !formData.so_dien_thoai) {
       return { ok: false, msg: "Vui lòng điền đầy đủ thông tin." };
     }
     if (!validatePhoneNumber(formData.so_dien_thoai)) {

@@ -18,22 +18,20 @@ const DangNhap = () => {
 
   const handleLogin = async () => {
     if (loading) return;
+
     if (!emailOrPhone.trim() || !password.trim()) {
       toast.error("Vui lòng nhập đầy đủ thông tin");
-      return;
-    }
-    if (!username.trim() || !password.trim()) {
-      toast.error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu");
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
-      toast.error("Tên đăng nhập không hợp lệ!");
       return;
     }
 
     try {
       setLoading(true);
+      // Nếu loginApi nhận 2 tham số (emailOrPhone, password)
       const res = await loginApi(emailOrPhone.trim(), password.trim());
+
+      // Nếu loginApi nhận object, dùng:
+      // const res = await loginApi({ email_or_phone: emailOrPhone.trim(), password: password.trim() });
+
       const { access_token, nhan_vien } = res.data || {};
       if (!access_token || !nhan_vien) {
         toast.error("Phản hồi đăng nhập không hợp lệ");
@@ -55,7 +53,6 @@ const DangNhap = () => {
           },
         })
       );
-
 
       navigate("/", { replace: true });
     } catch (error) {
