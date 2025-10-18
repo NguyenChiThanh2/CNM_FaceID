@@ -132,10 +132,10 @@ def get_active_contract_by_nhan_vien(nv_id):
 
 @hopdong_bp.route("/hop-dong", methods=["POST"])
 def create_hop_dong():
-    # Chỉ nhận JSON từ FE
+    # ✅ Nhận JSON từ FE
     data = request.get_json(silent=True) or {}
 
-    # Validate bắt buộc
+    # ✅ Kiểm tra các trường bắt buộc
     if noneish(data.get("nhan_vien_id")):
         return jsonify({"message": "Thiếu nhan_vien_id"}), 400
     if noneish(data.get("loai_hop_dong")):
@@ -147,6 +147,30 @@ def create_hop_dong():
         if not ngay_bat_dau:
             return jsonify({"message": "ngay_bat_dau là bắt buộc, định dạng YYYY-MM-DD"}), 400
 
+        # ✅ Kiểm tra nếu nhân viên đang có hợp đồng còn hiệu lực
+        today = date.today()
+        active_hd = (
+            HopDongLaoDong.query.filter(
+                HopDongLaoDong.nhan_vien_id == nhan_vien_id,
+                HopDongLaoDong.trang_thai.is_(True),
+                HopDongLaoDong.ngay_bat_dau <= today,
+                (HopDongLaoDong.ngay_ket_thuc.is_(None) | (HopDongLaoDong.ngay_ket_thuc >= today))
+            )
+            .order_by(HopDongLaoDong.ngay_bat_dau.desc())
+            .first()
+        )
+
+        if active_hd:
+            msg = (
+                f"Nhân viên này đang có hợp đồng còn hiệu lực "
+                f"từ {active_hd.ngay_bat_dau.strftime('%d/%m/%Y')} "
+                f"đến "
+                f"{active_hd.ngay_ket_thuc.strftime('%d/%m/%Y') if active_hd.ngay_ket_thuc else 'Không thời hạn'}. "
+                f"Vui lòng chờ hết hạn hoặc ký phụ lục hợp đồng."
+            )
+            return jsonify({"message": msg}), 400
+
+        # ✅ Xử lý thời hạn hợp đồng
         rd, normalized_label = parse_duration(data.get("thoi_gian_hop_dong"))
         if rd is None:
             if not (normalized_label and normalized_label.lower() == "không thời hạn"):
@@ -155,6 +179,7 @@ def create_hop_dong():
         else:
             ngay_ket_thuc = compute_end_date(ngay_bat_dau, rd)
 
+        # ✅ Tạo hợp đồng mới
         hopdong = HopDongLaoDong(
             nhan_vien_id=nhan_vien_id,
             quyche_id=to_int(data.get("quyche_id")),
@@ -181,9 +206,11 @@ def create_hop_dong():
             trang_thai=bool(data.get("trang_thai", True)),
             thoi_gian_hop_dong=normalized_label,
         )
+
         db.session.add(hopdong)
         db.session.commit()
         return jsonify(hopdong.to_dict()), 201
+
     except ValueError as ve:
         db.session.rollback()
         return jsonify({"message": str(ve)}), 400
@@ -191,6 +218,7 @@ def create_hop_dong():
         db.session.rollback()
         print("❌ Lỗi tạo hợp đồng:", e)
         return jsonify({"message": "Tạo hợp đồng thất bại", "error": str(e)}), 500
+
 
 @hopdong_bp.route("/hop-dong/<int:id>", methods=["PUT"])
 def update_hop_dong(id):
