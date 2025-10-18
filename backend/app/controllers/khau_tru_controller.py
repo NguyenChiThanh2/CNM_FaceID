@@ -29,12 +29,12 @@ def get_khau_tru_by_id(khau_tru_id):
 def get_khau_tru_by_nhan_vien_id(nhan_vien_id):
     try:
         khau_trus = get_khau_tru_by_nhan_vien_id_service(nhan_vien_id)
-        if khau_trus:
-            return jsonify([khau_tru.to_dict() for khau_tru in khau_trus]), 200
-        else:
-            return jsonify({'message': 'Không có khấu trừ cho nhân viên này'}), 404
-    except Exception as e:  
+        # 👉 Trả về mảng rỗng thay vì 404
+        return jsonify([kt.to_dict() for kt in khau_trus] if khau_trus else []), 200
+    except Exception as e:
         return jsonify({'message': f'Lỗi khi lấy khấu trừ nhân viên: {str(e)}'}), 500
+
+
 # Tạo mới khấu trừ
 def create_khau_tru():
     try:

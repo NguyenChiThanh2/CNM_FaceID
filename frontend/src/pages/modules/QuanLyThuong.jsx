@@ -7,8 +7,6 @@ import {
   Table,
   Modal,
   Breadcrumb,
-  OverlayTrigger,
-  Tooltip,
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import ThuongForm from "../../components/thuong/ThuongForm";
@@ -19,6 +17,15 @@ import axios from "axios";
 import Loading from "../../../src/components/Loading";
 
 const Thuong = () => {
+  // Lấy user từ localStorage để phân quyền
+  const raw = localStorage.getItem("user");
+  let currentUser = null;
+  try {
+    currentUser = raw ? JSON.parse(raw)?.nhan_vien : null;
+  } catch (_) { }
+  const HR_DEPARTMENT_ID = 2; // id phòng nhân sự
+  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+
   const [thuongList, setThuongList] = useState([]);
   const [selectedThuong, setSelectedThuong] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -41,13 +48,27 @@ const Thuong = () => {
   const fetchThuongList = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/get-all-thuong`);
-      if (!res.ok) throw new Error();
+      let url = `${API_BASE}/api/get-all-thuong`;
+      if (!isHR && currentUser?.id) {
+        url = `${API_BASE}/api/get-thuong-by-nhan-vien-id/${currentUser.id}`;
+      }
+      const res = await fetch(url);
+
+      if (res.status === 404) {
+        // ✅ Xem như không có dữ liệu
+        setThuongList([]);
+        return;
+      }
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status}: ${txt}`);
+      }
+
       const data = await res.json();
-      setThuongList(data);
+      setThuongList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Lỗi khi tải thưởng:", err);
-      toast.error("Không thể tải danh sách thưởng!");
+      toast.error(String(err?.message || "Không thể tải danh sách thưởng!"));
     } finally {
       setLoading(false);
     }
@@ -55,16 +76,13 @@ const Thuong = () => {
 
   useEffect(() => {
     fetchThuongList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredList = thuongList.filter(
     (pl) =>
-      (pl.ten_thuong || "")
-        .toLowerCase()
-        .includes(searchKeyword.toLowerCase()) ||
-      (pl.ngay_quyet_dinh || "")
-        .toLowerCase()
-        .includes(searchKeyword.toLowerCase())
+      (pl.ten_thuong || "").toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      (pl.ngay_quyet_dinh || "").toLowerCase().includes(searchKeyword.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
@@ -101,7 +119,7 @@ const Thuong = () => {
       } catch (err) {
         console.error("Lỗi xóa:", err);
         toast.error("❌ Lỗi khi xóa thưởng!");
-      }finally{
+      } finally {
         setLoading(false);
       }
     }
@@ -127,13 +145,8 @@ const Thuong = () => {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Thuong");
 
-      const excelBuffer = XLSX.write(workbook, {
-        bookType: "xlsx",
-        type: "array",
-      });
-      const file = new Blob([excelBuffer], {
-        type: "application/octet-stream",
-      });
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const file = new Blob([excelBuffer], { type: "application/octet-stream" });
       saveAs(file, "DanhSachThuong.xlsx");
       toast.success("📤 Đã xuất Excel!");
     } catch (e) {
@@ -144,23 +157,15 @@ const Thuong = () => {
   const formatCurrency = (amount) =>
     amount?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-  // 👉 Xem nhân viên
+  // 👉 Xem nhân viên (chỉ HR dùng)
   const handleViewNhanVien = async (thuongId) => {
     setLoading(true);
     try {
       const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
       setPhongBanList(respb.data);
 
-      const res = await axios.get(
-        `${API_BASE}/api/get-all-nhan-vien-by-thuong-id/${thuongId}`
-      );
-      // Kiểm tra nếu dữ liệu trả về là mảng và có phần tử thì setSelectedNhanVienIds
-      if (Array.isArray(res.data) && res.data.length > 0) {
-        setSelectedNhanVien(res.data);
-      } else {
-        // Nếu không có dữ liệu thì reset danh sách selected
-        setSelectedNhanVien([]);
-      }
+      const res = await axios.get(`${API_BASE}/api/get-all-nhan-vien-by-thuong-id/${thuongId}`);
+      setSelectedNhanVien(Array.isArray(res.data) ? res.data : []);
       setSelectedThuongId(thuongId);
     } catch (err) {
       toast.error("Lỗi kết nối !");
@@ -172,7 +177,7 @@ const Thuong = () => {
     }
   };
 
-  // 👉 Xóa nhân viên khỏi thưởng
+  // 👉 Xóa nhân viên khỏi thưởng (chỉ HR)
   const handleDeleteNhanVienFromThuong = async (nhanVienId) => {
     if (!selectedThuongId) return;
     if (window.confirm("Bạn có chắc muốn xóa nhân viên này khỏi thưởng?")) {
@@ -187,39 +192,38 @@ const Thuong = () => {
       } catch (err) {
         console.error("Lỗi khi xóa:", err);
         toast.error("Không thể xóa nhân viên.");
-      }finally{
+      } finally {
         setLoading(false);
       }
     }
   };
 
-  // 👉 Hiển thị modal thêm nhân viên
+  // 👉 Hiển thị modal thêm nhân viên (chỉ HR)
   const handleShowAddNhanVienModal = async (thuongId) => {
     setLoading(true);
     try {
       const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
       setPhongBanList(respb.data);
-      // const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
+
       const res = await axios.get(`${API_BASE}/api/get-all-nhan-vien`);
-      // Lấy danh sách nhân viên đã có thưởng này
       const resSelected = await axios.get(
         `${API_BASE}/api/get-all-nhan-vien-by-thuong-id/${thuongId}`
       );
-      // Kiểm tra nếu dữ liệu trả về là mảng và có phần tử thì setSelectedNhanVienIds
+
       if (Array.isArray(resSelected.data) && resSelected.data.length > 0) {
         const selectedIds = resSelected.data.map((nv) => nv.id);
         setSelectedNhanVienIds(selectedIds);
       } else {
-        // Nếu không có dữ liệu thì reset danh sách selected
         setSelectedNhanVienIds([]);
       }
+
       setNhanVienList(res.data);
       setSelectedThuongId(thuongId);
       setShowAddNhanVienModal(true);
     } catch (err) {
       toast.error("Lỗi kết nối !");
       console.error("Lỗi khi tải danh sách nhân viên:", err);
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -231,7 +235,7 @@ const Thuong = () => {
     setSelectedNhanVienIds([...newSet]);
   };
 
-  // 👉 Thêm nhân viên vào thưởng
+  // 👉 Thêm nhân viên vào thưởng (chỉ HR)
   const handleAddNhanVienToThuong = async () => {
     if (!selectedThuongId) return;
     setLoading(true);
@@ -246,16 +250,18 @@ const Thuong = () => {
     } catch (err) {
       console.error("Lỗi thêm nhân viên:", err);
       toast.error("Không thể thêm nhân viên.");
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date)
       ? date.toLocaleDateString("vi-VN")
       : "Ngày không hợp lệ";
   };
+
   if (loading)
     return (
       <div>
@@ -263,6 +269,7 @@ const Thuong = () => {
         <Loading />
       </div>
     );
+
   return (
     <div className="container min-vh-100">
       <ToastContainer position="top-right" autoClose={2000} />
@@ -294,46 +301,42 @@ const Thuong = () => {
               />
             </Col>
             <Col md={6} className="text-end">
-              <Button
-                variant="outline-success"
-                className="me-2"
-                onClick={handleAdd}
-              >
-                ➕ Thêm thưởng
-              </Button>
+              {isHR && (
+                <Button
+                  variant="outline-success"
+                  className="me-2"
+                  onClick={handleAdd}
+                >
+                  ➕ Thêm thưởng
+                </Button>
+              )}
               <Button variant="outline-primary" onClick={exportToExcel}>
                 📤 Xuất Excel
               </Button>
             </Col>
           </Row>
 
-          
-            <Table
-              striped
-              bordered
-              hover
-              responsive
-              className="align-middle rounded text-nowrap"
-              style={{ overflowX: "auto" }}
-            >
-              <thead className="table-dark text-center">
-                <tr>
-                  <th>Tên</th>
-                  <th>Mục đích thưởng</th>
-                  <th>Giá trị</th>
-                  <th>Ngày quyết định</th>
-                  <th>Ghi chú</th>
-                  <th>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="6" className="text-center">
-                      Đang tải dữ liệu...
-                    </td>
-                  </tr>
-                ) : currentItems.length > 0 ? (currentItems.map((pl) => (
+          <Table
+            striped
+            bordered
+            hover
+            responsive
+            className="align-middle rounded text-nowrap"
+            style={{ overflowX: "auto" }}
+          >
+            <thead className="table-dark text-center">
+              <tr>
+                <th>Tên</th>
+                <th>Mục đích thưởng</th>
+                <th>Giá trị</th>
+                <th>Ngày quyết định</th>
+                <th>Ghi chú</th>
+                {isHR && <th>Hành động</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {currentItems.length > 0 ? (
+                currentItems.map((pl) => (
                   <tr key={pl.id}>
                     <td>{pl.ten_thuong}</td>
                     <td>
@@ -349,53 +352,53 @@ const Thuong = () => {
                     <td>{formatCurrency(pl.so_tien)}</td>
                     <td>{formatDate(pl.ngay_quyet_dinh)}</td>
                     <td>{pl.ghi_chu}</td>
-                    <td className="text-center">
-                      <Button
-                        variant="outline-warning"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => handleEdit(pl)}
-                      >
-                        ✏️ Sửa
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => handleDelete(pl.id)}
-                      >
-                        🗑️ Xóa
-                      </Button>
 
-                      <Button
-                        variant="outline-info"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => handleViewNhanVien(pl.id)}
-                      >
-                        Xem nhân viên
-                      </Button>
-
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleShowAddNhanVienModal(pl.id)}
-                      >
-                        Thêm nhân viên
-                      </Button>
-                    </td>
+                    {isHR && (
+                      <td className="text-center">
+                        <Button
+                          variant="outline-warning"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => handleEdit(pl)}
+                        >
+                          ✏️ Sửa
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => handleDelete(pl.id)}
+                        >
+                          🗑️ Xóa
+                        </Button>
+                        <Button
+                          variant="outline-info"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => handleViewNhanVien(pl.id)}
+                        >
+                          Xem nhân viên
+                        </Button>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => handleShowAddNhanVienModal(pl.id)}
+                        >
+                          Thêm nhân viên
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))
-               ) : (
-                  <tr>
-                    <td colSpan="6" className="text-center text-muted">
-                      Không có đơn thưởng nào phù hợp
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </Table>
-           
+              ) : (
+                <tr>
+                  <td colSpan={isHR ? 6 : 5} className="text-center text-muted">
+                    Không có đơn thưởng nào phù hợp
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
 
           {totalPages > 1 && (
             <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap">
@@ -409,9 +412,7 @@ const Thuong = () => {
               {Array.from({ length: totalPages }, (_, i) => (
                 <Button
                   key={i}
-                  variant={
-                    i + 1 === currentPage ? "primary" : "outline-primary"
-                  }
+                  variant={i + 1 === currentPage ? "primary" : "outline-primary"}
                   onClick={() => setCurrentPage(i + 1)}
                 >
                   {i + 1}
@@ -427,7 +428,7 @@ const Thuong = () => {
             </div>
           )}
 
-          {/* Modal thêm/sửa thưởng */}
+          {/* Modal thêm/sửa thưởng (chỉ HR dùng, nhưng vẫn render khi isHR) */}
           <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
             <Modal.Header closeButton>
               <Modal.Title>
@@ -444,6 +445,7 @@ const Thuong = () => {
             </Modal.Body>
           </Modal>
 
+          {/* Modal danh sách nhân viên (chỉ HR) */}
           <Modal
             show={showNhanVienModal}
             onHide={() => setShowNhanVienModal(false)}
@@ -454,9 +456,7 @@ const Thuong = () => {
             </Modal.Header>
             <Modal.Body>
               {selectedNhanVien.length === 0 ? (
-                <p className="text-muted">
-                  Không có nhân viên nào được thưởng.
-                </p>
+                <p className="text-muted">Không có nhân viên nào được thưởng.</p>
               ) : (
                 PhongBanList.map((pb) => {
                   const nvTrongPB = selectedNhanVien.filter(
@@ -511,7 +511,7 @@ const Thuong = () => {
             </Modal.Footer>
           </Modal>
 
-          {/* Modal thêm nhân viên */}
+          {/* Modal thêm nhân viên (chỉ HR) */}
           <Modal
             show={showAddNhanVienModal}
             onHide={() => {
@@ -541,14 +541,10 @@ const Thuong = () => {
                     <input
                       type="checkbox"
                       className="form-check-input"
-                      checked={
-                        selectedNhanVienIds.length === nhanVienList.length
-                      }
+                      checked={selectedNhanVienIds.length === nhanVienList.length}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedNhanVienIds(
-                            nhanVienList.map((nv) => nv.id)
-                          );
+                          setSelectedNhanVienIds(nhanVienList.map((nv) => nv.id));
                         } else {
                           setSelectedNhanVienIds([]);
                         }
@@ -588,9 +584,7 @@ const Thuong = () => {
                                 setSelectedNhanVienIds((prev) =>
                                   prev.filter(
                                     (id) =>
-                                      !nhanVienTrongPB.some(
-                                        (nv) => nv.id === id
-                                      )
+                                      !nhanVienTrongPB.some((nv) => nv.id === id)
                                   )
                                 );
                               }

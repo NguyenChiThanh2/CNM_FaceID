@@ -1,10 +1,8 @@
 import React from "react";
-import { Card, Table, Button, Breadcrumb } from "react-bootstrap";
+import { Table, Button } from "react-bootstrap";
 
-const PhongBanList = ({ list, onEdit, onDelete, onViewNhanVien }) => {
+const PhongBanList = ({ list, onEdit, onDelete, onViewNhanVien, showActions = true }) => {
   return (
-
-
     <div className="table-responsive">
       <Table striped bordered hover responsive>
         <thead className="table-dark">
@@ -29,26 +27,31 @@ const PhongBanList = ({ list, onEdit, onDelete, onViewNhanVien }) => {
                 <td>{phongBan.ten_phong_ban}</td>
                 <td>{phongBan.mo_ta}</td>
                 <td className="text-center">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="me-2"
-                    onClick={() => onEdit(phongBan)}
-                  >
-                    Sửa
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    className="me-2"
-                    onClick={() => onDelete(phongBan.id)}
-                  >
-                    Xóa
-                  </Button>
+                  {/* Ẩn nút Sửa / Xóa nếu không có quyền */}
+                  {showActions && (
+                    <>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="me-2"
+                        onClick={() => onEdit?.(phongBan)}
+                      >
+                        Sửa
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        className="me-2"
+                        onClick={() => onDelete?.(phongBan.id)}
+                      >
+                        Xóa
+                      </Button>
+                    </>
+                  )}
                   <Button
                     variant="info"
                     size="sm"
-                    onClick={() => onViewNhanVien(phongBan.id)}
+                    onClick={() => onViewNhanVien?.(phongBan.id)}
                   >
                     Nhân viên
                   </Button>

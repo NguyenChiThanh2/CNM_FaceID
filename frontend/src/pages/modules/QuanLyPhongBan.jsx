@@ -4,9 +4,21 @@ import { Modal, Button, Breadcrumb, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import PhongBanForm from "../../components/phongban/PhongBanForm";
 import PhongBanList from "../../components/phongban/PhongBanList";
-import { getAllPhongBan, deletePhongBan } from "../../services/phongBanApi";
+import { getAllPhongBan, deletePhongBan, getPhongBanById } from "../../services/phongBanApi";
 
 const QuanLyPhongBan = () => {
+  // ====== PHÂN QUYỀN ======
+  const raw = localStorage.getItem("user");
+  let currentUser = null;
+  try { currentUser = raw ? JSON.parse(raw)?.nhan_vien : null; } catch { }
+  const HR_DEPARTMENT_ID = 2;
+  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const isAdmin = (currentUser?.role || currentUser?.vai_tro) === "ADMIN"; // tuỳ backend
+
+  // Cho phép thêm (HR hoặc Admin), nhưng Sửa/Xoá chỉ HR
+  const canAdd = isHR || isAdmin;
+  const canEditDelete = isHR;
+
   const [phongBanList, setPhongBanList] = useState([]);
   const [selectedPhongBan, setSelectedPhongBan] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -16,9 +28,21 @@ const QuanLyPhongBan = () => {
   const fetchPhongBan = async () => {
     setLoading(true);
     try {
-      // ⬇️ getAllPhongBan đã unwrap → trả thẳng data (array)
-      const data = await getAllPhongBan();
-      setPhongBanList(Array.isArray(data) ? data : []);
+      if (canAdd) {
+        // HR/Admin thấy tất cả
+        const data = await getAllPhongBan();
+        setPhongBanList(Array.isArray(data) ? data : []);
+      } else if (currentUser?.phong_ban_id) {
+        // Nhân viên thường: chỉ phòng ban của mình
+        try {
+          const one = await getPhongBanById(currentUser.phong_ban_id);
+          setPhongBanList(one ? [one] : []);
+        } catch {
+          setPhongBanList([]);
+        }
+      } else {
+        setPhongBanList([]);
+      }
     } catch (err) {
       console.error("Lỗi khi tải phòng ban:", err);
       toast.error("Không thể tải danh sách phòng ban!");
@@ -29,19 +53,32 @@ const QuanLyPhongBan = () => {
 
   useEffect(() => {
     fetchPhongBan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAdd = () => {
+    if (!canAdd) {
+      toast.error("Bạn không có quyền thêm phòng ban.");
+      return;
+    }
     setSelectedPhongBan(null);
     setShowModal(true);
   };
 
   const handleEdit = (phongBan) => {
+    if (!canEditDelete) {
+      toast.error("Bạn không có quyền sửa phòng ban.");
+      return;
+    }
     setSelectedPhongBan(phongBan);
     setShowModal(true);
   };
 
   const handleDelete = async (id) => {
+    if (!canEditDelete) {
+      toast.error("Bạn không có quyền xóa phòng ban.");
+      return;
+    }
     if (window.confirm("Bạn có chắc muốn xóa phòng ban này không?")) {
       try {
         await toast.promise(deletePhongBan(id), {
@@ -57,6 +94,11 @@ const QuanLyPhongBan = () => {
   };
 
   const handleViewNhanVien = (phongBanId) => {
+    // nhân viên thường chỉ được xem trang chi tiết phòng ban của chính mình
+    if (!(isHR || isAdmin) && phongBanId !== currentUser?.phong_ban_id) {
+      toast.error("Bạn không có quyền xem phòng ban này.");
+      return;
+    }
     navigate(`/get-phong-ban-by-id/${phongBanId}`);
   };
 
@@ -90,9 +132,11 @@ const QuanLyPhongBan = () => {
           <h2 className="mb-4 text-center">Quản lý Phòng ban</h2>
 
           <div className="mb-3 d-flex justify-content-end flex-wrap">
-            <button className="btn btn-success" onClick={handleAdd}>
-              Thêm phòng ban
-            </button>
+            {canAdd && (
+              <button className="btn btn-success" onClick={handleAdd}>
+                Thêm phòng ban
+              </button>
+            )}
           </div>
 
           {loading ? (
@@ -103,9 +147,11 @@ const QuanLyPhongBan = () => {
           ) : (
             <PhongBanList
               list={phongBanList}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onEdit={canEditDelete ? handleEdit : undefined}
+              onDelete={canEditDelete ? handleDelete : undefined}
               onViewNhanVien={handleViewNhanVien}
+              // gửi thêm cờ để component con có thể ẩn cột hành động
+              showActions={canEditDelete}
             />
           )}
 
@@ -135,3 +181,4 @@ const QuanLyPhongBan = () => {
 };
 
 export default QuanLyPhongBan;
+  

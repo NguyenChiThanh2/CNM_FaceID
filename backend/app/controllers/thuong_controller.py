@@ -29,11 +29,8 @@ def get_thuong_by_id(thuong_id):
 def get_thuong_by_nhan_vien_id(nhan_vien_id):
     try:
         thuongs = get_thuong_by_nhan_vien_id_service(nhan_vien_id)
-        if thuongs:
-            return jsonify([thuong.to_dict() for thuong in thuongs]), 200
-        else:
-            return jsonify({'message': 'Không có thưởng cho nhân viên này'}), 404
-    except Exception as e:  
+        return jsonify([t.to_dict() for t in thuongs] if thuongs else []), 200
+    except Exception as e:
         return jsonify({'message': f'Lỗi khi lấy thưởng nhân viên: {str(e)}'}), 500
 # Tạo mới thưởng
 def create_thuong():
