@@ -20,7 +20,12 @@ def get_khau_tru_by_name_service(ten_khau_tru):
 def get_khau_tru_by_id_service(khau_tru_id):
     return KhauTru.query.get(khau_tru_id)
 def get_khau_tru_by_nhan_vien_id_service(nhan_vien_id):
-    return db.session.query(KhauTru).join(KhauTruNhanVien).filter(KhauTruNhanVien.nhanvien_id == nhan_vien_id).all()
+    return (
+        db.session.query(KhauTru)
+        .join(KhauTruNhanVien, KhauTruNhanVien.khau_tru_id == KhauTru.id)
+        .filter(KhauTruNhanVien.nhan_vien_id == nhan_vien_id)
+        .all()
+    )
 
 # Thêm mới khấu trừ
 def create_khau_tru_service(ten_khau_tru,loai_khau_tru,so_tien,ghi_chu,ngay_quyet_dinh,file=None):

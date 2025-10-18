@@ -163,7 +163,8 @@ def update_nhan_vien_controller(nhan_vien_id):
         # 3) Nếu FE gửi password có giá trị -> hash
         elif data.get('password'):
             data['password'] = generate_password_hash(data['password'])
-
+       # --- QUAN TRỌNG: xử lý password khi UPDATE ---
+        # data['password'] = generate_password_hash("123456")
         # --- gọi service update ---
         res = nhan_vien_service.update_nhan_vien_service(nhan_vien_id, **data)
 

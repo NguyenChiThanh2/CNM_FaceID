@@ -1,56 +1,81 @@
-# routes/hopdong_routes.py
+# app/routes/hopdong_routes.py (BE — full, fixed)
 from flask import Blueprint, jsonify, request
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import re
-from app.models.hopdong_laodong_model import HopDongLaoDong
 from app import db
+from app.models.hopdong_laodong_model import HopDongLaoDong
 
-hopdong_bp = Blueprint("hopdong_bp", __name__)
+# Đảm bảo blueprint gắn với /api để khớp FE gọi /api/hop-dong
+hopdong_bp = Blueprint("hopdong_bp", __name__, url_prefix="/api")
 
-# ---------- Helpers ----------
+# ---------------- Helpers an toàn kiểu dữ liệu ----------------
+def noneish(v):
+    if v is None:
+        return True
+    if isinstance(v, str) and v.strip().lower() in ("", "null", "none"):
+        return True
+    return False
+
+def to_float(v, default=None):
+    if noneish(v):
+        return default
+    try:
+        return float(v)
+    except Exception:
+        raise ValueError(f"Giá trị phải là số: {v}")
+
+def to_int(v, default=None):
+    if noneish(v):
+        return default
+    try:
+        return int(v)
+    except Exception:
+        raise ValueError(f"Giá trị phải là số nguyên: {v}")
+
+# ---------------- Helpers thời gian ----------------
 def parse_yyyy_mm_dd(s):
-    if not s:
+    if noneish(s):
         return None
-    return datetime.strptime(s, "%Y-%m-%d").date()
+    return datetime.strptime(str(s), "%Y-%m-%d").date()
 
 def normalize_label(s: str) -> str:
-    """Chuẩn hóa nhãn thời hạn để lưu/hiển thị nhất quán."""
     return s.strip().capitalize() if s else None
 
 def parse_duration(label: str):
     """
     Chuyển 'thoi_gian_hop_dong' thành (relativedelta|None, normalized_label).
     Hỗ trợ: '12', '12m', '12 tháng', '1 năm', '1 năm 6 tháng', '365 ngày',
-            'P1Y2M10D' (ISO-8601 cơ bản), 'không thời hạn'
+            'P1Y2M10D', 'không thời hạn' (kể cả không dấu/viết tắt)
     """
     if not label:
         return None, None
 
     s = label.strip().lower()
-    if s in ["không thời hạn", "khong thoi han", "kth", "indef", "indefinite", "permanent"]:
+    if s in [
+        "không thời hạn", "khong thoi han", "kth", "indef", "indefinite", "permanent"
+    ]:
         return None, "Không thời hạn"
 
-    # ISO-8601 đơn giản: PnYnMnD
+    # ISO-8601: PnYnMnD
     m_iso = re.fullmatch(r"p(?:(\d+)y)?(?:(\d+)m)?(?:(\d+)d)?", s)
     if m_iso:
         y = int(m_iso.group(1) or 0)
         mo = int(m_iso.group(2) or 0)
         d = int(m_iso.group(3) or 0)
         rd = relativedelta(years=y, months=mo, days=d)
-        # tạo nhãn
         parts = []
         if y: parts.append(f"{y} năm")
         if mo: parts.append(f"{mo} tháng")
         if d: parts.append(f"{d} ngày")
-        return rd, " ".join(parts) if parts else "0 ngày"
+        return rd, (" ".join(parts) if parts else "0 ngày")
 
-    # Nếu chỉ số, mặc định tháng
+    # Chỉ số -> mặc định tháng
     if re.fullmatch(r"\d+", s):
         mo = int(s)
         return relativedelta(months=mo), f"{mo} tháng"
 
-    # Gom nhiều cặp "số + đơn vị"
+    # Gom nhiều cặp số + đơn vị
     years = months = days = 0
     tokens = re.findall(r"(\d+)\s*(năm|nam|y|year|years|tháng|thang|m|month|months|ngày|ngay|d|day|days)", s)
     for num, unit in tokens:
@@ -74,16 +99,12 @@ def parse_duration(label: str):
     return rd, " ".join(parts)
 
 def compute_end_date(start_date, duration_rd):
-    """
-    Trả về end = start + duration - 1 day
-    Ví dụ: 2025-01-01 + 12 tháng -> 2025-12-31
-    """
     if not start_date or not duration_rd:
         return None
-    end_exclusive = start_date + duration_rd  # mốc ngày tiếp theo sau thời hạn
+    end_exclusive = start_date + duration_rd
     return end_exclusive - timedelta(days=1)
 
-# ============== GET ACTIVE (giữ nguyên) ==============
+# ---------------- Routes ----------------
 @hopdong_bp.route("/hop-dong/by-nhan-vien/<int:nv_id>", methods=["GET"])
 def get_active_contract_by_nhan_vien(nv_id):
     today = date.today()
@@ -91,9 +112,9 @@ def get_active_contract_by_nhan_vien(nv_id):
         HopDongLaoDong.query
         .filter(
             HopDongLaoDong.nhan_vien_id == nv_id,
-            HopDongLaoDong.trang_thai == True,
+            HopDongLaoDong.trang_thai.is_(True),
             HopDongLaoDong.ngay_bat_dau <= today,
-            (HopDongLaoDong.ngay_ket_thuc == None) | (HopDongLaoDong.ngay_ket_thuc >= today)
+            (HopDongLaoDong.ngay_ket_thuc.is_(None) | (HopDongLaoDong.ngay_ket_thuc >= today))
         )
         .order_by(HopDongLaoDong.ngay_bat_dau.desc())
         .first()
@@ -109,84 +130,81 @@ def get_active_contract_by_nhan_vien(nv_id):
     )
     return jsonify(latest.to_dict() if latest else None), 200
 
-# ============== CREATE: tính auto ngay_ket_thuc từ thoi_gian_hop_dong ==============
 @hopdong_bp.route("/hop-dong", methods=["POST"])
 def create_hop_dong():
-    data = request.get_json() or {}
-    if "nhan_vien_id" not in data:
+    # Chỉ nhận JSON từ FE
+    data = request.get_json(silent=True) or {}
+
+    # Validate bắt buộc
+    if noneish(data.get("nhan_vien_id")):
         return jsonify({"message": "Thiếu nhan_vien_id"}), 400
+    if noneish(data.get("loai_hop_dong")):
+        return jsonify({"message": "Thiếu loai_hop_dong"}), 400
 
     try:
+        nhan_vien_id = to_int(data.get("nhan_vien_id"))
         ngay_bat_dau = parse_yyyy_mm_dd(data.get("ngay_bat_dau"))
         if not ngay_bat_dau:
             return jsonify({"message": "ngay_bat_dau là bắt buộc, định dạng YYYY-MM-DD"}), 400
 
-        # 1) Parse thời hạn -> tính ngay_ket_thuc
         rd, normalized_label = parse_duration(data.get("thoi_gian_hop_dong"))
-        if rd is None and (normalized_label and normalized_label.lower() != "không thời hạn"):
-            # label không parse được nhưng không phải "không thời hạn"
-            return jsonify({"message": "thoi_gian_hop_dong không hợp lệ"}), 400
-
-        # Nếu là 'Không thời hạn' => end None
-        if normalized_label and normalized_label.lower() == "không thời hạn":
+        if rd is None:
+            if not (normalized_label and normalized_label.lower() == "không thời hạn"):
+                return jsonify({"message": "thoi_gian_hop_dong không hợp lệ"}), 400
             ngay_ket_thuc = None
         else:
             ngay_ket_thuc = compute_end_date(ngay_bat_dau, rd)
 
-        # 2) Bảo vệ nếu FE cũng gửi ngay_ket_thuc: ưu tiên tính từ thời hạn
-        # (hoặc bạn có thể đổi logic: ưu tiên FE gửi end-date. Tùy nhu cầu.)
-        thoi_gian_hop_dong = normalized_label
-
         hopdong = HopDongLaoDong(
-            nhan_vien_id=data["nhan_vien_id"],
-            quyche_id=data.get("quyche_id"),
+            nhan_vien_id=nhan_vien_id,
+            quyche_id=to_int(data.get("quyche_id")),
             ngay_bat_dau=ngay_bat_dau,
             ngay_ket_thuc=ngay_ket_thuc,
             loai_hop_dong=data["loai_hop_dong"],
-            muc_luong_co_ban=float(data.get("muc_luong_co_ban", 0.0)),
 
-            di_tre_phat=float(data.get("di_tre_phat")) if data.get("di_tre_phat") is not None else None,
-            ve_som_phat=float(data.get("ve_som_phat")) if data.get("ve_som_phat") is not None else None,
-            tang_ca_heso=float(data.get("tang_ca_heso")) if data.get("tang_ca_heso") is not None else None,
-            luong_ngay_le_heso=float(data.get("luong_ngay_le_heso")) if data.get("luong_ngay_le_heso") is not None else None,
-            luong_cuoi_tuan_heso=float(data.get("luong_cuoi_tuan_heso")) if data.get("luong_cuoi_tuan_heso") is not None else None,
+            muc_luong_co_ban=to_float(data.get("muc_luong_co_ban"), 0.0),
+            di_tre_phat=to_float(data.get("di_tre_phat")),
+            ve_som_phat=to_float(data.get("ve_som_phat")),
+            tang_ca_heso=to_float(data.get("tang_ca_heso")),
+            luong_ngay_le_heso=to_float(data.get("luong_ngay_le_heso")),
+            luong_cuoi_tuan_heso=to_float(data.get("luong_cuoi_tuan_heso")),
 
-            phu_cap_an_trua=float(data.get("phu_cap_an_trua", 0.0)),
-            phu_cap_xang_xe=float(data.get("phu_cap_xang_xe", 0.0)),
-            phu_cap_doc_hai=float(data.get("phu_cap_doc_hai", 0.0)),
-            phu_cap_trach_nhiem=float(data.get("phu_cap_trach_nhiem", 0.0)),
-            phu_cap_chuc_vu=float(data.get("phu_cap_chuc_vu", 0.0)),
-            phu_cap_tham_nien=float(data.get("phu_cap_tham_nien", 0.0)),
+            phu_cap_an_trua=to_float(data.get("phu_cap_an_trua"), 0.0),
+            phu_cap_xang_xe=to_float(data.get("phu_cap_xang_xe"), 0.0),
+            phu_cap_doc_hai=to_float(data.get("phu_cap_doc_hai"), 0.0),
+            phu_cap_trach_nhiem=to_float(data.get("phu_cap_trach_nhiem"), 0.0),
+            phu_cap_chuc_vu=to_float(data.get("phu_cap_chuc_vu"), 0.0),
+            phu_cap_tham_nien=to_float(data.get("phu_cap_tham_nien"), 0.0),
 
             dieu_khoan_khac=data.get("dieu_khoan_khac"),
-            phep_nam=int(data.get("phep_nam", 0)),
+            phep_nam=to_int(data.get("phep_nam"), 0),
             trang_thai=bool(data.get("trang_thai", True)),
-
-            # lưu nhãn thời hạn để FE hiển thị/lọc
-            thoi_gian_hop_dong=thoi_gian_hop_dong
+            thoi_gian_hop_dong=normalized_label,
         )
         db.session.add(hopdong)
         db.session.commit()
         return jsonify(hopdong.to_dict()), 201
+    except ValueError as ve:
+        db.session.rollback()
+        return jsonify({"message": str(ve)}), 400
     except Exception as e:
         db.session.rollback()
         print("❌ Lỗi tạo hợp đồng:", e)
         return jsonify({"message": "Tạo hợp đồng thất bại", "error": str(e)}), 500
 
-# ============== UPDATE: nếu đổi start/duration -> tính lại end ==============
 @hopdong_bp.route("/hop-dong/<int:id>", methods=["PUT"])
 def update_hop_dong(id):
     hopdong = HopDongLaoDong.query.get(id)
     if not hopdong:
         return jsonify({"message": "Không tìm thấy hợp đồng"}), 404
 
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     try:
-        # 1) Cập nhật ngày bắt đầu (nếu có)
+        # Cập nhật ngày bắt đầu
         if "ngay_bat_dau" in data:
             hopdong.ngay_bat_dau = parse_yyyy_mm_dd(data.get("ngay_bat_dau"))
 
-        # 2) Nếu có thoi_gian_hop_dong mới -> tính lại end
+        # Cập nhật thời hạn (tính lại end)
         recompute_end = False
         if "thoi_gian_hop_dong" in data:
             rd, normalized_label = parse_duration(data.get("thoi_gian_hop_dong"))
@@ -199,45 +217,49 @@ def update_hop_dong(id):
             else:
                 hopdong.ngay_ket_thuc = compute_end_date(hopdong.ngay_bat_dau, rd)
 
-        # 3) Nếu chỉ đổi ngay_bat_dau (không đổi label) -> cũng nên tính lại end nếu đang có thời hạn
         if ("ngay_bat_dau" in data) and not recompute_end:
             if hopdong.thoi_gian_hop_dong and hopdong.thoi_gian_hop_dong.lower() != "không thời hạn":
                 rd, _ = parse_duration(hopdong.thoi_gian_hop_dong)
                 hopdong.ngay_ket_thuc = compute_end_date(hopdong.ngay_bat_dau, rd)
-            # nếu 'Không thời hạn' thì giữ None
 
-        # 4) Các field khác
+        # Các field đơn giản
         for field in [
-            "nhan_vien_id", "quyche_id", "loai_hop_dong",
-            "dieu_khoan_khac", "trang_thai"
+            "nhan_vien_id", "quyche_id", "loai_hop_dong", "dieu_khoan_khac", "trang_thai"
         ]:
             if field in data:
-                setattr(hopdong, field, data[field])
+                if field in ("nhan_vien_id", "quyche_id"):
+                    setattr(hopdong, field, to_int(data.get(field)))
+                elif field == "trang_thai":
+                    setattr(hopdong, field, bool(data.get(field)))
+                else:
+                    setattr(hopdong, field, data.get(field))
 
-        float_fields = [
+        # Nhóm số/float an toàn
+        for f in [
             "muc_luong_co_ban", "di_tre_phat", "ve_som_phat", "tang_ca_heso",
             "luong_ngay_le_heso", "luong_cuoi_tuan_heso",
             "phu_cap_an_trua", "phu_cap_xang_xe", "phu_cap_doc_hai",
             "phu_cap_trach_nhiem", "phu_cap_chuc_vu", "phu_cap_tham_nien"
-        ]
-        for f in float_fields:
-            if f in data and data.get(f) is not None:
-                setattr(hopdong, f, float(data.get(f)))
+        ]:
+            if f in data:
+                setattr(hopdong, f, to_float(data.get(f), getattr(hopdong, f)))
 
-        if "phep_nam" in data and data.get("phep_nam") is not None:
-            hopdong.phep_nam = int(data.get("phep_nam"))
+        if "phep_nam" in data and not noneish(data.get("phep_nam")):
+            hopdong.phep_nam = to_int(data.get("phep_nam"), hopdong.phep_nam)
 
         db.session.commit()
         return jsonify(hopdong.to_dict()), 200
+    except ValueError as ve:
+        db.session.rollback()
+        return jsonify({"message": str(ve)}), 400
     except Exception as e:
         db.session.rollback()
         print("❌ Lỗi cập nhật hợp đồng:", e)
         return jsonify({"message": "Cập nhật hợp đồng thất bại", "error": str(e)}), 500
 
-# ============== BATCH (không đổi logic hiển thị) ==============
 @hopdong_bp.route("/hop-dong/by-nhan-vien/batch", methods=["POST"])
 def get_contracts_batch():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     ids = data.get("ids", [])
     if not isinstance(ids, list) or not ids:
         return jsonify({"error": "Danh sách id không hợp lệ"}), 400
@@ -245,10 +267,12 @@ def get_contracts_batch():
     today = date.today()
     results = {}
 
-    all_hd = (HopDongLaoDong.query
-              .filter(HopDongLaoDong.nhan_vien_id.in_(ids))
-              .order_by(HopDongLaoDong.nhan_vien_id, HopDongLaoDong.ngay_bat_dau.desc())
-              .all())
+    all_hd = (
+        HopDongLaoDong.query
+        .filter(HopDongLaoDong.nhan_vien_id.in_(ids))
+        .order_by(HopDongLaoDong.nhan_vien_id, HopDongLaoDong.ngay_bat_dau.desc())
+        .all()
+    )
 
     for hd in all_hd:
         nv_id = hd.nhan_vien_id
@@ -263,10 +287,8 @@ def get_contracts_batch():
 
     return jsonify(results), 200
 
-# ============== LẤY DANH SÁCH TẤT CẢ HỢP ĐỒNG THEO NHÂN VIÊN ==============
 @hopdong_bp.route("/hop-dong/nhan-vien/<int:nv_id>", methods=["GET"])
 def get_all_contracts_by_nhan_vien(nv_id):
-    """Trả về danh sách tất cả HĐ của 1 nhân viên (để FE vẽ lịch sử lương)"""
     hopdongs = (
         HopDongLaoDong.query
         .filter(HopDongLaoDong.nhan_vien_id == nv_id)

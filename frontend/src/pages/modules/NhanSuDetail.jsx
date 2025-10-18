@@ -313,14 +313,13 @@ export default function NhanSuDetail() {
       <SalaryHistory nhanVienId={id} refreshKey={refreshKey} />
       {/* Modal form hợp đồng */}
       <HopDongFormModal
-
         show={!!showHDModal}
         onHide={() => setShowHDModal(null)}
         initial={showHDModal === "edit" ? hopDong : null}
-        onSubmit={handleSubmitHD}
-        disabled={savingHD}
+        nhanVienId={Number(id)}                 //  TRUYỀN ID NHÂN VIÊN
         onUpdated={handleHopDongUpdated}
       />
+
     </div>
   );
 }

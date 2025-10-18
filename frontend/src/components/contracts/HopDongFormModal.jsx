@@ -62,6 +62,11 @@ export default function HopDongFormModal({
     // 🧩 Xử lý lưu hợp đồng
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!nhanVienId && nhanVienId !== 0) {
+            console.error("❌ nhanVienId is missing in props");
+            toast.error("Thiếu nhanVienId. Vui lòng mở form từ trang chi tiết nhân sự hoặc truyền đúng prop.");
+            return;
+        }
         const toNum = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
 
         if (!form.loai_hop_dong || !form.ngay_bat_dau || (!form.muc_luong_co_ban && form.muc_luong_co_ban !== 0)) {
