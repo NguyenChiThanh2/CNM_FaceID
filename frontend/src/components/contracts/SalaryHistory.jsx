@@ -90,12 +90,50 @@ export default function SalaryHistory({ nhanVienId, refreshKey }) {
     }, [filteredList]);
 
     const chartData = useMemo(() => {
-        return rows.map((r) => ({
-            date: fmtDate(r.ngay_bat_dau),
-            salary: r.tong_thu_nhap,
-            base: nz(r.muc_luong_co_ban),
-        }));
+        const points = [];
+
+        rows.forEach((r) => {
+            if (!r.ngay_bat_dau) return;
+            const start = new Date(r.ngay_bat_dau);
+            const end = r.ngay_ket_thuc ? new Date(r.ngay_ket_thuc) : new Date();
+
+            // Sinh ra từng tháng trong khoảng thời gian hợp đồng
+            const current = new Date(start);
+            while (current <= end) {
+                const monthLabel = `${current.getFullYear()}-${String(
+                    current.getMonth() + 1
+                ).padStart(2, "0")}`;
+                points.push({
+                    month: monthLabel,
+                    salary: r.tong_thu_nhap,
+                    base: nz(r.muc_luong_co_ban),
+                });
+                current.setMonth(current.getMonth() + 1);
+            }
+        });
+
+        // Gom nhóm theo tháng (nếu nhiều hợp đồng chồng)
+        const grouped = {};
+        points.forEach((p) => {
+            if (!grouped[p.month]) grouped[p.month] = { ...p, count: 1 };
+            else {
+                grouped[p.month].salary += p.salary;
+                grouped[p.month].base += p.base;
+                grouped[p.month].count++;
+            }
+        });
+
+        const merged = Object.entries(grouped)
+            .map(([month, v]) => ({
+                date: month,
+                salary: v.salary / v.count,
+                base: v.base / v.count,
+            }))
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        return merged;
     }, [rows]);
+
 
     if (loading) return <p className="mt-3">Đang tải lịch sử lương…</p>;
     if (!rows.length)
@@ -137,7 +175,11 @@ export default function SalaryHistory({ nhanVienId, refreshKey }) {
                             margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
                         >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
+                            <XAxis dataKey="date" tickFormatter={(d) => {
+                                const [y, m] = d.split("-");
+                                return `${m}/${y}`;
+                            }} />
+
                             <YAxis
                                 tickFormatter={(v) =>
                                     v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}tr` : v

@@ -1,21 +1,24 @@
 // src/services/hopDongLaoDongApi.js
 import axiosInstance from "./axiosInstance";
 
+// ✅ Hàm unwrap chuẩn hoá lỗi (đã thêm userMessage)
 const unwrap = async (p) => {
   try {
     const r = await p;
     return r.data;
   } catch (e) {
+    // Lấy message rõ ràng nhất có thể từ backend
     const msg =
       e?.response?.data?.message ||
       e?.response?.data?.error ||
       e?.message ||
-      "Request error";
-    e.userMessage = msg;
+      "Lỗi kết nối đến máy chủ. Vui lòng thử lại.";
+    e.userMessage = msg; // ⚡️ Quan trọng: để toast.promise hiển thị
     throw e;
   }
 };
 
+// ✅ Chuẩn hoá định dạng YYYY-MM-DD
 const toYMD = (d) => {
   if (!d) return null;
   if (typeof d === "string") return d;
@@ -24,6 +27,7 @@ const toYMD = (d) => {
   return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
 };
 
+// ✅ Hỗ trợ FE format duration "năm - tháng - ngày"
 export const buildDuration = ({ years = 0, months = 0, days = 0 } = {}) => {
   const parts = [];
   if (years) parts.push(`${years} năm`);
@@ -40,7 +44,7 @@ export const getHopDongByNhanVienId = (nhanVienId) =>
 export const getHopDongListByNhanVienId = (nhanVienId) =>
   unwrap(axiosInstance.get(`/hop-dong/nhan-vien/${nhanVienId}`));
 
-/** Tạo HĐ cho nhân viên (BE tự tính ngày kết thúc nếu có) */
+/** 🟢 Tạo HĐ cho nhân viên (BE tự tính ngày kết thúc nếu có) */
 export const createHopDongForNhanVien = (nhanVienId, payload = {}) => {
   const body = {
     ...payload,
@@ -51,7 +55,7 @@ export const createHopDongForNhanVien = (nhanVienId, payload = {}) => {
   return unwrap(axiosInstance.post(`/hop-dong`, body));
 };
 
-/** Cập nhật HĐ theo id (BE tự tính lại ngày kết thúc nếu cần) */
+/** 🟡 Cập nhật HĐ theo id (BE tự tính lại ngày kết thúc nếu cần) */
 export const updateHopDong = (id, payload = {}) => {
   const body = { ...payload };
   if ("ngay_bat_dau" in body) body.ngay_bat_dau = toYMD(body.ngay_bat_dau);
@@ -63,6 +67,6 @@ export const updateHopDong = (id, payload = {}) => {
 export const getHopDongBatchByNhanVienIds = (ids) =>
   unwrap(axiosInstance.post(`/hop-dong/by-nhan-vien/batch`, { ids }));
 
-/** (Tuỳ chọn) Xoá HĐ */
+/** Xoá HĐ */
 export const deleteHopDong = (id) =>
   unwrap(axiosInstance.delete(`/hop-dong/${id}`));

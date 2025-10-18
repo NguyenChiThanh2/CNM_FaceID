@@ -1,3 +1,4 @@
+// src/pages/TrangChu.jsx
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
@@ -32,31 +33,41 @@ const TrangChu = () => {
 
   if (!userInfo) return null;
 
-  const allModules = [
-    { title: "Quản lý nhân sự", icon: "👤", path: "/nhan-su", color: "#007bff" },
-    { title: "Quản lý chấm công", icon: "📷", path: "/quan-ly-cham-cong", color: "#17a2b8" },
-    { title: "Nghỉ phép", icon: "📆", path: "/nghi-phep", color: "#ffc107" },
-    { title: "Tính lương", icon: "💰", path: "/tinh-luong", color: "#28a745" },
-    { title: "Phúc lợi", icon: "🎁", path: "/phuc-loi", color: "#6610f2" },
-    { title: "Đào tạo", icon: "📚", path: "/dao-tao", color: "#fd7e14" },
-    { title: "Đánh giá", icon: "📈", path: "/danh-gia", color: "#20c997" },
-    { title: "Phòng ban", icon: "🏢", path: "/phong-ban", color: "#6c757d" },
+  const modules = [
+    { title: "Quản lý nhân sự", icon: "👤", path: "/nhan-su", color: "#6ea8fe" },
+    { title: "Quản lý chấm công", icon: "📷", path: "/quan-ly-cham-cong", color: "#a3cfbb" },
+    { title: "Nghỉ phép", icon: "📆", path: "/nghi-phep", color: "#ffd8a8" },
+    { title: "Giấy phép", icon: "📜", path: "/quan-ly-giay-phep", color: "#ffe69c" },
+    { title: "Tính lương", icon: "💰", path: "/tinh-luong", color: "#f1aeb5" },
+    { title: "Thưởng", icon: "🎁", path: "/thuong", color: "#c29ffa" },
+    { title: "Khấu trừ", icon: "❌", path: "/khau-tru", color: "#f8d7da" },
+    { title: "Người phụ thuộc", icon: "👪", path: "/nguoi-phu-thuoc", color: "#f9c74f" },
+    { title: "Phúc lợi", icon: "⚜️", path: "/phuc-loi", color: "#d1e7dd" },
+    { title: "QL nghỉ có lương", icon: "🎆", path: "/ngay-nghi-le", color: "#b6effb" },
+    { title: "Đánh giá", icon: "📈", path: "/danh-gia", color: "#bcd0ff" },
+    { title: "Phòng ban", icon: "🏢", path: "/phong-ban", color: "#e2e3e5" },
+
   ];
 
-  // 👇 Lọc module theo phòng ban
-  const restrictedPaths = ["/tinh-luong", "/phuc-loi", "/dao-tao"];
+  // 👇 Tuỳ chính sách: ẩn bớt module với non-HR (ví dụ lương & phòng ban)
+  const restrictedPaths = [];
 
-  const visibleModules = allModules.filter((m) => {
+  const visibleModules = modules.filter((m) => {
     if (userInfo.phong_ban_id === HR_DEPARTMENT_ID) return true; // HR thấy hết
-    return !restrictedPaths.includes(m.path); // người khác bị ẩn
+    return !restrictedPaths.includes(m.path); // người khác bị ẩn 1 vài mục
   });
 
   return (
-    <div className="main-content flex-grow-1 p-4" style={{ backgroundColor: "#343a40", color: "white", minHeight: "100vh" }}>
+    <div
+      className="main-content flex-grow-1 p-4"
+      style={{ backgroundColor: "#343a40", color: "white", minHeight: "100vh" }}
+    >
       <header className="d-flex justify-content-between align-items-center mb-4">
         <h1 className="text-light">🏢 Hệ thống Quản lý Nhân sự</h1>
         <div className="user-info">
-          <span className="text-white"><b>Xin chào, {userInfo.displayName}</b></span>
+          <span className="text-white">
+            <b>Xin chào, {userInfo.displayName}</b>
+          </span>
         </div>
       </header>
 

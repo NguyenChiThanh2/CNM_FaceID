@@ -11,7 +11,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { getNhanVienInfo } from "../../utils/auth";
-import { getHopDongBatchByNhanVienIds } from "../../services/hopDongLaoDongAPI";
+import { getHopDongBatchByNhanVienIds } from "../../services/hopDongLaoDongApi";
 import { getAllNhanVien, deleteNhanVien as apiDeleteNhanVien } from "../../services/nhanSuApi";
 import ChungChiModal from "../../components/nhansu/ChungChiModal";
 const QuanLyNhanSu = () => {

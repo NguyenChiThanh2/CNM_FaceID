@@ -26,7 +26,7 @@ const Sidebar = () => {
   const userInfo = getUserInfo();
 
   const HR_DEPARTMENT_ID = 2;
-  const restrictedPaths = ["/tinh-luong", "/phuc-loi", "/dao-tao"];
+  const restrictedPaths = [];
 
   const modules = [
     { title: "Quản lý nhân sự", icon: "👤", path: "/nhan-su" },
@@ -36,6 +36,7 @@ const Sidebar = () => {
     { title: "Tính lương", icon: "💰", path: "/tinh-luong" },
     { title: "Thưởng", icon: "🎁", path: "/thuong" },
     { title: "Khấu trừ", icon: "❌", path: "/khau-tru" },
+    { title: "Người phụ thuộc", icon: "👪", path: "/nguoi-phu-thuoc", color: "#f9c74f" },
     { title: "Phúc lợi", icon: "⚜️", path: "/phuc-loi" },
     { title: "QL nghỉ có lương", icon: "🎆", path: "/ngay-nghi-le" },
     { title: "Đánh giá", icon: "📈", path: "/danh-gia" },
@@ -87,7 +88,7 @@ const Sidebar = () => {
 
       <ul className="nav flex-column">
         {visibleModules.map((module, index) => {
-          const isActive = location.pathname === module.path; // 👈 kiểm tra active
+          const isActive = location.pathname === module.path; // kiểm tra active
           return (
             <li className="nav-item mb-2" key={index}>
               <Button
@@ -97,7 +98,7 @@ const Sidebar = () => {
                 onClick={() => navigate(module.path)}
                 style={{
                   backgroundColor: isActive ? "#e2e6eaf" : "#495057",
-                  color: isActive ? "#fff" : "#e2e6ea", // 🔥 chữ sáng hơn khi active
+                  color: isActive ? "#fff" : "#e2e6ea", //  chữ sáng hơn khi active
                   borderRadius: "8px",
                   textDecoration: "none",
                   transition: "all 0.3s",

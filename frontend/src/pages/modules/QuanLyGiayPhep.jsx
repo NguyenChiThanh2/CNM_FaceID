@@ -1,31 +1,17 @@
-import React, { useState, useEffect } from "react";
+// src/pages/modules/QuanLyGiayPhep.jsx
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import axios from "axios";
 import GiayPhepForm from "../../components/giayphep/GiayPhepForm";
-import { Modal, Button, Table, Breadcrumb } from "react-bootstrap";
+import { Modal, Button, Table, Breadcrumb, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import {ToastContainer, toast } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import Loading from "../../../src/components/Loading";
+import "react-toastify/dist/ReactToastify.css";
+import { getNhanVienInfo } from "../../utils/auth";
 
 const API_URL = "http://127.0.0.1:5000/api";
-const HR_DEPARTMENT_ID = 1; // ⚠️ sửa thành ID thật của phòng Nhân sự trong DB
-
-const getUserInfo = () => {
-  try {
-    const saved = localStorage.getItem("user");
-    if (!saved) return null;
-    const parsed = JSON.parse(saved);
-    const nv = parsed.nhan_vien || {};
-    return {
-      id: nv.id,
-      ho_ten: nv.ho_ten,
-      phong_ban_id: nv.phong_ban_id,
-      ten_phong_ban: nv.ten_phong_ban || "",
-      role: parsed.role?.ma_vai_tro || "user",
-    };
-  } catch {
-    return null;
-  }
-};
+// ⚠️ Đổi ID này thành ID thật của phòng Nhân sự trong DB
+const HR_DEPARTMENT_ID = 2;
 
 const QuanLyGiayPhep = () => {
   const [giayPhepList, setGiayPhepList] = useState([]);
@@ -35,108 +21,151 @@ const QuanLyGiayPhep = () => {
   const [showModal, setShowModal] = useState(false);
   const [nhanVienList, setNhanVienList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [hardLoading, setHardLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const navigate = useNavigate();
-  const userInfo = getUserInfo();
-  const isHR = !!userInfo && userInfo.phong_ban_id === HR_DEPARTMENT_ID;
 
+  const navigate = useNavigate();
+
+  // 🔒 currentUser ổn định, tránh loop render
+  const [currentUser] = useState(() => getNhanVienInfo());
+  const userId = currentUser?.id ?? null;
+  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+
+  // 🚧 Route guard
   useEffect(() => {
-    fetchGiayPhep();
-    fetchNhanVien();
+    if (userId == null) navigate("/dang-nhap", { replace: true });
+  }, [userId, navigate]);
+
+  // ===== Helpers quyền hạn =====
+  const isOwner = useCallback((gp) => !!userId && gp?.nhan_vien_id === userId, [userId]);
+
+  const canCreate = useCallback(() => !!currentUser, [currentUser]);
+
+  const canEdit = useCallback(
+    (gp) =>
+      (isHR && gp.trang_thai === "Chưa duyệt") ||
+      (!isHR && isOwner(gp) && gp.trang_thai === "Chưa duyệt"),
+    [isHR, isOwner]
+  );
+
+  const canCancel = useCallback(
+    (gp) =>
+      (isHR && (gp.trang_thai === "Chưa duyệt" || gp.trang_thai === "Từ chối")) ||
+      (!isHR && isOwner(gp) && (gp.trang_thai === "Chưa duyệt" || gp.trang_thai === "Từ chối")),
+    [isHR, isOwner]
+  );
+
+  const canApproveReject = useCallback((gp) => isHR && gp.trang_thai === "Chưa duyệt", [isHR]);
+
+  const deny = () => toast.error("Bạn không có quyền thực hiện thao tác này!");
+
+  // ===== API =====
+  const fetchNhanVien = useCallback(async () => {
+    try {
+      const resp = await axios.get(`${API_URL}/get-all-nhan-vien`);
+      setNhanVienList(Array.isArray(resp.data) ? resp.data : []);
+    } catch (error) {
+      console.error("Lỗi khi gọi API nhân viên:", error);
+      toast.error("Có lỗi xảy ra khi tải danh sách nhân viên!");
+    }
   }, []);
 
+  const fetchGiayPhep = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp = await axios.get(`${API_URL}/get-all-giay-phep`);
+      let list = resp.data || [];
+      if (userId && !isHR) {
+        list = list.filter((gp) => gp.nhan_vien_id === userId);
+      }
+      setGiayPhepList(list);
+    } catch (e) {
+      console.error("Lỗi khi gọi API giấy phép:", e);
+      toast.error("Không có giấy phép nào được tìm thấy!");
+    } finally {
+      setLoading(false);
+      setHardLoading(false);
+    }
+  }, [userId, isHR]);
+
+  // ✅ Chỉ 1 effect fetch theo userId (tránh fetch 2 lần)
+  useEffect(() => {
+    if (userId == null) return;
+    (async () => {
+      await Promise.all([fetchGiayPhep(), fetchNhanVien()]);
+    })();
+  }, [userId, isHR, fetchGiayPhep, fetchNhanVien]);
+
+  // Reset trang khi filter/search thay đổi
   useEffect(() => {
     setCurrentPage(1);
   }, [searchKeyword, filterTrangThai]);
 
-  const fetchGiayPhep = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${API_URL}/get-all-giay-phep`);
-      let list = response.data || [];
-      if (userInfo && !isHR) {
-        list = list.filter((gp) => gp.nhan_vien_id === userInfo.id);
-      }
-      setGiayPhepList(list);
-
-    } catch (error) {
-      console.error("Lỗi khi gọi API giấy phép:", error);
-      toast.error("Không có giấy phép nào được tìm thấy!");
-    } finally {
-      setLoading(false);
-
-    }
-  };
-
-  const fetchNhanVien = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
-      setNhanVienList(response.data);
-    } catch (error) {
-      console.error("Lỗi khi gọi API nhân viên:", error);
-      toast.error("Có lỗi xảy ra khi tải danh sách nhân viên!");
-    }finally {
-      setLoading(false);
-    }
-  };
-
+  // ===== Handlers =====
   const handleAdd = () => {
+    if (!canCreate()) return deny();
     setEditingGiayPhep(null);
     setShowModal(true);
   };
 
   const handleEdit = (gp) => {
+    if (!canEdit(gp)) return deny();
     setEditingGiayPhep(gp);
     setShowModal(true);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Bạn có chắc muốn hủy giấy phép này không?")) {
-      setLoading(true);
-      try {
-        await axios.delete(`${API_URL}/cancel-giay-phep/${id}`);
-        fetchGiayPhep();
-        toast.success("Đã hủy giấy phép thành công!");
-      } catch (error) {
-        console.error("Lỗi khi hủy giấy phép:", error);
-        toast.error("Có lỗi xảy ra khi hủy giấy phép!");
-      }finally{
-        setLoading(false);
-      }
+    const gp = giayPhepList.find((x) => x.id === id);
+    if (!gp || !canCancel(gp)) return deny();
+    if (!window.confirm("Bạn có chắc muốn hủy giấy phép này không?")) return;
+
+    setLoading(true);
+    try {
+      await axios.delete(`${API_URL}/cancel-giay-phep/${id}`);
+      toast.success("Đã hủy giấy phép thành công!");
+      fetchGiayPhep();
+    } catch (error) {
+      console.error("Lỗi khi hủy giấy phép:", error);
+      toast.error("Có lỗi xảy ra khi hủy giấy phép!");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDuyet = async (id) => {
-    if (window.confirm("Bạn có chắc muốn duyệt giấy phép này không?")) {
-      setLoading(true);
-      try {
-        await axios.put(`${API_URL}/approve-giay-phep/${id}`);
-        fetchGiayPhep();
-        toast.success("Đã duyệt giấy phép thành công!");
-      } catch (error) {
-        console.error("Lỗi khi duyệt giấy phép:", error);
-        toast.error("Có lỗi xảy ra khi duyệt giấy phép!");
-      }finally{
-        setLoading(false);
-      }
+    const gp = giayPhepList.find((x) => x.id === id);
+    if (!gp || !canApproveReject(gp)) return deny();
+    if (!window.confirm("Bạn có chắc muốn duyệt giấy phép này không?")) return;
+
+    setLoading(true);
+    try {
+      await axios.put(`${API_URL}/approve-giay-phep/${id}`);
+      toast.success("Đã duyệt giấy phép thành công!");
+      fetchGiayPhep();
+    } catch (error) {
+      console.error("Lỗi khi duyệt giấy phép:", error);
+      toast.error("Có lỗi xảy ra khi duyệt giấy phép!");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleTuChoi = async (id) => {
-    if (window.confirm("Bạn có chắc muốn từ chối giấy phép này không?")) {
-      setLoading(true);
-      try {
-        await axios.put(`${API_URL}/reject-giay-phep/${id}`);
-        fetchGiayPhep();
-        toast.success("Đã từ chối giấy phép thành công!");
-      } catch (error) {
-        console.error("Lỗi khi từ chối giấy phép:", error);
-        toast.error("Có lỗi xảy ra khi từ chối giấy phép!");
-      }finally{
-        setLoading(false);
-      }
+    const gp = giayPhepList.find((x) => x.id === id);
+    if (!gp || !canApproveReject(gp)) return deny();
+    if (!window.confirm("Bạn có chắc muốn từ chối giấy phép này không?")) return;
+
+    setLoading(true);
+    try {
+      await axios.put(`${API_URL}/reject-giay-phep/${id}`);
+      toast.success("Đã từ chối giấy phép thành công!");
+      fetchGiayPhep();
+    } catch (error) {
+      console.error("Lỗi khi từ chối giấy phép:", error);
+      toast.error("Có lỗi xảy ra khi từ chối giấy phép!");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -151,53 +180,60 @@ const QuanLyGiayPhep = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date)
       ? date.toLocaleDateString("vi-VN")
       : "Ngày không hợp lệ";
   };
 
-  const nhanVienMap = nhanVienList.reduce((acc, nv) => {
-    acc[nv.id] = nv.ho_ten.toLowerCase();
-    return acc;
-  }, {});
+  // Map nhanh ID → tên NV (lowercase để search)
+  const nhanVienMap = useMemo(
+    () =>
+      nhanVienList.reduce((acc, nv) => {
+        acc[nv.id] = (nv.ho_ten || "").toLowerCase();
+        return acc;
+      }, {}),
+    [nhanVienList]
+  );
 
-  const filteredList = giayPhepList.filter((np) => {
-    const lyDo = np.ly_do ? np.ly_do.toLowerCase() : "";
-    const nhanVienName = nhanVienMap[np.nhan_vien_id] || "";
+  const normalizedKeyword = (searchKeyword || "").toLowerCase();
 
-    const searchMatch =
-      lyDo.includes(searchKeyword.toLowerCase()) ||
-      nhanVienName.includes(searchKeyword.toLowerCase());
+  const filteredList = useMemo(() => {
+    return (giayPhepList || []).filter((gp) => {
+      const lyDo = (gp.ly_do || "").toLowerCase();
+      const nhanVienName = nhanVienMap[gp.nhan_vien_id] || "";
+      const searchMatch = lyDo.includes(normalizedKeyword) || nhanVienName.includes(normalizedKeyword);
+      const statusMatch = filterTrangThai ? gp.trang_thai === filterTrangThai : true;
+      return searchMatch && statusMatch;
+    });
+  }, [giayPhepList, nhanVienMap, normalizedKeyword, filterTrangThai]);
 
-    const statusMatch = filterTrangThai
-      ? np.trang_thai === filterTrangThai
-      : true;
-
-    return searchMatch && statusMatch;
-  });
-
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
-  if (loading)
+  // ===== Render =====
+  if (!currentUser) return null; // đang redirect
+
+  if (hardLoading) {
     return (
       <div>
         <ToastContainer position="top-right" autoClose={2000} />
         <Loading />
       </div>
-  );
+    );
+  }
+
   return (
     <div className="container min-vh-100">
       <ToastContainer position="top-right" autoClose={2000} />
+
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>
-              Trang chủ
-            </Breadcrumb.Item>
+            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
             <Breadcrumb.Item active>Quản lý giấy phép</Breadcrumb.Item>
           </Breadcrumb>
 
@@ -209,6 +245,7 @@ const QuanLyGiayPhep = () => {
             <h2 className="text-center flex-grow-1">Quản lý giấy phép</h2>
           </div>
 
+          {/* Bộ lọc */}
           <div className="row mb-3">
             <div className="col-md-6 mb-2">
               <input
@@ -234,15 +271,16 @@ const QuanLyGiayPhep = () => {
             </div>
           </div>
 
-          <div className="d-flex justify-content-end mb-3">
-            <button
-              className="btn btn-outline-success px-4"
-              onClick={handleAdd}
-            >
-              + Thêm giấy phép
-            </button>
-          </div>
+          {/* Nút thêm mới (theo quyền) */}
+          {canCreate() && (
+            <div className="d-flex justify-content-end mb-3">
+              <button className="btn btn-outline-success px-4" onClick={handleAdd}>
+                + Thêm giấy phép
+              </button>
+            </div>
+          )}
 
+          {/* Bảng */}
           <div className="table-responsive">
             <Table bordered hover striped className="rounded">
               <thead className="table-dark text-center">
@@ -258,10 +296,12 @@ const QuanLyGiayPhep = () => {
                   <th>Hành động</th>
                 </tr>
               </thead>
+
               <tbody>
                 {loading ? (
                   <tr>
                     <td colSpan="9" className="text-center">
+                      <Spinner animation="border" size="sm" className="me-2" />
                       Đang tải dữ liệu...
                     </td>
                   </tr>
@@ -269,10 +309,7 @@ const QuanLyGiayPhep = () => {
                   currentItems.map((gp) => (
                     <tr key={gp.id}>
                       <td>{gp.id}</td>
-                      <td>
-                        {nhanVienList.find((nv) => nv.id === gp.nhan_vien_id)
-                          ?.ho_ten || "Không rõ"}
-                      </td>
+                      <td>{nhanVienList.find((nv) => nv.id === gp.nhan_vien_id)?.ho_ten || "Không rõ"}</td>
                       <td>{formatDate(gp.ngay_bat_dau)}</td>
                       <td>{formatDate(gp.ngay_ket_thuc)}</td>
                       <td>{gp.loai_giay_phep}</td>
@@ -281,87 +318,59 @@ const QuanLyGiayPhep = () => {
                       <td className="text-center">
                         <span
                           className={`badge ${gp.trang_thai === "Chưa duyệt"
-                            ? "bg-warning text-dark"
-                            : gp.trang_thai === "Đã duyệt"
-                              ? "bg-success"
-                              : gp.trang_thai === "Từ chối"
-                                ? "bg-danger"
-                                : "bg-secondary"
+                              ? "bg-warning text-dark"
+                              : gp.trang_thai === "Đã duyệt"
+                                ? "bg-success"
+                                : gp.trang_thai === "Từ chối"
+                                  ? "bg-danger"
+                                  : "bg-secondary"
                             }`}
                         >
                           {gp.trang_thai}
                         </span>
                       </td>
-                      <td>
-                        {/* ✅ HR được duyệt / từ chối / hủy / sửa khi Chưa duyệt */}
-                        {isHR && gp.trang_thai === "Chưa duyệt" && (
+
+                      {/* Hành động theo quyền */}
+                      <td className="text-nowrap">
+                        {canApproveReject(gp) && (
                           <>
                             <button
                               className="btn btn-sm btn-outline-success me-1"
+                              disabled={loading}
                               onClick={() => handleDuyet(gp.id)}
                             >
                               ✔ Duyệt
                             </button>
                             <button
                               className="btn btn-sm btn-outline-danger me-1"
+                              disabled={loading}
                               onClick={() => handleTuChoi(gp.id)}
                             >
                               ✖ Từ chối
                             </button>
-                            <button
-                              className="btn btn-sm btn-outline-danger me-1"
-                              onClick={() => handleDelete(gp.id)}
-                            >
-                              🗑 Hủy
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-warning"
-                              onClick={() => handleEdit(gp)}
-                            >
-                              ✏️ Sửa
-                            </button>
                           </>
                         )}
 
-                        {/* 👷 Nhân viên thường: chỉ được sửa/hủy giấy phép của chính mình khi Chưa duyệt */}
-                        {!isHR && gp.nhan_vien_id === userInfo?.id && gp.trang_thai === "Chưa duyệt" && (
-                          <>
-                            <button
-                              className="btn btn-sm btn-outline-warning me-1"
-                              onClick={() => handleEdit(gp)}
-                            >
-                              ✏️ Sửa
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleDelete(gp.id)}
-                            >
-                              🗑 Hủy
-                            </button>
-                          </>
-                        )}
-
-                        {/* HR có thể hủy sau khi bị từ chối */}
-                        {isHR && gp.trang_thai === "Từ chối" && (
+                        {canCancel(gp) && (
                           <button
-                            className="btn btn-sm btn-outline-danger"
+                            className="btn btn-sm btn-outline-danger me-1"
+                            disabled={loading}
                             onClick={() => handleDelete(gp.id)}
                           >
                             🗑 Hủy
                           </button>
                         )}
 
-                        {/* Nhân viên chỉ hủy nếu là người tạo và trạng thái bị từ chối */}
-                        {!isHR && gp.nhan_vien_id === userInfo?.id && gp.trang_thai === "Từ chối" && (
+                        {canEdit(gp) && (
                           <button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => handleDelete(gp.id)}
+                            className="btn btn-sm btn-outline-warning"
+                            disabled={loading}
+                            onClick={() => handleEdit(gp)}
                           >
-                            🗑 Hủy
+                            ✏️ Sửa
                           </button>
                         )}
                       </td>
-
                     </tr>
                   ))
                 ) : (
@@ -376,12 +385,12 @@ const QuanLyGiayPhep = () => {
           </div>
 
           {/* Phân trang */}
-          {totalPages > 1 && (
+          {totalPages > 1 && !loading && (
             <div className="d-flex justify-content-center align-items-center mt-3 gap-2">
               <Button
                 variant="outline-secondary"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               >
                 ← Trang Trước
               </Button>
@@ -391,7 +400,7 @@ const QuanLyGiayPhep = () => {
               <Button
                 variant="outline-secondary"
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               >
                 Trang Sau →
               </Button>
@@ -399,11 +408,9 @@ const QuanLyGiayPhep = () => {
           )}
 
           {/* Modal thêm/sửa */}
-          <Modal show={showModal} onHide={handleModalClose} size="lg">
+          <Modal show={showModal} onHide={handleModalClose} size="lg" centered>
             <Modal.Header closeButton>
-              <Modal.Title>
-                {editingGiayPhep ? "Chỉnh sửa giấy phép" : "Thêm giấy phép"}
-              </Modal.Title>
+              <Modal.Title>{editingGiayPhep ? "Chỉnh sửa giấy phép" : "Thêm giấy phép"}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <GiayPhepForm
@@ -420,7 +427,6 @@ const QuanLyGiayPhep = () => {
           </Modal>
         </div>
       </div>
-      
     </div>
   );
 };
