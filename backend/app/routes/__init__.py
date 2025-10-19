@@ -20,6 +20,7 @@ from .ngay_nghi_le_routers import ngay_nghi_le_bp
 from .facecheckin import facecheckin_bp
 from .chung_chi_routes import chung_chi_bp
 from .hopdong_routes import hopdong_bp
+from .nguoi_phu_thuoc_router import nguoi_phu_thuoc_bp
 def register_routes(app):
     app.register_blueprint(ngay_nghi_le_bp, url_prefix='/api')
     app.register_blueprint(khau_tru_bp, url_prefix='/api')
@@ -29,7 +30,6 @@ def register_routes(app):
     app.register_blueprint(giayphep_bp, url_prefix='/api')
     app.register_blueprint(tinhluong_bp, url_prefix='/api')
     app.register_blueprint(bangluong_bp, url_prefix='/api') 
-    # app.register_blueprint(role_bp, url_prefix='/api')  
     app.register_blueprint(phuc_loi_bp, url_prefix='/api')
     app.register_blueprint(phong_ban_bp, url_prefix='/api')
     app.register_blueprint(nghi_phep_bp, url_prefix='/api')
@@ -43,3 +43,4 @@ def register_routes(app):
     app.register_blueprint(loai_nghi_phep_bp, url_prefix='/api')
     app.register_blueprint(chung_chi_bp, url_prefix='/api')
     app.register_blueprint(hopdong_bp, url_prefix='/api')
+    app.register_blueprint(nguoi_phu_thuoc_bp, url_prefix="/api/nguoi-phu-thuoc")

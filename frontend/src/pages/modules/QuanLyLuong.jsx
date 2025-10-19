@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import {
   Table,
@@ -10,7 +10,6 @@ import {
   Row,
   Col,
   Popover,
-  Spinner,
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -18,8 +17,10 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import "react-toastify/dist/ReactToastify.css";
 import Loading from "../../../src/components/Loading";
+import { getNhanVienInfo } from "../../utils/auth"; // ✅ thêm
 
 const API_URL = "http://127.0.0.1:5000/api";
+const HR_DEPARTMENT_ID = 2; // ❗ đổi lại ID thật phòng Nhân sự trong DB
 
 const QuanLyLuong = () => {
   const [luongList, setLuongList] = useState([]);
@@ -41,9 +42,11 @@ const QuanLyLuong = () => {
 
   const navigate = useNavigate();
 
+  // ✅ lấy user hiện tại & cờ phân quyền
+  const currentUser = getNhanVienInfo(); // {id, ho_ten, phong_ban_id, ...}
+  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+
   useEffect(() => {
-    // if (hasFetched.current) return; // Nếu đã gọi rồi -> bỏ qua
-    // hasFetched.current = true;
     fetchLuong();
     fetchNhanVien();
   }, []);
@@ -52,13 +55,13 @@ const QuanLyLuong = () => {
     if (!showModal) {
       const today = new Date();
       setFormData({
-        nhan_vien_id: "",
+        nhan_vien_id: isHR ? "" : currentUser?.id || "", // 🟢 non-HR mặc định là chính mình
         thang: today.getMonth() + 1,
         nam: today.getFullYear(),
       });
-      setIsTinhTatCa(false);
+      setIsTinhTatCa(false); // 🟢 non-HR không được bật tính tất cả
     }
-  }, [showModal]);
+  }, [showModal, isHR, currentUser?.id]);
 
   const fetchLuong = async () => {
     setLoading(true);
@@ -66,7 +69,7 @@ const QuanLyLuong = () => {
       const response = await axios.get(`${API_URL}/get-all-bang-luong`);
       setLuongList(response.data);
     } catch (error) {
-      toast.error("Không thể tải dữ liệu lương!", error);
+      toast.error("Không thể tải dữ liệu lương!");
     } finally {
       setLoading(false);
     }
@@ -76,15 +79,16 @@ const QuanLyLuong = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
-      setNhanVienList(response.data);
+      setNhanVienList(response.data || []);
     } catch (error) {
-      toast.error("Không thể tải danh sách nhân viên!", error);
+      toast.error("Không thể tải danh sách nhân viên!");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteLuong = async (luongId) => {
+    if (!isHR) return; // 🚫 chặn non-HR
     if (!window.confirm("Bạn có chắc chắn muốn xoá dòng lương này?")) return;
     setLoading(true);
     try {
@@ -92,38 +96,49 @@ const QuanLyLuong = () => {
       toast.success("Xoá lương thành công!");
       fetchLuong();
     } catch (error) {
-      toast.error("Không thể xoá lương.", error);
+      toast.error("Không thể xoá lương.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSubmitLuong = async () => {
-    const { nhan_vien_id, thang, nam } = formData;
+    let { nhan_vien_id, thang, nam } = formData;
 
     if (!thang || !nam) {
       toast.warning("Vui lòng điền đầy đủ tháng và năm.");
       return;
     }
 
-    if (isTinhTatCa) {
+    // 🛡️ non-HR không được tính tất cả và chỉ được tính cho chính họ
+    if (!isHR) {
+      nhan_vien_id = currentUser?.id;
+      if (!nhan_vien_id) {
+        toast.error("Không xác định được nhân viên hiện tại!");
+        return;
+      }
+    }
+
+    if (isTinhTatCa && isHR) {
+      // HR: tính tất cả
       setLoading(true);
       try {
         const response = await axios.post(`${API_URL}/get-tinh-luong-tat-ca`, {
           thang: parseInt(thang),
           nam: parseInt(nam),
         });
-        if (response.data.data) {
+        if (response.data?.data) {
           toast.success("Đã tính lương cho tất cả nhân viên.");
           setShowModal(false);
           fetchLuong();
         }
       } catch (error) {
-        toast.error("Lỗi khi tính lương cho tất cả nhân viên.", error);
+        toast.error("Lỗi khi tính lương cho tất cả nhân viên.");
       } finally {
         setLoading(false);
       }
     } else {
+      // HR hoặc non-HR: tính 1 NV (non-HR luôn là chính họ)
       if (!nhan_vien_id) {
         toast.warning("Vui lòng chọn nhân viên.");
         return;
@@ -141,7 +156,7 @@ const QuanLyLuong = () => {
           fetchLuong();
         }
       } catch (error) {
-        toast.error("Lỗi khi tính lương!", error);
+        toast.error("Lỗi khi tính lương!");
       } finally {
         setLoading(false);
       }
@@ -151,23 +166,44 @@ const QuanLyLuong = () => {
   const formatCurrency = (amount) =>
     amount?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-  const nhanVienMap = nhanVienList.reduce((acc, nv) => {
-    acc[nv.id] = nv.ho_ten.toLowerCase();
-    return acc;
-  }, {});
+  // Map tên NV (đủ cho HR; non-HR chỉ cần chính họ)
+  const nhanVienMap = useMemo(() => {
+    return nhanVienList.reduce((acc, nv) => {
+      acc[nv.id] = (nv.ho_ten || "").toLowerCase();
+      return acc;
+    }, {});
+  }, [nhanVienList]);
 
-  const filteredList = luongList
-    .filter((luong) => {
-      const hoTen = nhanVienMap[luong.nhan_vien_id] || "";
-      const searchMatch = hoTen.includes(searchKeyword.toLowerCase());
-      const monthMatch =
-        selectedMonthNumber && selectedYear
-          ? luong.thang === parseInt(selectedMonthNumber) &&
-          luong.nam === parseInt(selectedYear)
-          : true;
-      return searchMatch && monthMatch;
-    })
-    .sort((a, b) => b.id - a.id);
+  // 🧹 Lọc theo quyền + keyword + tháng-năm
+  const filteredList = useMemo(() => {
+    return luongList
+      .filter((luong) => {
+        // 1) PHÂN QUYỀN: non-HR chỉ xem được lương của chính mình
+        if (!isHR && currentUser?.id && luong.nhan_vien_id !== currentUser.id) {
+          return false;
+        }
+        // 2) Tìm theo tên (trên toàn dsNV)
+        const hoTen = nhanVienMap[luong.nhan_vien_id] || "";
+        const searchMatch = hoTen.includes((searchKeyword || "").toLowerCase());
+        // 3) Lọc theo tháng-năm
+        const monthMatch =
+          selectedMonthNumber && selectedYear
+            ? luong.thang === parseInt(selectedMonthNumber) &&
+            luong.nam === parseInt(selectedYear)
+            : true;
+
+        return searchMatch && monthMatch;
+      })
+      .sort((a, b) => b.id - a.id);
+  }, [
+    luongList,
+    isHR,
+    currentUser?.id,
+    nhanVienMap,
+    searchKeyword,
+    selectedMonthNumber,
+    selectedYear,
+  ]);
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
   const paginatedList = filteredList.slice(
@@ -176,6 +212,7 @@ const QuanLyLuong = () => {
   );
 
   const exportToExcel = () => {
+    // ⚠️ non-HR vẫn được xuất nhưng chỉ dữ liệu của mình (filteredList đã đảm bảo)
     if (filteredList.length === 0) {
       toast.warning("Không có dữ liệu để xuất!");
       return;
@@ -188,14 +225,12 @@ const QuanLyLuong = () => {
         "Ghi chú": luong.ghi_chu || "",
         "Nhân viên": nv?.ho_ten || "Không rõ",
         Tháng: `${luong.thang}/${luong.nam}`,
-
         "Ngày công chuẩn": luong.ngay_cong_chuan,
         "Số ngày công": luong.so_ngay_cong,
-        "Ngày phép": luong?.ngay_phep || 0,
+        "Ngày phép": luong?.nghi_phep ?? luong?.ngay_phep ?? 0,
         "Trừ nghỉ không phép": luong?.tru_nghi_khong_phep || 0,
-        "Ngày làm lễ": luong?.ngay_lam_le || 0,
-        "Tiền làm lễ": luong?.tien_lam_le || 0,
-
+        "Ngày làm lễ": luong?.tong_ngay_lam_le ?? luong?.ngay_lam_le ?? 0,
+        "Tiền làm lễ": luong?.tong_tien_lam_le ?? luong?.tien_lam_le ?? 0,
         "Phụ cấp ăn trưa": luong?.phu_cap_an_trua || 0,
         "Phụ cấp xăng, xe": luong?.phu_cap_xang_xe || 0,
         "Phụ cấp độc hại": luong?.phu_cap_doc_hai || 0,
@@ -204,47 +239,36 @@ const QuanLyLuong = () => {
         "Phụ cấp thâm niên": luong?.phu_cap_tham_nien || 0,
         "Phụ cấp khác": luong?.phu_cap_khac || 0,
         "Tổng phụ cấp": luong.tong_phu_cap,
-
         "Thưởng nóng": luong?.thuong_nong || 0,
         "Thưởng lễ": luong?.thuong_le || 0,
         "Thưởng khác": luong?.thuong_khac || 0,
         "Tổng thưởng": luong.tong_thuong,
-
         "Tổng lương": luong.tong_luong,
-
         "Trừ đi trễ, về sớm": luong?.tru_di_tre_ve_som || 0,
         "Trừ vi phạm": luong?.tru_vi_pham || 0,
         "Trừ tạm ứng": luong?.tru_tam_ung || 0,
         "Trừ khác": luong?.tru_khac || 0,
         "Tổng khấu trừ": luong.tong_khau_tru,
-
         BHXH: luong.bhxh,
         BHTN: luong.bhtn,
         BHYT: luong.bhyt,
         "Thuế TNCN": luong.thue_tncn,
-
         "Thực nhận": luong.thuc_nhan,
       };
     });
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport, { origin: "A3" });
-
-    // Thêm tiêu đề chính
     const title = [["BẢNG LƯƠNG NHÂN VIÊN"]];
-    const subTitle = [
-      [`Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`],
-    ];
+    const subTitle = [[`Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`]];
     XLSX.utils.sheet_add_aoa(worksheet, title, { origin: "A1" });
     XLSX.utils.sheet_add_aoa(worksheet, subTitle, { origin: "A2" });
 
-    // Merge tiêu đề
     const totalCols = Object.keys(dataToExport[0]).length;
     worksheet["!merges"] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } },
     ];
 
-    // Tự điều chỉnh độ rộng cột
     worksheet["!cols"] = Object.keys(dataToExport[0]).map((key) => ({
       wch: Math.max(
         key.length + 2,
@@ -252,37 +276,8 @@ const QuanLyLuong = () => {
       ),
     }));
 
-    // Tạo workbook và style
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Bảng Lương");
-
-    // Style (cần plugin xlsx-style hoặc sheetjs Pro để áp dụng hoàn toàn)
-    const titleCell = worksheet["A1"];
-    if (titleCell) {
-      titleCell.s = {
-        font: { bold: true, sz: 16, color: { rgb: "1F497D" } },
-        alignment: { horizontal: "center", vertical: "center" },
-      };
-    }
-
-    const headerRowIndex = 2;
-    for (let c = 0; c < totalCols; c++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex, c });
-      const cell = worksheet[cellAddress];
-      if (cell) {
-        cell.s = {
-          font: { bold: true, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "4F81BD" } },
-          alignment: { horizontal: "center", vertical: "center" },
-          border: {
-            top: { style: "thin", color: { rgb: "999999" } },
-            bottom: { style: "thin", color: { rgb: "999999" } },
-            left: { style: "thin", color: { rgb: "999999" } },
-            right: { style: "thin", color: { rgb: "999999" } },
-          },
-        };
-      }
-    }
 
     const excelBuffer = XLSX.write(workbook, {
       bookType: "xlsx",
@@ -315,15 +310,14 @@ const QuanLyLuong = () => {
       <div className="row">
         <div className="col-12 mt-5">
           <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>
-              Trang chủ
-            </Breadcrumb.Item>
+            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
             <Breadcrumb.Item active>Quản lý lương</Breadcrumb.Item>
           </Breadcrumb>
-          <Button variant="secondary" onClick={() => navigate("/")}>
+          <Button variant="secondary" onClick={() => navigate("← Trang chủ")}>
             ← Trang chủ
           </Button>
           <h2 className="mb-4 text-center">Quản lý lương</h2>
+
           {/* Bộ lọc */}
           <div className="row mb-4">
             <div className="col-md-4 mb-2">
@@ -378,37 +372,50 @@ const QuanLyLuong = () => {
                 })}
               </select>
             </div>
+
+            {/* Nút hành động theo quyền */}
             <div className="col-md-4 mb-2">
               <OverlayTrigger
                 placement="top"
-                overlay={<Tooltip>Tính lương cho 1 nhân viên</Tooltip>}
+                overlay={
+                  <Tooltip>
+                    {isHR ? "Tính lương cho 1 nhân viên" : "Tính lương cho chính bạn"}
+                  </Tooltip>
+                }
               >
                 <Button
                   variant="outline-success"
                   className="w-100"
-                  onClick={() => setShowModal(true)}
-                >
-                  Tính lương cho 1 nhân viên
-                </Button>
-              </OverlayTrigger>
-            </div>
-            <div className="col-md-4 mb-2">
-              <OverlayTrigger
-                placement="top"
-                overlay={<Tooltip>Tính lương toàn bộ nhân viên</Tooltip>}
-              >
-                <Button
-                  variant="outline-warning"
-                  className="w-100"
                   onClick={() => {
-                    setIsTinhTatCa(true);
+                    setIsTinhTatCa(false); // non-HR luôn false
                     setShowModal(true);
                   }}
                 >
-                  Tính lương tất cả nhân viên
+                  {isHR ? "Tính lương cho 1 nhân viên" : "Tính lương của tôi"}
                 </Button>
               </OverlayTrigger>
             </div>
+
+            {isHR && (
+              <div className="col-md-4 mb-2">
+                <OverlayTrigger
+                  placement="top"
+                  overlay={<Tooltip>Tính lương toàn bộ nhân viên</Tooltip>}
+                >
+                  <Button
+                    variant="outline-warning"
+                    className="w-100"
+                    onClick={() => {
+                      setIsTinhTatCa(true);
+                      setShowModal(true);
+                    }}
+                  >
+                    Tính lương tất cả nhân viên
+                  </Button>
+                </OverlayTrigger>
+              </div>
+            )}
+
             <div className="col-md-2 mb-2 d-flex justify-content-md-end justify-content-center">
               <Button
                 variant="outline-success"
@@ -419,15 +426,15 @@ const QuanLyLuong = () => {
               </Button>
             </div>
           </div>
-          {/* Bảng lương */}
 
+          {/* Bảng lương */}
           <div
             style={{
               maxHeight: "75vh",
               overflowX: "auto",
               overflowY: "auto",
               whiteSpace: "nowrap",
-              position: "relative", // Để các cột sticky hoạt động đúng
+              position: "relative",
             }}
           >
             <Table striped bordered hover responsive className="align-middle">
@@ -441,8 +448,8 @@ const QuanLyLuong = () => {
                       position: "sticky",
                       left: 0,
                       zIndex: 4,
-                      minWidth: "50px", // icon
-                      background: "#212529", // cùng màu header
+                      minWidth: "50px",
+                      background: "#212529",
                     }}
                   ></th>
                   <th
@@ -450,7 +457,7 @@ const QuanLyLuong = () => {
                       position: "sticky",
                       left: "49px",
                       zIndex: 4,
-                      minWidth: "180px", // tên NV
+                      minWidth: "180px",
                       background: "#212529",
                     }}
                   >
@@ -459,7 +466,7 @@ const QuanLyLuong = () => {
                   <th
                     style={{
                       position: "sticky",
-                      left: "228px", // = 50px + 180px
+                      left: "228px",
                       zIndex: 4,
                       minWidth: "120px",
                       background: "#212529",
@@ -475,7 +482,6 @@ const QuanLyLuong = () => {
                   <th>Tiền làm lễ</th>
                   <th>Giờ tăng ca</th>
                   <th>Tiền tăng ca</th>
-
                   <th>Phụ cấp ăn trưa</th>
                   <th>Phụ cấp xăng, xe</th>
                   <th>Phụ cấp độc hại</th>
@@ -484,21 +490,16 @@ const QuanLyLuong = () => {
                   <th>Phụ cấp thâm niên</th>
                   <th>Phụ cấp khác</th>
                   <th>Tổng phụ cấp</th>
-
                   <th>Thưởng nóng</th>
                   <th>Thưởng lễ</th>
                   <th>Thưởng khác</th>
                   <th>Tổng Thưởng</th>
-
                   <th>Tổng lương</th>
-
                   <th>Trừ đi trễ, về sớm</th>
-
                   <th>Trừ vi phạm</th>
                   <th>Trừ tạm ứng</th>
                   <th>Trừ khác</th>
                   <th>Tổng khấu trừ</th>
-
                   <th>BHXH</th>
                   <th>BHTN</th>
                   <th>BHYT</th>
@@ -508,66 +509,28 @@ const QuanLyLuong = () => {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="9" className="text-center">
-                      Đang tải dữ liệu...
-                    </td>
-                  </tr>
-                ) : paginatedList.length > 0 ? (
+                {paginatedList.length > 0 ? (
                   paginatedList.map((luong) => {
                     const nv = nhanVienList.find(
                       (nv) => nv.id === luong.nhan_vien_id
                     );
-                    const anUong = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "AN_UONG"
-                    );
-                    const xangXe = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "XANG_XE"
-                    );
-                    const docHai = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "DOC_HAI"
-                    );
-                    const trachNhiem = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "TRACH_NHIEM"
-                    );
-                    const chucVu = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "CHUC_VU"
-                    );
-                    const thamNien = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "THAM_NIEN"
-                    );
-                    const phucapkhac = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "PHU_CAP_KHAC"
-                    );
-
-                    const diTreVeSom = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "DI_TRE_VE_SOM"
-                    );
-                    const nghiKhongPhep = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "NGHI_KHONG_PHEP"
-                    );
-                    const viPhamNoiQuy = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "VI_PHAM"
-                    );
-                    const tamUng = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "UNG_LUONG"
-                    );
+                    const anUong = luong.chi_tiet_luong?.find((ct) => ct.loai === "AN_UONG");
+                    const xangXe = luong.chi_tiet_luong?.find((ct) => ct.loai === "XANG_XE");
+                    const docHai = luong.chi_tiet_luong?.find((ct) => ct.loai === "DOC_HAI");
+                    const trachNhiem = luong.chi_tiet_luong?.find((ct) => ct.loai === "TRACH_NHIEM");
+                    const chucVu = luong.chi_tiet_luong?.find((ct) => ct.loai === "CHUC_VU");
+                    const thamNien = luong.chi_tiet_luong?.find((ct) => ct.loai === "THAM_NIEN");
+                    const phucapkhac = luong.chi_tiet_luong?.find((ct) => ct.loai === "PHU_CAP_KHAC");
+                    const diTreVeSom = luong.chi_tiet_luong?.find((ct) => ct.loai === "DI_TRE_VE_SOM");
+                    const nghiKhongPhep = luong.chi_tiet_luong?.find((ct) => ct.loai === "NGHI_KHONG_PHEP");
+                    const viPhamNoiQuy = luong.chi_tiet_luong?.find((ct) => ct.loai === "VI_PHAM");
+                    const tamUng = luong.chi_tiet_luong?.find((ct) => ct.loai === "UNG_LUONG");
                     const truKhacList =
-                      luong.chi_tiet_luong?.filter(
-                        (ct) => ct.loai === "TRU_KHAC"
-                      ) || [];
-
-                    const thuongNong = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "NONG"
-                    );
-                    const thuongLe = luong.chi_tiet_luong?.find(
-                      (ct) => ct.loai === "LE"
-                    );
+                      luong.chi_tiet_luong?.filter((ct) => ct.loai === "TRU_KHAC") || [];
+                    const thuongNong = luong.chi_tiet_luong?.find((ct) => ct.loai === "NONG");
+                    const thuongLe = luong.chi_tiet_luong?.find((ct) => ct.loai === "LE");
                     const thuongKhacList =
-                      luong.chi_tiet_luong?.filter(
-                        (ct) => ct.loai === "THUONG_KHAC"
-                      ) || [];
+                      luong.chi_tiet_luong?.filter((ct) => ct.loai === "THUONG_KHAC") || [];
 
                     return (
                       <tr key={luong.id}>
@@ -591,9 +554,7 @@ const QuanLyLuong = () => {
                               </Popover>
                             }
                           >
-                            <h3>
-                              {luong.ghi_chu === "Nghỉ thai sản" ? "🤰" : ""}
-                            </h3>
+                            <h3>{luong.ghi_chu === "Nghỉ thai sản" ? "🤰" : ""}</h3>
                           </OverlayTrigger>
                         </td>
 
@@ -612,7 +573,7 @@ const QuanLyLuong = () => {
                         <td
                           style={{
                             position: "sticky",
-                            left: "228px", // 50px + 180px
+                            left: "228px",
                             zIndex: 2,
                             minWidth: "120px",
                             background: "#fff",
@@ -620,15 +581,14 @@ const QuanLyLuong = () => {
                         >
                           {`${luong.thang}/${luong.nam}`}
                         </td>
+
                         <td>{luong.ngay_cong_chuan}</td>
                         <td>{luong.so_ngay_cong}</td>
                         <td align="center">
                           {luong.nghi_phep > 0 ? luong.nghi_phep : " "}
                         </td>
                         <td className="text-danger bg-danger-subtle">
-                          {nghiKhongPhep
-                            ? formatCurrency(nghiKhongPhep.so_tien)
-                            : formatCurrency(0)}
+                          {nghiKhongPhep ? formatCurrency(nghiKhongPhep.so_tien) : formatCurrency(0)}
                         </td>
                         <td>{luong.tong_ngay_lam_le}</td>
                         <td className="text-success bg-success-subtle">
@@ -640,56 +600,38 @@ const QuanLyLuong = () => {
                         </td>
 
                         <td className="text-success bg-success-subtle">
-                          {anUong
-                            ? formatCurrency(anUong.so_tien)
-                            : formatCurrency(0)}
+                          {anUong ? formatCurrency(anUong.so_tien) : formatCurrency(0)}
                         </td>
                         <td className="text-success bg-success-subtle">
-                          {xangXe
-                            ? formatCurrency(xangXe.so_tien)
-                            : formatCurrency(0)}
+                          {xangXe ? formatCurrency(xangXe.so_tien) : formatCurrency(0)}
                         </td>
                         <td className="text-success bg-success-subtle">
-                          {docHai
-                            ? formatCurrency(docHai.so_tien)
-                            : formatCurrency(0)}
+                          {docHai ? formatCurrency(docHai.so_tien) : formatCurrency(0)}
                         </td>
                         <td className="text-success bg-success-subtle">
-                          {trachNhiem
-                            ? formatCurrency(trachNhiem.so_tien)
-                            : formatCurrency(0)}
+                          {trachNhiem ? formatCurrency(trachNhiem.so_tien) : formatCurrency(0)}
                         </td>
                         <td className="text-success bg-success-subtle">
-                          {chucVu
-                            ? formatCurrency(chucVu.so_tien)
-                            : formatCurrency(0)}
+                          {chucVu ? formatCurrency(chucVu.so_tien) : formatCurrency(0)}
                         </td>
                         <td className="text-success bg-success-subtle">
-                          {thamNien
-                            ? formatCurrency(thamNien.so_tien)
-                            : formatCurrency(0)}
+                          {thamNien ? formatCurrency(thamNien.so_tien) : formatCurrency(0)}
                         </td>
 
                         <OverlayTrigger
                           placement="top"
                           overlay={
                             <Popover>
-                              <Popover.Header as="h5">
-                                Phụ cấp khác
-                              </Popover.Header>
+                              <Popover.Header as="h5">Phụ cấp khác</Popover.Header>
                               <Popover.Body>
-                                <small>
-                                  {phucapkhac?.ghi_chu || "Không có ghi chú"}
-                                </small>
+                                <small>{phucapkhac?.ghi_chu || "Không có ghi chú"}</small>
                               </Popover.Body>
                             </Popover>
                           }
                         >
                           <td className="text-success bg-success-subtle">
                             <span style={{ cursor: "pointer" }}>
-                              {phucapkhac
-                                ? formatCurrency(phucapkhac.so_tien)
-                                : formatCurrency(0)}
+                              {phucapkhac ? formatCurrency(phucapkhac.so_tien) : formatCurrency(0)}
                             </span>
                           </td>
                         </OverlayTrigger>
@@ -699,36 +641,26 @@ const QuanLyLuong = () => {
                         </td>
 
                         <td className="bg-warning-subtle">
-                          {thuongNong
-                            ? formatCurrency(thuongNong.so_tien)
-                            : formatCurrency(0)}
+                          {thuongNong ? formatCurrency(thuongNong.so_tien) : formatCurrency(0)}
                         </td>
                         <td className="bg-warning-subtle">
-                          {thuongLe
-                            ? formatCurrency(thuongLe.so_tien)
-                            : formatCurrency(0)}
+                          {thuongLe ? formatCurrency(thuongLe.so_tien) : formatCurrency(0)}
                         </td>
 
                         <OverlayTrigger
                           placement="top"
                           overlay={
                             <Popover>
-                              <Popover.Header as="h5">
-                                Thưởng khác
-                              </Popover.Header>
+                              <Popover.Header as="h5">Thưởng khác</Popover.Header>
                               <Popover.Body>
                                 {thuongKhacList.length > 0 ? (
                                   <ul className="mb-0 ps-3">
                                     {thuongKhacList.map((tk, index) => (
                                       <li key={index}>
                                         <div>
-                                          <strong>
-                                            {tk.ghi_chu || "Thưởng khác"}
-                                          </strong>
+                                          <strong>{tk.ghi_chu || "Thưởng khác"}</strong>
                                         </div>
-                                        <div>
-                                          Số tiền: {formatCurrency(tk.so_tien)}
-                                        </div>
+                                        <div>Số tiền: {formatCurrency(tk.so_tien)}</div>
                                       </li>
                                     ))}
                                   </ul>
@@ -743,11 +675,8 @@ const QuanLyLuong = () => {
                             <span style={{ cursor: "pointer" }}>
                               {thuongKhacList.length > 0
                                 ? formatCurrency(
-                                    thuongKhacList.reduce(
-                                      (sum, tk) => sum + (tk.so_tien || 0),
-                                      0
-                                    )
-                                  )
+                                  thuongKhacList.reduce((sum, tk) => sum + (tk.so_tien || 0), 0)
+                                )
                                 : formatCurrency(0)}
                             </span>
                           </td>
@@ -761,63 +690,29 @@ const QuanLyLuong = () => {
                           <b>{formatCurrency(luong.tong_luong)}</b>
                         </td>
                         <td className="text-danger bg-danger-subtle">
-                          {diTreVeSom
-                            ? formatCurrency(diTreVeSom.so_tien)
-                            : formatCurrency(0)}
+                          {diTreVeSom ? formatCurrency(diTreVeSom.so_tien) : formatCurrency(0)}
+                        </td>
+                        <td className="text-danger bg-danger-subtle">
+                          {viPhamNoiQuy ? formatCurrency(viPhamNoiQuy.so_tien) : formatCurrency(0)}
+                        </td>
+                        <td className="text-danger bg-danger-subtle">
+                          {tamUng ? formatCurrency(tamUng.so_tien) : formatCurrency(0)}
                         </td>
 
-                        <td className="text-danger bg-danger-subtle">
-                          {viPhamNoiQuy
-                            ? formatCurrency(viPhamNoiQuy.so_tien)
-                            : formatCurrency(0)}
-                        </td>
-                        <td className="text-danger bg-danger-subtle">
-                          {tamUng
-                            ? formatCurrency(tamUng.so_tien)
-                            : formatCurrency(0)}
-                        </td>
-
-                        {/* <OverlayTrigger
-                        placement="top"
-                        overlay={
-                          <Popover>
-                            <Popover.Header as="h5">Trừ khác</Popover.Header>
-                            <Popover.Body>
-                              <small>
-                                {truKhac?.ghi_chu || "Không có ghi chú"}
-                              </small>
-                            </Popover.Body>
-                          </Popover>
-                        }
-                      >
-                        <td className="text-danger bg-danger-subtle">
-                          <span style={{ cursor: "pointer" }}>
-                            {truKhac
-                              ? formatCurrency(truKhac.so_tien)
-                              : formatCurrency(0)}
-                          </span>
-                        </td>
-                      </OverlayTrigger> */}
                         <OverlayTrigger
                           placement="top"
                           overlay={
                             <Popover>
-                              <Popover.Header as="h5">
-                                Khấu trừ khác
-                              </Popover.Header>
+                              <Popover.Header as="h5">Khấu trừ khác</Popover.Header>
                               <Popover.Body>
                                 {truKhacList.length > 0 ? (
                                   <ul className="mb-0 ps-3">
                                     {truKhacList.map((kt, index) => (
                                       <li key={index}>
                                         <div>
-                                          <strong>
-                                            {kt.ghi_chu || "Khấu trừ khác"}
-                                          </strong>
+                                          <strong>{kt.ghi_chu || "Khấu trừ khác"}</strong>
                                         </div>
-                                        <div>
-                                          Số tiền: {formatCurrency(kt.so_tien)}
-                                        </div>
+                                        <div>Số tiền: {formatCurrency(kt.so_tien)}</div>
                                       </li>
                                     ))}
                                   </ul>
@@ -832,11 +727,8 @@ const QuanLyLuong = () => {
                             <span style={{ cursor: "pointer" }}>
                               {truKhacList.length > 0
                                 ? formatCurrency(
-                                    truKhacList.reduce(
-                                      (sum, kt) => sum + (kt.so_tien || 0),
-                                      0
-                                    )
-                                  )
+                                  truKhacList.reduce((sum, kt) => sum + (kt.so_tien || 0), 0)
+                                )
                                 : formatCurrency(0)}
                             </span>
                           </td>
@@ -845,41 +737,35 @@ const QuanLyLuong = () => {
                         <td className="text-danger bg-danger bg-opacity-50 ">
                           <b>{formatCurrency(luong.tong_khau_tru)}</b>
                         </td>
-                        <td className="text-danger">
-                          {formatCurrency(luong.bhxh)}
-                        </td>
-                        <td className="text-danger">
-                          {formatCurrency(luong.bhtn)}
-                        </td>
-                        <td className="text-danger">
-                          {formatCurrency(luong.bhyt)}
-                        </td>
-                        <td className="text-danger">
-                          {formatCurrency(luong.thue_tncn)}
-                        </td>
+                        <td className="text-danger">{formatCurrency(luong.bhxh)}</td>
+                        <td className="text-danger">{formatCurrency(luong.bhtn)}</td>
+                        <td className="text-danger">{formatCurrency(luong.bhyt)}</td>
+                        <td className="text-danger">{formatCurrency(luong.thue_tncn)}</td>
                         <td className="bg-primary bg-opacity-25">
                           <b>{formatCurrency(luong.thuc_nhan)}</b>
                         </td>
                         <td>
-                          <OverlayTrigger
-                            placement="top"
-                            overlay={<Tooltip>Xoá dòng lương này</Tooltip>}
-                          >
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleDeleteLuong(luong.id)}
+                          {isHR && (
+                            <OverlayTrigger
+                              placement="top"
+                              overlay={<Tooltip>Xoá dòng lương này</Tooltip>}
                             >
-                              Xoá
-                            </Button>
-                          </OverlayTrigger>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleDeleteLuong(luong.id)}
+                              >
+                                Xoá
+                              </Button>
+                            </OverlayTrigger>
+                          )}
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan="11" className="text-center text-muted">
+                    <td colSpan="35" className="text-center text-muted">
                       Không có bảng lương
                     </td>
                   </tr>
@@ -887,7 +773,8 @@ const QuanLyLuong = () => {
               </tbody>
             </Table>
           </div>
-          {/* Phân trang giữ nguyên kiểu cũ */}
+
+          {/* Phân trang */}
           <Row className="justify-content-center mt-3">
             <Col xs="auto" className="text-center">
               <div className="d-flex align-items-center gap-3">
@@ -911,13 +798,15 @@ const QuanLyLuong = () => {
               </div>
             </Col>
           </Row>
+
           {/* Modal tính lương */}
           <Modal show={showModal} onHide={() => setShowModal(false)}>
             <Modal.Header closeButton>
               <Modal.Title>Tính lương</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-              {!isTinhTatCa && (
+              {/* HR mới có quyền chọn NV; non-HR ẩn dropdown và fix về chính mình */}
+              {isHR ? (
                 <select
                   className="form-control mb-3"
                   value={formData.nhan_vien_id}
@@ -932,7 +821,14 @@ const QuanLyLuong = () => {
                     </option>
                   ))}
                 </select>
+              ) : (
+                <input
+                  className="form-control mb-3"
+                  value={`${currentUser?.ho_ten || "Tôi"} (ID: ${currentUser?.id || "-"})`}
+                  disabled
+                />
               )}
+
               <div className="d-flex gap-2">
                 <input
                   type="number"
@@ -953,6 +849,22 @@ const QuanLyLuong = () => {
                   }
                 />
               </div>
+
+              {/* non-HR không hiển thị switch “tính tất cả” */}
+              {isHR && (
+                <div className="form-check mt-3">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="tinhTatCa"
+                    checked={isTinhTatCa}
+                    onChange={(e) => setIsTinhTatCa(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="tinhTatCa">
+                    Tính lương tất cả nhân viên
+                  </label>
+                </div>
+              )}
             </Modal.Body>
             <Modal.Footer>
               <Button variant="secondary" onClick={() => setShowModal(false)}>

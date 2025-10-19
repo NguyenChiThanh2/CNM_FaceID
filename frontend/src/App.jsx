@@ -25,6 +25,8 @@ import Thuong from "./pages/modules/QuanLyThuong";
 import KhauTru from "./pages/modules/QuanLyKhauTru";
 import NgayNghiLe from "./pages/modules/QuanLyNgayNghiLe";
 import MacGuard from "./pages/MacGuard";
+import NguoiPhuThuocPage from "./pages/modules/QuanLyNguoiPhuThuoc";
+
 const AppLayout = () => {
   const location = useLocation();
   const hideNavbarPaths = ["/dang-nhap", "/404", "/cham-cong-face"];
@@ -67,7 +69,7 @@ const AppLayout = () => {
           <Route path="/cham-cong-nhan-vien/:id" element={<PrivateRoute><ChamCongNhanVien /></PrivateRoute>} />
           <Route path="/quan-ly-giay-phep" element={<PrivateRoute><QuanLyGiayPhep /></PrivateRoute>} />
           <Route path="/ngay-nghi-le" element={<PrivateRoute><NgayNghiLe /></PrivateRoute>} />
-
+          <Route path="/nguoi-phu-thuoc" element={<PrivateRoute><NguoiPhuThuocPage /></PrivateRoute>} />
           {/* Trang 404 */}
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" />} />

@@ -14,7 +14,6 @@ class NguoiPhuThuoc(db.Model):
     ghi_chu = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime,server_default=func.now())
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
-
     NguoiPhuThuoc_nv = db.relationship("NhanVien", back_populates="NguoiPhuThuoc_nv", lazy=True)
     
     def __repr__(self):

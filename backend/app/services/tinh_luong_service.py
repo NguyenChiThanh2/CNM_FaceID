@@ -812,6 +812,6 @@ def tinh_luong_cho_tat_ca_nhan_vien(thang,nam):
             bangluong_1nv = tinh_luong_cho_1nv(nv.id,thang,nam)
             ket_qua.append(bangluong_1nv.to_dict())
         except Exception as e:
-            raise Exception({str(e)})
+                raise Exception({str(e)})
     return ket_qua
     
