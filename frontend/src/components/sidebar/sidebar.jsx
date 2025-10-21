@@ -26,7 +26,7 @@ const Sidebar = () => {
   const userInfo = getUserInfo();
 
   const HR_DEPARTMENT_ID = 2;
-  const restrictedPaths = [];
+  const restrictedPaths = ["/ngay-nghi-le"];
 
   const modules = [
     { title: "Quản lý nhân sự", icon: "👤", path: "/nhan-su" },

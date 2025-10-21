@@ -1,38 +1,101 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createFaceDetector } from "../../lib/faceDetectorFallback";
 
 const API_BASE = "http://127.0.0.1:5000";
 const RECOGNIZE_EVERY = 1300; // ms
-const STABLE_MS = 1500;      // ms
-const COOLDOWN_MS = 5000;   // ms
+const STABLE_MS = 1500;       // ms
+const COOLDOWN_MS = 5000;     // ms
+// Giảm giật & tiết kiệm CPU
+const DETECT_EVERY_MS = 90;   // chỉ detect mỗi ~90ms; giữa các lần sẽ dùng kết quả gần nhất
+const KEEP_FACE_MS = 600;     // nếu miss tạm 1-2 frame thì vẫn giữ khung trong 600ms
+
+// Box portrait (cao hơn ngang). Ví dụ 1.25 = cao hơn ngang 25%
+// Bạn có thể chỉnh 1.2–1.35 tuỳ gu.
+const PORTRAIT_ASPECT = 1.25;
 
 // Ngưỡng ảnh
 const BLUR_THRESHOLD = 20; // hạ tạm để dễ pass
 const DEBUG = false;       // bật/tắt console.log
-// Kiểm tra có hỗ trợ requestVideoFrameCallback không
+const MIRRORED = false;    // bật true nếu bạn mirror video (scaleX(-1))
+
+// ===== Utils =====
+const dlog = (...args) => DEBUG && console.log("[FaceCheckin]", ...args);
+
 const supportsRVFC = () => {
   const v = document.createElement("video");
   return typeof v.requestVideoFrameCallback === "function";
 };
 
-export default function FaceCheckin() {
-  // refs & state
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);   // chụp ảnh gửi BE
-  const overlayRef = useRef(null);  // vẽ khung + label
-  const lastRecognizeAtRef = useRef(0);
+// EMA smoothing cho bbox
+function emaBox(prev, cur, alpha = 0.25) {
+  if (!prev) return cur;
+  return {
+    x: prev.x + alpha * (cur.x - prev.x),
+    y: prev.y + alpha * (cur.y - prev.y),
+    width: prev.width + alpha * (cur.width - prev.width),
+    height: prev.height + alpha * (cur.height - prev.height),
+  };
+}
 
-  const matchedRef = useRef(null);        // NV mới nhất cho frame hiện tại
-  const previewTokenRef = useRef(null);   // token mới nhất cho frame hiện tại
-  const stableStartRef = useRef(null);    // mốc bắt đầu “ổn định” theo frame
+// Quy về hộp vuông + padding quanh tâm, clamp trong khung
+// Quy về hộp portrait (cao hơn ngang) + padding quanh tâm, clamp trong khung
+function padPortraitBox(bb, padRatio, overlayW, overlayH, aspect = PORTRAIT_ASPECT) {
+  let { x, y, width: w, height: h } = bb;
+  // normalized → pixels
+  if (w <= 1 && h <= 1) {
+    x *= overlayW; y *= overlayH; w *= overlayW; h *= overlayH;
+  }
+  // lấy kích thước “gần gũi” với detector, rồi ép tỉ lệ dọc > ngang
+  const cx = x + w / 2, cy = y + h / 2;
+  let newW = Math.max(w, h / aspect);
+  let newH = Math.max(h, newW * aspect);
+
+  // padding nhẹ
+  const p = padRatio ?? 0.12;
+  newW *= (1 + p);
+  newH *= (1 + p);
+
+  // chuyển về (x,y,w,h) & clamp
+  let nx = cx - newW / 2, ny = cy - newH / 2;
+  nx = Math.max(0, Math.min(nx, overlayW - newW));
+  ny = Math.max(0, Math.min(ny, overlayH - newH));
+  newW = Math.min(newW, overlayW - nx);
+  newH = Math.min(newH, overlayH - ny);
+
+  return { x: nx, y: ny, width: newW, height: newH };
+}
+
+
+export default function FaceCheckin() {
+  // ===== Refs & state =====
+  const videoRef = useRef(null);
+  const overlayRef = useRef(null);
+  const canvasRef = useRef(null); // nếu cần chụp ẩn
+  const analysisCanvasRef = useRef(null);
+
+  const loopHandleRef = useRef(null);
+
+  const lastRecognizeAtRef = useRef(0);
+  const matchedRef = useRef(null);
+  const previewTokenRef = useRef(null);
+  const stableStartRef = useRef(null);
+
+  const smoothBoxRef = useRef(null);
+  const lastFacesRef = useRef([]);
+  const lastFaceTsRef = useRef(0);
+  const boxHistoryRef = useRef([]); // lưu 5–7 bbox gần nhất
+  const lastDetectAtRef = useRef(0);
+  const detectorRef = useRef(null);
 
   const [ready, setReady] = useState(false);
+  const [detectorReady, setDetectorReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(false);
 
   const [matched, setMatched] = useState(null);        // { id, ho_ten } | null
   const [previewToken, setPreviewToken] = useState(null);
-  const [stableStart, setStableStart] = useState(null); // chỉ để hiển thị “đang chờ 2s…”
-  const analysisCanvasRef = useRef(null);
+  const [stableStart, setStableStart] = useState(null); // hiển thị “đang chờ 2s…”
+
   // Modal đơn giản
   const [modalOpen, setModalOpen] = useState(false);
   const [modalHtml, setModalHtml] = useState("");
@@ -41,61 +104,18 @@ export default function FaceCheckin() {
     setModalHtml(html);
     setModalType(type);
     setModalOpen(true);
-    setTimeout(() => {
-      setModalOpen(false);
-    }, 3000);
+    setTimeout(() => setModalOpen(false), 3000);
   }
-  const detectorRef = useRef(null);
-  function drawToAnalysisCanvas(targetW = 320) {
-    const v = videoRef.current;
-    const c = analysisCanvasRef.current || (analysisCanvasRef.current = document.createElement("canvas"));
-    if (!v || !v.videoWidth) return null;
-    const scale = targetW / v.videoWidth;
-    const w = Math.round(v.videoWidth * scale);
-    const h = Math.round(v.videoHeight * scale);
-    c.width = w; c.height = h;
-    const ctx = c.getContext("2d", { willReadFrequently: true, desynchronized: true });
-    ctx.drawImage(v, 0, 0, w, h);
-    return c;
-  }
-
-  useEffect(() => {
-    if ("FaceDetector" in window) {
-      detectorRef.current = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
-    }
-  }, []);
-
   function closeModal() { setModalOpen(false); }
 
-  // ===== Helpers =====
-  const dlog = (...args) => DEBUG && console.log("[FaceCheckin]", ...args);
-  const loopHandleRef = useRef(null);
-  const stopLoopRef = useRef(false);
-
-  function scheduleLoop(video) {
-    if (supportsRVFC() && video?.requestVideoFrameCallback) {
-      loopHandleRef.current = video.requestVideoFrameCallback((now, meta) => loop(now, meta));
-    } else {
-      loopHandleRef.current = requestAnimationFrame((now) => loop(now));
-    }
-  }
-
-  function cancelLoop(video) {
-    if (!loopHandleRef.current) return;
-    if (supportsRVFC() && video?.cancelVideoFrameCallback) {
-      video.cancelVideoFrameCallback(loopHandleRef.current);
-    } else {
-      cancelAnimationFrame(loopHandleRef.current);
-    }
-    loopHandleRef.current = null;
-  }
-
+  // ===== Overlay helpers =====
   function syncOverlaySize() {
     const video = videoRef.current;
     const overlay = overlayRef.current;
     if (!video || !overlay) return;
-    const w = video.videoWidth || video.clientWidth || 0;
-    const h = video.videoHeight || video.clientHeight || 0;
+
+    const w = video.videoWidth;
+    const h = video.videoHeight;
     if (!w || !h) return;
     overlay.width = w;
     overlay.height = h;
@@ -111,53 +131,92 @@ export default function FaceCheckin() {
   function drawBoxes(faces, label) {
     syncOverlaySize();
     const overlay = overlayRef.current;
-    if (!overlay) return;
+    if (!overlay || !overlay.width || !overlay.height) return;
     const ctx = overlay.getContext("2d");
     ctx.clearRect(0, 0, overlay.width, overlay.height);
 
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#0d6efd";
-    ctx.font = "16px Segoe UI, Tahoma, sans-serif";
-    const pad = 10, h = 26;
-
     faces.forEach((f) => {
-      const bb = f.boundingBox || {};
-      const x = bb.x, y = bb.y, width = bb.width, height = bb.height;
-      if (!width || !height) return;
-      ctx.strokeRect(x, y, width, height);
+      const bb0 = f.boundingBox || {};
+      let bb = padPortraitBox(bb0, 0.15, overlay.width, overlay.height);
+      bb = (smoothBoxRef.current = emaBox(smoothBoxRef.current, bb, 0.25));
 
-      if (!label) return; // không vẽ label nếu chưa có tên
-      const tw = ctx.measureText(label).width + pad * 2;
-      const bx = Math.max(10, Math.min(x, overlay.width - tw - 10));
-      const by = Math.max(10, y - h - 6);
-      ctx.fillStyle = "rgba(25,135,84,0.9)";
-      ctx.fillRect(bx, by, tw, h);
-      ctx.fillStyle = "#fff";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, bx + pad, by + h / 2);
+      if (MIRRORED) bb.x = overlay.width - (bb.x + bb.width);
+
+      // Clamp
+      bb.x = Math.max(0, Math.min(bb.x, overlay.width - 2));
+      bb.y = Math.max(0, Math.min(bb.y, overlay.height + 2));
+      bb.width = Math.max(2, Math.min(bb.width, overlay.width - bb.x));
+      bb.height = Math.max(2, Math.min(bb.height, overlay.height - bb.y));
+
+      // Vẽ
+      const pad = 10, lh = 26;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#00ff00";
+      ctx.strokeRect(bb.x, bb.y, bb.width, bb.height);
+
+      if (label) {
+        ctx.font = "16px Segoe UI, Tahoma, sans-serif";
+        const tw = ctx.measureText(label).width + pad * 2;
+        const bx = Math.max(10, Math.min(bb.x, overlay.width - tw - 10));
+        const by = Math.max(10, bb.y - lh - 6);
+        ctx.fillStyle = "rgba(25,135,84,0.9)";
+        ctx.fillRect(bx, by, tw, lh);
+        ctx.fillStyle = "#fff";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, bx + pad, by + lh / 2);
+      }
     });
   }
+  function median(arr) {
+    if (!arr.length) return 0;
+    const a = [...arr].sort((a, b) => a - b);
+    const m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  }
 
-  // Chụp frame hiện tại thành base64 jpeg
+  function medianBox(history) {
+    if (!history.length) return null;
+    return {
+      x: median(history.map(b => b.x)),
+      y: median(history.map(b => b.y)),
+      width: median(history.map(b => b.width)),
+      height: median(history.map(b => b.height)),
+    };
+  }
+
+  // ===== Chụp frame để gửi BE =====
+  function drawToAnalysisCanvas(targetW = 320) {
+    const v = videoRef.current;
+    const c = analysisCanvasRef.current || (analysisCanvasRef.current = document.createElement("canvas"));
+    if (!v || !v.videoWidth) return null;
+    const scale = targetW / v.videoWidth;
+    const w = Math.round(v.videoWidth * scale);
+    const h = Math.round(v.videoHeight * scale);
+    c.width = w; c.height = h;
+    const ctx = c.getContext("2d", { willReadFrequently: true, desynchronized: true });
+    ctx.drawImage(v, 0, 0, w, h);
+    return c;
+  }
+
   function snapBase64(quality = 0.85) {
-    const c = drawToAnalysisCanvas(360);   // 320–480 đều ổn; 360 là ngọt
+    const c = drawToAnalysisCanvas(360);
     if (!c) return null;
     return c.toDataURL("image/jpeg", quality);
   }
 
-  // Gom 6–8 frames trong ~1.2s để BE kiểm tra liveness thụ động
   async function collectFrames(durationMs = 1200, stepMs = 150, quality = 0.72) {
     const frames = [];
     const start = performance.now();
     while (performance.now() - start < durationMs) {
       const dataURL = snapBase64(quality);
       if (dataURL) frames.push(dataURL);
+      // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => setTimeout(r, stepMs));
     }
-    return frames; // ~20 frames
+    return frames;
   }
 
-  // Đo độ nét ảnh: Variance of Laplacian (approx)
+  // Độ nét ảnh – Variance of Laplacian (approx)
   function varianceOfLaplacian(imageData) {
     const gray = [];
     const data = imageData.data;
@@ -170,8 +229,7 @@ export default function FaceCheckin() {
     for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
         const idx = y * w + x;
-        const val =
-          -gray[idx - w] - gray[idx - 1] + 4 * gray[idx] - gray[idx + 1] - gray[idx + w];
+        const val = -gray[idx - w] - gray[idx - 1] + 4 * gray[idx] - gray[idx + 1] - gray[idx + w];
         lap.push(val);
       }
     }
@@ -180,15 +238,7 @@ export default function FaceCheckin() {
     return variance;
   }
 
-  function drawToCanvasAndGetImageData() {
-    const c = drawToAnalysisCanvas(320);
-    if (!c) return null;
-    const ctx = c.getContext("2d", { willReadFrequently: true });
-    return ctx.getImageData(0, 0, c.width, c.height);
-  }
-
-
-  // ===== API calls =====
+  // ===== API =====
   async function apiRecognize() {
     const dataURL = snapBase64(0.85);
     if (!dataURL) { dlog("No dataURL for recognize"); return null; }
@@ -208,7 +258,6 @@ export default function FaceCheckin() {
   }
 
   async function apiCheckinWithToken(token, frames) {
-    // Nếu có frames thì gửi frames; không thì fallback 1 ảnh như cũ
     const payload = (frames && frames.length)
       ? { frames, preview_token: token }
       : { image_base64: snapBase64(0.92), preview_token: token };
@@ -230,7 +279,7 @@ export default function FaceCheckin() {
     }
   }
 
-  // ===== Nhận diện nhanh: cập nhật state + ref ngay trong frame =====
+  // ===== Tick nhận diện nhanh =====
   async function recognizeTick(ts) {
     if (cooldown || loading) { dlog("skip recognize: cooldown/loading"); return; }
     if (ts - lastRecognizeAtRef.current < RECOGNIZE_EVERY) { return; }
@@ -239,12 +288,9 @@ export default function FaceCheckin() {
     const res = await apiRecognize();
     if (!res || !res.ok) {
       dlog("recognize failed or not ok");
-      setMatched(null);
-      matchedRef.current = null;
-      setPreviewToken(null);
-      previewTokenRef.current = null;
-      setStableStart(null);
-      stableStartRef.current = null;
+      setMatched(null); matchedRef.current = null;
+      setPreviewToken(null); previewTokenRef.current = null;
+      setStableStart(null); stableStartRef.current = null;
       return;
     }
 
@@ -255,10 +301,7 @@ export default function FaceCheckin() {
     const newId = nv?.id;
 
     if (prevId !== newId) {
-      // chỉ khi đổi người (hoặc mất người) mới cập nhật UI
-      matchedRef.current = nv;
-      setMatched(nv);
-
+      matchedRef.current = nv; setMatched(nv);
       const now = performance.now();
       stableStartRef.current = nv ? now : null;
       setStableStart(nv ? now : null);
@@ -266,69 +309,68 @@ export default function FaceCheckin() {
 
     previewTokenRef.current = token;
     setPreviewToken(token);
-    matchedRef.current = nv;     // token dùng ngay trong frame
+    matchedRef.current = nv;
   }
 
-  // ===== Vòng lặp chính =====
+  // ===== Loop chính =====
   async function loop(ts) {
-    if (!ready || cooldown || loading) {
+    if (!ready || !detectorReady || cooldown || loading) {
       scheduleLoop(videoRef.current);
-
       return;
     }
-
     const v = videoRef.current;
-    if (!v || !v.videoWidth) {
+    if (!v || !v.videoWidth || !v.videoHeight) {
       scheduleLoop(videoRef.current);
-
       return;
     }
 
     try {
-      if (window.FaceDetector) {
-        const faces = detectorRef.current ? await detectorRef.current.detect(v) : [];
+      if (detectorRef.current && typeof detectorRef.current.detect === "function") {
+        let faces = await detectorRef.current.detect(v);
+        dlog("detector=", detectorRef.current?.name, "faces=", faces?.length, faces?.[0]?.boundingBox);
 
+        // smoothing giữ khung 400ms nếu tạch 1-2 frame
+        const nowTs = performance.now();
+        if (!faces || faces.length === 0) {
+          if (nowTs - lastFaceTsRef.current < 400 && lastFacesRef.current.length) {
+            faces = lastFacesRef.current;
+          }
+        } else {
+          lastFacesRef.current = faces;
+          lastFaceTsRef.current = nowTs;
+        }
 
         if (faces && faces.length) {
-          // 1) Nhận diện TRƯỚC để có tên/token mới nhất
+          // 1) Nhận diện để lấy tên/token
           await recognizeTick(ts);
 
-          // 2) Vẽ khung với tên NV mới nhất (nếu có)
+          // 2) Vẽ khung
           const nvNow = matchedRef.current;
-          const label = nvNow
-            ? ` ${nvNow.ho_ten}${stableStartRef.current ? "" : ""}`
-            : "Chưa tìm thấy dữ liệu nhân viên"; // để trống nếu chưa match
+          const label = nvNow ? ` ${nvNow.ho_ten}${stableStartRef.current ? "" : ""}` : "Chưa tìm thấy dữ liệu nhân viên";
           drawBoxes(faces, label);
 
-          // 3) Nếu đã đủ ổn định + ảnh đủ nét → chấm công
-          const tokenNow = previewTokenRef.current; // dùng token mới nhất
-          const stableElapsed = stableStartRef.current
-            ? (performance.now() - stableStartRef.current)
-            : 0;
+          // 3) Nếu đủ ổn định + ảnh đủ nét → chấm công
+          const tokenNow = previewTokenRef.current;
+          const stableElapsed = stableStartRef.current ? (performance.now() - stableStartRef.current) : 0;
           const enoughStable = !!(nvNow && stableElapsed >= STABLE_MS);
-
-          dlog("check conditions:", {
-            nvId: nvNow?.id,
-            ho_ten: nvNow?.ho_ten,
-            stableElapsed: Math.round(stableElapsed),
-            enoughStable,
-            hasToken: !!tokenNow,
-          });
+          dlog("check conditions:", { nvId: nvNow?.id, ho_ten: nvNow?.ho_ten, stableElapsed: Math.round(stableElapsed), enoughStable, hasToken: !!tokenNow });
 
           if (enoughStable && tokenNow) {
-            const imgData = drawToCanvasAndGetImageData();
+            const imgData = (() => {
+              const c = drawToAnalysisCanvas(320);
+              if (!c) return null;
+              const ctx = c.getContext("2d", { willReadFrequently: true });
+              return ctx.getImageData(0, 0, c.width, c.height);
+            })();
             const sharp = imgData ? varianceOfLaplacian(imgData) : 0;
             dlog("sharp=", Math.round(sharp), "threshold=", BLUR_THRESHOLD);
 
             if (sharp >= BLUR_THRESHOLD) {
-              // Gom 6–8 frames (~1.2s) để BE làm liveness thụ động
               const frames = await collectFrames(2500, 120, 0.76);
               const result = await apiCheckinWithToken(tokenNow, frames);
               if (result.ok) {
                 const message = result.data?.message || "Thành công";
-                const nvName =
-                  (result.data?.nhan_vien && result.data.nhan_vien.ho_ten) ||
-                  (nvNow && nvNow.ho_ten) || "";
+                const nvName = (result.data?.nhan_vien && result.data.nhan_vien.ho_ten) || (nvNow && nvNow.ho_ten) || "";
                 const time = result.data?.time || "";
                 showModal(
                   `✅ ${message} <strong style="font-weight:900;">${nvName}</strong><br/>
@@ -337,51 +379,37 @@ export default function FaceCheckin() {
                 );
                 setCooldown(true);
                 if (loopHandleRef.current) cancelLoop(videoRef.current);
-
-                loopHandleRef.current = null;
-
                 setTimeout(() => {
                   setCooldown(false);
                   if (ready && !loopHandleRef.current) scheduleLoop(videoRef.current);
                 }, COOLDOWN_MS);
 
-
+                // reset nhận diện cho lượt sau
+                setMatched(null); matchedRef.current = null;
+                setPreviewToken(null); previewTokenRef.current = null;
+                setStableStart(null); stableStartRef.current = null;
               } else {
-                const nvName =
-                  (result.data?.name || (nvNow && nvNow.ho_ten))
-                    ? ` <strong style="font-weight:900;">${result.data?.name || nvNow.ho_ten}</strong>`
-                    : "";
+                const nvName = (result.data?.name || (nvNow && nvNow.ho_ten))
+                  ? ` <strong style="font-weight:900;">${result.data?.name || nvNow.ho_ten}</strong>` : "";
                 showModal(`❌ ${result.data?.message || "Chấm công thất bại"}${nvName}`, "danger");
               }
-
-              // reset nhận diện cho lượt sau
-              setMatched(null);
-              matchedRef.current = null;
-              setPreviewToken(null);
-              previewTokenRef.current = null;
-              setStableStart(null);
-              stableStartRef.current = null;
             } else {
               dlog("blocked: image too blur");
             }
-          } else {
-            if (!nvNow) dlog("blocked: no matched nv");
-            else if (!tokenNow) dlog("blocked: no preview token");
-            else dlog("blocked: not enough stable ms");
           }
         } else {
-          if (faces) dlog("no faces");
-          clearOverlay();
-          // mất mặt → reset
-          setMatched(null);
-          matchedRef.current = null;
-          setPreviewToken(null);
-          previewTokenRef.current = null;
-          setStableStart(null);
-          stableStartRef.current = null;
+          if (performance.now() - lastFaceTsRef.current >= 400) {
+            clearOverlay();
+            // reset khi mất mặt đủ lâu
+            setMatched(null); matchedRef.current = null;
+            setPreviewToken(null); previewTokenRef.current = null;
+            setStableStart(null); stableStartRef.current = null;
+            smoothBoxRef.current = null;
+            lastFacesRef.current = [];
+          }
         }
       } else {
-        dlog("FaceDetector not supported");
+        dlog("Detector not ready/available");
         clearOverlay();
       }
     } catch (e) {
@@ -389,29 +417,65 @@ export default function FaceCheckin() {
       clearOverlay();
     } finally {
       scheduleLoop(videoRef.current);
-
     }
   }
 
-  // ===== Lifecycle =====
+  function scheduleLoop(video) {
+    if (supportsRVFC() && video?.requestVideoFrameCallback) {
+      loopHandleRef.current = video.requestVideoFrameCallback((now, meta) => loop(now, meta));
+    } else {
+      loopHandleRef.current = requestAnimationFrame((now) => loop(now));
+    }
+  }
+  function cancelLoop(video) {
+    if (!loopHandleRef.current) return;
+    if (supportsRVFC() && video?.cancelVideoFrameCallback) {
+      video.cancelVideoFrameCallback(loopHandleRef.current);
+    } else {
+      cancelAnimationFrame(loopHandleRef.current);
+    }
+    loopHandleRef.current = null;
+  }
+
+  // ===== Khởi tạo detector (fallback) =====
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const det = await createFaceDetector();
+        if (!cancelled) {
+          detectorRef.current = det;
+          setDetectorReady(true);
+          dlog("Using detector:", det?.name);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          detectorRef.current = null;
+          setDetectorReady(false);
+          console.error("Detector init error", e);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ===== Lifecycle camera =====
   useEffect(() => {
     let stream = null;
-    const playOnceRef = { current: false }; // chặn gọi play() nhiều lần
+    const playOnceRef = { current: false };
 
     const tryPlay = (video) => {
       if (!video || playOnceRef.current) return;
       playOnceRef.current = true;
-      // playsInline + muted giúp autoplay ổn trên iOS/Chrome
       video.playsInline = true;
       video.muted = true;
       syncOverlaySize();
       video.play().then(() => {
         setReady(true);
-        dlog("camera ready");
+        dlog("camera ready", { width: video.videoWidth, height: video.videoHeight });
       }).catch((err) => {
-        // AbortError do load mới -> bỏ qua, cho phép oncanplay gọi lại
         if (err?.name === "AbortError") {
-          playOnceRef.current = false; // cho phép thử lại khi canplay
+          playOnceRef.current = false;
         } else {
           console.warn("video.play() error:", err);
         }
@@ -421,22 +485,19 @@ export default function FaceCheckin() {
     (async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: 480, height: 360 },
+          video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
           audio: false,
         });
         const video = videoRef.current;
         if (video) {
-          // Gắn handlers TRƯỚC khi gán srcObject để không bỏ lỡ sự kiện
           const onLoadedMeta = () => tryPlay(video);
           const onCanPlay = () => tryPlay(video);
           video.addEventListener("loadedmetadata", onLoadedMeta);
           video.addEventListener("canplay", onCanPlay);
 
           video.srcObject = stream;
-          // Nếu HMR hoặc readyState đã sẵn sàng, thử play ngay
           if (video.readyState >= 2) tryPlay(video);
 
-          // cleanup handlers khi unmount
           return () => {
             video.removeEventListener("loadedmetadata", onLoadedMeta);
             video.removeEventListener("canplay", onCanPlay);
@@ -452,10 +513,8 @@ export default function FaceCheckin() {
     const onVis = () => {
       if (document.hidden) {
         if (loopHandleRef.current) cancelLoop(videoRef.current);
-        loopHandleRef.current = null;
-      } else if (!loopHandleRef.current && ready) {
+      } else if (!loopHandleRef.current && ready && detectorReady) {
         scheduleLoop(videoRef.current);
-
       }
     };
     window.addEventListener("resize", onResize);
@@ -465,27 +524,20 @@ export default function FaceCheckin() {
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVis);
       if (loopHandleRef.current) cancelLoop(videoRef.current);
-
-      loopHandleRef.current = null;
-
-      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (stream) stream.getTracks().forEach((t) => t.stop());
     };
+  }, [detectorReady]);
 
-  }, []);
-
-
+  // Start loop khi camera & detector đã sẵn sàng
   useEffect(() => {
-    if (ready && !loopHandleRef.current) {
+    if (ready && detectorReady && !loopHandleRef.current) {
       scheduleLoop(videoRef.current);
-
     }
     return () => {
       if (loopHandleRef.current) cancelLoop(videoRef.current);
-
-      loopHandleRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
+  }, [ready, detectorReady]);
 
   return (
     <div
@@ -503,7 +555,16 @@ export default function FaceCheckin() {
       </p>
 
       {/* Video + overlay */}
-      <div className="position-relative d-inline-block" style={{ width: "100%", maxWidth: 500 }}>
+      <div
+        className="position-relative d-inline-block"
+        style={{
+          width: "100%",
+          maxWidth: 500,
+          borderRadius: 12,
+          border: "2px solid #2b2b2b",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+        }}
+      >
         <video
           ref={videoRef}
           autoPlay
@@ -513,10 +574,10 @@ export default function FaceCheckin() {
             width: "100%",
             height: "auto",
             borderRadius: 12,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            border: "2px solid #2b2b2b",
             backgroundColor: "#000",
             display: "block",
+            // Nếu cần mirror selfie:
+            // transform: "scaleX(-1)",
           }}
         />
         <canvas
@@ -536,18 +597,17 @@ export default function FaceCheckin() {
       <div className="mt-3">
         {matched && (
           <div className="mb-2">
-            <strong>{stableStart && <span> · đang chờ 2s…</span>}</strong>
-
+            <strong>{stableStart && <span> Giữ 2giây để chấm công</span>}</strong>
           </div>
         )}
         {loading ? (
           <span className="badge bg-warning text-dark px-3 py-2">Đang xử lý…</span>
         ) : cooldown ? (
           <span className="badge bg-secondary px-3 py-2">Vui lòng đợi {COOLDOWN_MS / 1000}s</span>
-        ) : ready ? (
+        ) : ready && detectorReady ? (
           <span className="badge bg-success px-3 py-2">Sẵn sàng</span>
         ) : (
-          <span className="badge bg-danger px-3 py-2">Camera chưa sẵn sàng</span>
+          <span className="badge bg-danger px-3 py-2">Camera/Detector chưa sẵn sàng</span>
         )}
       </div>
 
@@ -557,13 +617,11 @@ export default function FaceCheckin() {
             <div className="modal-content">
               <div className="modal-header"><h5 className="modal-title">Thông báo</h5></div>
               <div className="modal-body" dangerouslySetInnerHTML={{ __html: modalHtml }} />
-              <div className="modal-footer">
-
-              </div>
+              <div className="modal-footer"></div>
             </div>
           </div>
         </div>
       )}
     </div>
   );
-}
+} 
