@@ -47,7 +47,7 @@ DEBUG_LIVENESS         = os.getenv("DEBUG_LIVENESS", "0") == "1"
 
 # ====== CRUD cơ bản ======
 def get_all_cham_cong_service():
-    return ChamCong.query.order_by(ChamCong.ngay.desc()).all()
+    return ChamCong.query.order_by(ChamCong.id.desc()).all()
 
 def get_cham_cong_by_id_service(id):
     chamcong = ChamCong.query.get(id)
