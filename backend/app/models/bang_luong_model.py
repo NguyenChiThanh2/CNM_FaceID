@@ -13,8 +13,12 @@ class BangLuong(db.Model):
     nghi_phep = db.Column(db.Integer, default=0)
     tong_ngay_lam_le = db.Column(db.Float, default=0.0)
     tong_tien_lam_le = db.Column(db.Float, default=0.0)
+    tong_ngay_cuoi_tuan = db.Column(db.Float, default=0.0)
+    tong_tien_cuoi_tuan = db.Column(db.Float, default=0.0)
+    
     tong_gio_tang_ca = db.Column(db.Float, default=0.0)
     tong_tien_tang_ca = db.Column(db.Float, default=0.0)
+    
     tong_khau_tru = db.Column(db.Float, default=0.0) 
     tong_phu_cap = db.Column(db.Float, default=0.0)
     tong_thuong = db.Column(db.Float, default=0.0)
@@ -53,6 +57,8 @@ class BangLuong(db.Model):
             "tong_luong": self.tong_luong,
             "thuc_nhan": self.thuc_nhan,
             "chi_tiet_luong": [ct.to_dict() for ct in self.chi_tiet_luong_bang_luong],
-            "ghi_chu": self.ghi_chu
+            "ghi_chu": self.ghi_chu,
+            "tong_ngay_cuoi_tuan": self.tong_ngay_cuoi_tuan,
+            "tong_tien_cuoi_tuan": self.tong_tien_cuoi_tuan,
         }
     

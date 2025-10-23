@@ -17,9 +17,8 @@ class NhanVien(db.Model):
     avatar = db.Column(db.String(255), nullable=True)
     trang_thai = db.Column(db.String(50))
     so_ngay_phep_con_lai = db.Column(db.Integer, default=12)
-    password = db.Column(db.String(120), nullable=False)
     face_encoding = db.Column(db.PickleType, nullable=True)
-
+    password = db.Column(db.String(255)) 
     # Relationships
     phong_ban = db.relationship('PhongBan', back_populates='phong_ban_nv', lazy=True)
     chuc_vu_nv = db.relationship('ChucVu', back_populates='chuc_vu_nv', lazy=True)
@@ -49,12 +48,22 @@ class NhanVien(db.Model):
     giayphep_nv = db.relationship("GiayPhep", foreign_keys='GiayPhep.nhan_vien_id', back_populates="giayphep_nv", lazy=True)
     giayphep_nguoi_duyet = db.relationship("GiayPhep", foreign_keys='GiayPhep.nguoi_duyet_id',back_populates="nguoi_duyet", lazy=True)
     
+    # khautru_list = db.relationship(
+    #     'KhauTru',
+    #     secondary='khautru_nhanvien',
+    #     back_populates='nhan_viens'
+    # )
     khautru_list = db.relationship(
-        'KhauTru',
-        secondary='khautru_nhanvien',
-        back_populates='nhan_viens'
+        "KhauTru",
+        secondary="khautru_nhanvien",
+        back_populates="nhan_viens",
+        overlaps="khautru_nhanvien_list,nhan_vien"
     )
-    
+    khautru_nhanvien_list = db.relationship(
+        "KhauTruNhanVien",
+        back_populates="nhan_vien",
+        overlaps="khautru_list,nhan_viens"
+    )
 
     def __repr__(self):
         return f"<NhanVien {self.ho_ten}>"

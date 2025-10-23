@@ -191,7 +191,7 @@ def generate_cham_cong_data(start_nhan_vien_id, end_nhan_vien_id, thang, nam):
 if __name__ == "__main__":
     # Ví dụ 1: Tạo dữ liệu cho nhân viên từ 2 đến 30
     print("=== Dữ liệu cho nhân viên 2-30 ===")
-    sql_1 = generate_cham_cong_data(4, 30, 4, 2025)
+    sql_1 = generate_cham_cong_data(1, 30, 4, 2025)
     print(sql_1)
     
     print("\n" + "="*50 + "\n")

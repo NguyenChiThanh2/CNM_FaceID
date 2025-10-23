@@ -9,8 +9,18 @@ class KhauTruNhanVien(db.Model):
     nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id', ondelete='CASCADE'), nullable=False)
     so_tien_thuc_te = db.Column(db.Numeric(15, 2), nullable=True)
 
-    khau_tru = db.relationship('KhauTru', backref=db.backref('khautru_nhanvien_list', cascade="all, delete-orphan"))
-    nhan_vien = db.relationship('NhanVien', backref=db.backref('khautru_nhanvien_list', cascade="all, delete-orphan"))
+    # khau_tru = db.relationship('KhauTru', backref=db.backref('khautru_nhanvien_list', cascade="all, delete-orphan"))
+    # nhan_vien = db.relationship('NhanVien', backref=db.backref('khautru_nhanvien_list', cascade="all, delete-orphan"))
+    nhan_vien = db.relationship(
+        "NhanVien",
+        back_populates="khautru_nhanvien_list",
+        overlaps="khautru_list,nhan_viens"
+    )
+    khau_tru = db.relationship(
+        "KhauTru",
+        back_populates="khautru_nhanvien_list",
+        overlaps="khautru_list,nhan_viens"
+    )
 
     def __repr__(self):
         return f"<KhauTruNhanVien loai={self.khau_tru.loai_khau_tru}, so_tien={self.khau_tru.so_tien}, ten_khau_tru={self.khau_tru.ten_khau_tru}, so_tien_thuc_te={self.so_tien_thuc_te} >"
