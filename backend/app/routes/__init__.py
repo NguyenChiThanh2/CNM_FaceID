@@ -34,7 +34,7 @@ def register_routes(app):
     app.register_blueprint(phong_ban_bp, url_prefix='/api')
     app.register_blueprint(nghi_phep_bp, url_prefix='/api')
     app.register_blueprint(luong_bp, url_prefix='/api')
-    app.register_blueprint(danh_gia_bp, url_prefix='/api')
+    app.register_blueprint(danh_gia_bp, url_prefix='/api/danhgia')
     app.register_blueprint(chuc_vu_bp, url_prefix='/api')
     app.register_blueprint(cham_cong_bp)
     app.register_blueprint(face_bp)

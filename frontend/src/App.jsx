@@ -26,7 +26,7 @@ import KhauTru from "./pages/modules/QuanLyKhauTru";
 import NgayNghiLe from "./pages/modules/QuanLyNgayNghiLe";
 import MacGuard from "./pages/MacGuard";
 import NguoiPhuThuocPage from "./pages/modules/QuanLyNguoiPhuThuoc";
-
+import "./styles/danhgia.css";
 const AppLayout = () => {
   const location = useLocation();
   const hideNavbarPaths = ["/dang-nhap", "/404", "/cham-cong-face"];

@@ -4,7 +4,9 @@
   height: 100%;
   top: 0;
 }
-html, body {
+
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -17,9 +19,11 @@ html, body {
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -28,6 +32,7 @@ html, body {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -72,3 +77,67 @@ html, body {
   transition: color 0.25s ease-in-out;
 }
 
+/* Ngăn xuống dòng toàn bảng, giúp ellipsis hoạt động ổn định */
+.table-nowrap td,
+.table-nowrap th {
+  white-space: nowrap;
+}
+
+/* Dấu … cho nội dung dài */
+.td-ellipsis {
+  max-width: 240px;
+  /* điều chỉnh theo layout của bạn */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bản mở rộng dùng cho cột Phòng ban */
+.td-ellipsis-lg {
+  max-width: 320px;
+}
+
+/* Thu gọn padding để đỡ tràn */
+.table-compact td,
+.table-compact th {
+  padding-top: .55rem;
+  padding-bottom: .55rem;
+}
+/* Tổng thể bảng gọn hơn */
+.table-compact > :not(caption) > * > * { padding: .55rem .6rem; vertical-align: middle; }
+
+/* Ellipsis helper (đã có, bổ sung chút) */
+.td-ellipsis { max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.td-ellipsis-lg { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Ô minh chứng: xếp chip đều, không bị “lồi lõm” */
+.evidence-cell { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+
+/* Nút minh chứng kiểu chip */
+.evidence-chip {
+  --h: 28px;
+  min-width: 40px;
+  height: var(--h);
+  line-height: calc(var(--h) - 2px);
+  padding: 0 .6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: .85rem;
+  border: 1px solid #dfe3e6;
+  background: #f8f9fa;  /* sáng nhẹ */
+  color: #343a40;
+}
+.evidence-chip:hover { background: #eef1f4; border-color: #d0d7de; }
+.evidence-chip:focus { box-shadow: none; }
+
+/* Chip disabled (thiếu minh chứng) */
+.evidence-chip[disabled] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* Làm header “đậm mà tinh” */
+.table thead.table-dark th {
+  background: #161b22 !important;
+  border-color: #222 !important;
+}

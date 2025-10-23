@@ -22,7 +22,7 @@ CHECKIN_DIR = os.path.join("static", "checkin_images")
 os.makedirs(CHECKIN_DIR, exist_ok=True)
 # ====== STRICT MODE ======
 STRICT_MODE            = os.getenv("LIVENESS_STRICT", "1") == "1"
-MIN_FRAMES             = int(os.getenv("LIVENESS_MIN_FRAMES", "12"))
+MIN_FRAMES             = int(os.getenv("LIVENESS_MIN_FRAMES", "8"))
 
 # Ngưỡng nền
 LAPLACIAN_MIN          = float(os.getenv("LIVENESS_LAPLACIAN_MIN",  "18")) # Độ nét tối thiểu
@@ -42,7 +42,7 @@ FACE_AREA_MIN          = float(os.getenv("LIVENESS_FACE_AREA_MIN", "0.20"))
 FACE_AREA_MAX          = float(os.getenv("LIVENESS_FACE_AREA_MAX", "0.70"))
 
 DEBUG_LIVENESS         = os.getenv("DEBUG_LIVENESS", "0") == "1"
-
+MIN_GAP_BETWEEN_CHECKINS = timedelta(minutes=1)
 
 
 # ====== CRUD cơ bản ======
@@ -507,16 +507,87 @@ def create_cham_cong_from_face_service_passive(payload):
 
     cc = ChamCong.query.filter_by(nhan_vien_id=nv.id, ngay=today).first()
     if not cc:
+        # lần đầu trong ngày -> VÀO
         cc = ChamCong(nhan_vien_id=nv.id, thoi_gian_vao=now, ngay=today, hinh_anh_vao=filename)
         db.session.add(cc)
         db.session.commit()
-        return {"ok": True, "message": "Chấm công vào thành công", "nhan_vien": {"id": nv.id, "ho_ten": nv.ho_ten}, "time": time_str, "cham_cong": cc.to_dict()}, 200
+        return {
+            "ok": True,
+            "message": "Chấm công vào thành công",
+            "nhan_vien": {"id": nv.id, "ho_ten": nv.ho_ten},
+            "time": time_str,
+            "cham_cong": cc.to_dict(),
+        }, 200
     elif cc.thoi_gian_ra is None:
+        # đang có VÀO rồi, chuẩn bị RA -> kiểm tra đủ gap chưa
+        try:
+            vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
+
+            def _ensure_aware(dt, tz):
+                if dt is None:
+                    return None
+                # Nếu dt chưa có tz -> gán tz VN; nếu có -> chuyển về VN tz
+                return tz.localize(dt) if dt.tzinfo is None else dt.astimezone(tz)
+
+            last_in = _ensure_aware(cc.thoi_gian_vao, vn_tz)
+            now_local = _ensure_aware(now, vn_tz)  # now ở trên đã là aware, đoạn này chỉ để đồng nhất
+
+            if last_in is None:
+                # Không có thoi_gian_vao hợp lệ -> fail-safe
+                return {
+                    "ok": False,
+                    "message": "Không tìm thấy thời gian vào để đối chiếu. Vui lòng thử lại.",
+                    "name": nv.ho_ten,
+                }, 400
+
+            gap = now_local - last_in
+            if gap < MIN_GAP_BETWEEN_CHECKINS:
+                left = MIN_GAP_BETWEEN_CHECKINS - gap
+                mins = int(left.total_seconds() // 60)
+                secs = int(left.total_seconds() % 60)
+
+                # Thông điệp động theo cấu hình MIN_GAP_BETWEEN_CHECKINS
+                target_mins = int(MIN_GAP_BETWEEN_CHECKINS.total_seconds() // 60)
+                target_secs = int(MIN_GAP_BETWEEN_CHECKINS.total_seconds() % 60)
+                target_str = (
+                    f"{target_mins} phút" if target_secs == 0
+                    else f"{target_mins} phút {target_secs} giây"
+                )
+
+                return {
+                    "ok": False,
+                    "message": f"Chưa đủ {target_str} từ lần chấm gần nhất. Vui lòng thử lại sau {mins} phút {secs} giây.",
+                    "name": nv.ho_ten,
+                    "debug": {
+                        "last_in": last_in.isoformat(),
+                        "now": now_local.isoformat(),
+                        "gap_seconds": int(gap.total_seconds()),
+                        "required_seconds": int(MIN_GAP_BETWEEN_CHECKINS.total_seconds()),
+                    }
+                }, 400
+
+        except Exception as e:
+            # nếu lỗi tz/so sánh -> fail-safe nhưng có debug
+            return {
+                "ok": False,
+                "message": "Không thể xác minh khoảng cách giữa 2 lần chấm. Vui lòng thử lại sau.",
+                "name": nv.ho_ten,
+                "error": str(e),
+            }, 400
+
+        # đủ gap -> cho RA
         cc.thoi_gian_ra = now
         cc.hinh_anh_ra = filename
         db.session.commit()
-        return {"ok": True, "message": "Chấm công ra thành công", "nhan_vien": {"id": nv.id, "ho_ten": nv.ho_ten}, "time": time_str, "cham_cong": cc.to_dict()}, 200
+        return {
+            "ok": True,
+            "message": "Chấm công ra thành công",
+            "nhan_vien": {"id": nv.id, "ho_ten": nv.ho_ten},
+            "time": time_str,
+            "cham_cong": cc.to_dict(),
+        }, 200
     else:
+        # đã đủ vào/ra trong ngày
         return {"ok": False, "message": "Hôm nay đã chấm đủ vào/ra", "name": nv.ho_ten}, 400
 
 # ====== Backward-compat (API cũ: 1 ảnh, không token) ======
@@ -627,4 +698,4 @@ def get_tinhsocong_theogiayphep_service(id):
         return {"success": message}, 200
     except Exception as e:
         db.session.rollback()
-        return {"error": str(e)}, 500
+        return {"error": str(e)}, 500 

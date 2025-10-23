@@ -1,35 +1,36 @@
-# app/routes/danh_gia_routers.py
+# app/routes/danh_gia_routes.py
 from flask import Blueprint
-from app.controllers.danh_gia_controller import *
+from app.controllers import danh_gia_controller
 
-danh_gia_bp = Blueprint('danh_gia_bp', __name__)
+# Nên có prefix rõ ràng:
+danh_gia_bp = Blueprint("danh_gia", __name__)
 
-# Lấy tất cả đánh giá
-@danh_gia_bp.route('/get-all-danh-gia', methods=['GET'])
-def get_all_danh_gia_router():
-    return get_all_danh_gia()
+# Danh sách + lọc
+@danh_gia_bp.route("", methods=["GET"])
+def list_danh_gia():
+    return danh_gia_controller.list_danh_gia_controller()
 
-# Lấy đánh giá theo ID
-@danh_gia_bp.route('/get-danh-gia-by-id/<int:id>', methods=['GET'])
-def get_danh_gia_by_id_router(id):
-    return get_danh_gia_by_id(id)
+# Lấy 1 bản ghi
+@danh_gia_bp.route("/<int:id>", methods=["GET"])
+def get_danh_gia(id):
+    return danh_gia_controller.get_danh_gia_controller(id)
 
-# Lấy tất cả đánh giá của một nhân viên theo ID nhân viên
-@danh_gia_bp.route('/get-danh-gia-by-nhan-vien-id/nhan-vien/<int:nhan_vien_id>', methods=['GET'])
-def get_danh_gia_by_nhan_vien_id_router(nhan_vien_id):
-    return get_danh_gia_by_nhan_vien_id(nhan_vien_id)
+# Tạo mới
+@danh_gia_bp.route("", methods=["POST"])
+def create_danh_gia():
+    return danh_gia_controller.create_danh_gia_controller()
 
-# Tạo đánh giá mới
-@danh_gia_bp.route('/add-danh-gia', methods=['POST'])
-def create_danh_gia_router():
-    return create_danh_gia()
+# Cập nhật
+@danh_gia_bp.route("/<int:id>", methods=["PUT", "PATCH"])
+def update_danh_gia(id):
+    return danh_gia_controller.update_danh_gia_controller(id)
 
-# Cập nhật đánh giá theo ID
-@danh_gia_bp.route('/eidt-danh-gia/<int:id>', methods=['PUT'])
-def update_danh_gia_router(id):
-    return update_danh_gia(id)
+# Xóa
+@danh_gia_bp.route("/<int:id>", methods=["DELETE"])
+def delete_danh_gia(id):
+    return danh_gia_controller.delete_danh_gia_controller(id)
 
-# Xóa đánh giá theo ID
-@danh_gia_bp.route('/delete-danh-gia/<int:id>', methods=['DELETE'])
-def delete_danh_gia_router(id):
-    return delete_danh_gia(id)
+# Đổi trạng thái (DRAFT/SUBMITTED/APPROVED/REJECTED)
+@danh_gia_bp.route("/<int:id>/status", methods=["PATCH"])
+def change_status(id):
+    return danh_gia_controller.change_status_controller(id)
