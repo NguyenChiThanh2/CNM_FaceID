@@ -851,20 +851,6 @@ const QuanLyLuong = () => {
               </div>
 
               {/* non-HR không hiển thị switch “tính tất cả” */}
-              {isHR && (
-                <div className="form-check mt-3">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id="tinhTatCa"
-                    checked={isTinhTatCa}
-                    onChange={(e) => setIsTinhTatCa(e.target.checked)}
-                  />
-                  <label className="form-check-label" htmlFor="tinhTatCa">
-                    Tính lương tất cả nhân viên
-                  </label>
-                </div>
-              )}
             </Modal.Body>
             <Modal.Footer>
               <Button variant="secondary" onClick={() => setShowModal(false)}>
