@@ -1,8 +1,28 @@
 // src/pages/modules/QuanLyChamCong.jsx
 import React, { useState, useEffect, useMemo } from "react";
-import { Button, Breadcrumb, Spinner } from "react-bootstrap";
+import { 
+  Button, 
+  Breadcrumb, 
+  Spinner, 
+  Card, 
+  Row, 
+  Col, 
+  Form,
+  Table,
+  Badge
+} from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
+import { 
+  FaHome, 
+  FaSearch, 
+  FaEdit, 
+  FaTrash, 
+  FaClock,
+  FaUserClock,
+  FaImage,
+  FaCalendarAlt
+} from "react-icons/fa";
 
 import {
   searchNhanVienByName,
@@ -11,6 +31,7 @@ import {
   getAllNhanVien,
 } from "../../services/chamCongApi";
 import axiosInstance from "../../services/axiosInstance";
+import Loading from "../../../src/components/Loading";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -25,7 +46,7 @@ const QuanLyChamCong = () => {
   const [dsNhanVien, setDsNhanVien] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState(""); // filter trong bảng
   const [loadingTable, setLoadingTable] = useState(false);
-
+  const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   const navigate = useNavigate();
@@ -34,6 +55,7 @@ const QuanLyChamCong = () => {
   const API_BASE =
     (axiosInstance.defaults.baseURL || "").replace(/\/+$/, "") ||
     (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api");
+  
   const getUserInfo = () => {
     try {
       const storedUser = localStorage.getItem("user");
@@ -53,11 +75,14 @@ const QuanLyChamCong = () => {
       return null;
     }
   };
-  const HR_DEPARTMENT_ID = 2; // 👈 chỉnh đúng ID phòng nhân sự
+  
+  const HR_DEPARTMENT_ID = 2;
   const userInfo = getUserInfo();
+
   // ====== Load dữ liệu ban đầu ======
   useEffect(() => {
     (async () => {
+      setLoading(true);
       setLoadingTable(true);
       try {
         const [chamCong, nhanVien] = await Promise.all([
@@ -72,13 +97,13 @@ const QuanLyChamCong = () => {
         }
 
         setChamCongList(list);
-
         setDsNhanVien(Array.isArray(nhanVien) ? nhanVien : []);
       } catch (error) {
         console.error(error);
         toast.error("Không thể tải dữ liệu chấm công/nhân viên!");
       } finally {
         setLoadingTable(false);
+        setLoading(false);
       }
     })();
   }, []);
@@ -115,7 +140,6 @@ const QuanLyChamCong = () => {
   const formatTime = (d) => {
     if (!d) return "-";
     const dt = new Date(d);
-    // nếu backend trả chuỗi custom -> giữ nguyên
     return isNaN(dt)
       ? d
       : dt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
@@ -123,29 +147,24 @@ const QuanLyChamCong = () => {
 
   const getImgUrl = (file) => (file ? `${API_BASE}/checkin_images/${file}` : "");
 
-  // const handleDelete = async (id) => {
-  //   if (!window.confirm("Bạn có chắc muốn xóa chấm công này không?")) return;
-  //   try {
-  //     await toast.promise(
-  //       axios.delete(`http://127.0.0.1:5000/api/delete-cham-cong/${id}`),
-  //       {
-  //         pending: "Đang xóa chấm công...",
-  //         success: "Đã xóa chấm công!",
-  //         error: "Xóa chấm công thất bại!",
-  //       }
-  //     );
-  //     // làm mới dữ liệu & về trang 1 để tránh trang trống
-  //     await fetchChamCong();
-  //     setCurrentPage(1);
-  //   } catch (error) {
-  //     // lỗi đã được toast.promise hiển thị
-  //     console.error("Lỗi khi xóa chấm công:", error);
-  //   }
-  // };
-
-  // const handleRowClick = (chamCong) => {
-  //   navigate(`/cham-cong/${chamCong.id}`);
-  // };
+  const getStatusBadge = (chamCong) => {
+    if (chamCong.trang_thai) {
+      return (
+        <Badge bg={
+          chamCong.trang_thai === "Hoàn tất" ? "success" :
+          chamCong.trang_thai === "Đi trễ" ? "warning" :
+          chamCong.trang_thai === "Vắng mặt" ? "danger" : "secondary"
+        }>
+          {chamCong.trang_thai}
+        </Badge>
+      );
+    }
+    return (
+      <Badge bg={chamCong.thoi_gian_ra ? "success" : "primary"}>
+        {chamCong.thoi_gian_ra ? "Hoàn tất" : "Chưa ra"}
+      </Badge>
+    );
+  };
 
   // --- Tìm kiếm theo ngày (chuỗi) hoặc tên NV
   const filteredList = chamCongList.filter((cc) => {
@@ -154,16 +173,6 @@ const QuanLyChamCong = () => {
     const key = (searchKeyword || "").toLowerCase();
     return ngayStr.toLowerCase().includes(key) || tenNhanVien.includes(key);
   });
-  // ====== Lọc & phân trang tối ưu ======
-  // const filteredList = useMemo(() => {
-  //   const key = (searchKeyword || "").toLowerCase();
-  //   return chamCongList.filter((cc) => {
-  //     const ngayStr = formatDate(cc.ngay).toLowerCase();
-  //     const tenNhanVien = getTenNhanVien(cc.nhan_vien_id).toLowerCase();
-  //     return ngayStr.includes(key) || tenNhanVien.includes(key);
-  //   });
-  // }, [chamCongList, dsNhanVien, searchKeyword]);
-
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / ITEMS_PER_PAGE));
 
@@ -176,11 +185,6 @@ const QuanLyChamCong = () => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   };
-  // const handleRowClick_tennv = (nv) => {
-  //   navigate(`/cham-cong-nhan-vien/${nv.id}`); 
-  // };
-
-
 
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa chấm công này không?")) return;
@@ -206,179 +210,309 @@ const QuanLyChamCong = () => {
   const handleRowClick_tennv = (nv) => navigate(`/cham-cong-nhan-vien/${nv.id}`);
 
   // ====== Render ======
+  if (loading)
+        return (
+          <div>
+            <ToastContainer position="top-right" autoClose={2000} />
+            <Loading />
+          </div>
+        );
   return (
-    <div className="container min-vh-100">
-      <div className="row">
-        <div className="col-12 mt-5">
-          <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
-            <Breadcrumb.Item active>Quản lý chấm công</Breadcrumb.Item>
-          </Breadcrumb>
+    <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
+      <ToastContainer position="top-right" autoClose={2000} />
 
-          <Button variant="secondary" onClick={() => navigate("/")}>
-            ← Trang chủ
+      {/* Header Section */}
+      <div 
+        className="rounded-4 mb-4 shadow-sm"
+        style={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          padding: "2rem",
+          color: "white"
+        }}
+      >
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <Breadcrumb className="mb-3">
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                <FaHome className="me-2" />
+                Trang chủ
+              </Breadcrumb.Item>
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                Quản lý chấm công
+              </Breadcrumb.Item>
+            </Breadcrumb>
+            <h1 className="fw-bold mb-2">⏰ Quản lý Chấm công</h1>
+            <p className="mb-0 opacity-90">
+              Theo dõi và quản lý lịch sử chấm công của nhân viên
+            </p>
+          </div>
+          <Button 
+            variant="outline-light" 
+            onClick={() => navigate("/")}
+            className="border-0"
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(10px)"
+            }}
+          >
+            <FaHome className="me-2" />
+            Trang chủ
           </Button>
+        </div>
+      </div>
 
-          <h2 className="mb-4 text-center">Quản lý chấm công</h2>
-
-          {/* Search gợi ý nhân viên */}
-          {userInfo?.phong_ban_id === HR_DEPARTMENT_ID && (
-            <div className="mb-2">
-              <input
+      {/* Search Employee for HR */}
+      {userInfo?.phong_ban_id === HR_DEPARTMENT_ID && (
+        <Card className="shadow-sm border-0 rounded-4 mb-4">
+          <Card.Header 
+            style={{
+              background: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
+              color: "white",
+              fontWeight: "600"
+            }}
+          >
+            <FaSearch className="me-2" />
+            Tìm kiếm Nhân viên
+          </Card.Header>
+          <Card.Body className="p-4">
+            <div className="position-relative">
+              <FaSearch className="position-absolute top-50 start-3 translate-middle-y text-muted" />
+              <Form.Control
                 type="text"
+                placeholder="Nhập tên nhân viên để tìm kiếm..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Nhập tên nhân viên..."
-                className="form-control"
+                style={{ paddingLeft: "2.5rem" }}
               />
-              <div className="list-group w-auto mb-4">
-                {loadingSearch && (
-                  <div className="px-3 py-2 text-muted small">Đang tìm...</div>
-                )}
-                {!loadingSearch &&
-                  results.map((nv) => (
-                    <button
-                      type="button"
-                      className="list-group-item list-group-item-action"
-                      key={nv.id}
-                      onClick={() => handleRowClick_tennv(nv)}
-                    >
-                      {nv.ho_ten}
-                    </button>
-                  ))}
-              </div>
             </div>
-          )}
+            
+            {loadingSearch && (
+              <div className="text-center mt-3">
+                <Spinner animation="border" size="sm" variant="primary" />
+                <span className="ms-2 text-muted">Đang tìm kiếm...</span>
+              </div>
+            )}
+            
+            {!loadingSearch && results.length > 0 && (
+              <Card className="mt-3 border-0 shadow-sm">
+                <Card.Body className="p-0">
+                  <div className="list-group list-group-flush">
+                    {results.map((nv) => (
+                      <button
+                        type="button"
+                        className="list-group-item list-group-item-action d-flex align-items-center"
+                        key={nv.id}
+                        onClick={() => handleRowClick_tennv(nv)}
+                      >
+                        <FaUserClock className="text-primary me-3" />
+                        <div>
+                          <div className="fw-semibold">{nv.ho_ten}</div>
+                          <small className="text-muted">Xem lịch sử chấm công</small>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </Card.Body>
+              </Card>
+            )}
+          </Card.Body>
+        </Card>
+      )}
 
+      {/* Filter and Table Section */}
+      <Card className="shadow-sm border-0 rounded-4 mb-4">
+        <Card.Header 
+          style={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            fontWeight: "600",
+            fontSize: "1.1rem"
+          }}
+        >
+          <FaCalendarAlt className="me-2" />
+          Lịch sử Chấm công
+        </Card.Header>
+        <Card.Body className="p-4">
+          {/* Search Filter */}
+          <Row className="mb-4">
+            <Col md={6}>
+              <div className="position-relative">
+                <FaSearch className="position-absolute top-50 start-3 translate-middle-y text-muted" />
+                <Form.Control
+                  type="text"
+                  placeholder="🔍 Tìm theo ngày hoặc tên nhân viên..."
+                  value={searchKeyword}
+                  onChange={(e) => {
+                    setSearchKeyword(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{ paddingLeft: "2.5rem" }}
+                />
+              </div>
+            </Col>
+          </Row>
 
-          {/* Search lọc trong bảng */}
-          <div className="mb-4">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="🔍 Tìm theo ngày hoặc tên nhân viên..."
-              value={searchKeyword}
-              onChange={(e) => {
-                setSearchKeyword(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-
+          {/* Table */}
           {loadingTable ? (
-            <div className="text-center my-4">
-              <Spinner animation="border" variant="primary" />
-              <div className="mt-2">Đang tải dữ liệu...</div>
+            <div className="text-center py-5">
+              <Spinner animation="border" variant="primary" size="lg" />
+              <div className="mt-3 fw-semibold">Đang tải dữ liệu chấm công...</div>
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-bordered table-hover w-100">
-                <thead className="table-dark text-center">
+              <Table bordered hover className="mb-0">
+                <thead
+                  style={{ 
+                    background: "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
+                    color: "white"
+                  }}
+                >
                   <tr>
-                    <th>ID</th>
-                    <th>Nhân viên</th>
-                    <th>Ngày</th>
-                    <th>Giờ vào</th>
-                    <th>Giờ ra</th>
-                    <th>Ảnh vào</th>
-                    <th>Ảnh ra</th>
-                    <th>Trạng thái</th>
-                    <th>Hành động</th>
+                    <th style={{ padding: "12px", fontWeight: "600" }}>ID</th>
+                    <th style={{ padding: "12px", fontWeight: "600" }}>Nhân viên</th>
+                    <th style={{ padding: "12px", fontWeight: "600" }}>Ngày</th>
+                    <th style={{ padding: "12px", fontWeight: "600" }}>Giờ vào</th>
+                    <th style={{ padding: "12px", fontWeight: "600" }}>Giờ ra</th>
+                    <th style={{ padding: "12px", fontWeight: "600" }}>Ảnh vào</th>
+                    <th style={{ padding: "12px", fontWeight: "600" }}>Ảnh ra</th>
+                    <th style={{ padding: "12px", fontWeight: "600" }}>Trạng thái</th>
+                    <th style={{ padding: "12px", fontWeight: "600" }}>Hành động</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {currentItems.map((cc) => (
-                    <tr key={cc.id}>
-                      <td>{cc.id}</td>
-                      <td>{getTenNhanVien(cc.nhan_vien_id)}</td>
-                      <td>{formatDate(cc.ngay)}</td>
-                      <td>{formatTime(cc.thoi_gian_vao)}</td>
-                      <td>{formatTime(cc.thoi_gian_ra)}</td>
-                      <td className="text-center">
+                    <tr key={cc.id} style={{ transition: "all 0.3s ease" }}>
+                      <td style={{ padding: "12px", fontWeight: "500" }}>{cc.id}</td>
+                      <td style={{ padding: "12px", fontWeight: "500" }}>
+                        {getTenNhanVien(cc.nhan_vien_id)}
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <Badge bg="light" text="dark">
+                          {formatDate(cc.ngay)}
+                        </Badge>
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <div className="d-flex align-items-center">
+                          <FaClock className="text-success me-2" />
+                          {formatTime(cc.thoi_gian_vao)}
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <div className="d-flex align-items-center">
+                          <FaClock className="text-primary me-2" />
+                          {formatTime(cc.thoi_gian_ra)}
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px", textAlign: "center" }}>
                         {cc.hinh_anh_vao ? (
                           <img
                             src={getImgUrl(cc.hinh_anh_vao)}
                             alt="Ảnh vào"
                             width="50"
                             height="50"
-                            style={{ objectFit: "cover", borderRadius: "50%" }}
+                            style={{ 
+                              objectFit: "cover", 
+                              borderRadius: "8px",
+                              border: "2px solid #dee2e6"
+                            }}
+                            className="shadow-sm"
                           />
                         ) : (
-                          "—"
+                          <span className="text-muted">—</span>
                         )}
                       </td>
-                      <td className="text-center">
+                      <td style={{ padding: "12px", textAlign: "center" }}>
                         {cc.hinh_anh_ra ? (
                           <img
                             src={getImgUrl(cc.hinh_anh_ra)}
                             alt="Ảnh ra"
                             width="50"
                             height="50"
-                            style={{ objectFit: "cover", borderRadius: "50%" }}
+                            style={{ 
+                              objectFit: "cover", 
+                              borderRadius: "8px",
+                              border: "2px solid #dee2e6"
+                            }}
+                            className="shadow-sm"
                           />
                         ) : (
-                          "—"
+                          <span className="text-muted">—</span>
                         )}
                       </td>
-                      <td>{cc.trang_thai || (cc.thoi_gian_ra ? "Hoàn tất" : "Chưa ra")}</td>
-                      <td>
-                        <button
-                          className="btn btn-sm btn-warning me-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRowClick(cc);
-                          }}
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(cc.id);
-                          }}
-                        >
-                          Xóa
-                        </button>
+                      <td style={{ padding: "12px", textAlign: "center" }}>
+                        {getStatusBadge(cc)}
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <div className="d-flex gap-1 flex-wrap">
+                          <Button
+                            variant="outline-warning"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRowClick(cc);
+                            }}
+                          >
+                            <FaEdit />
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(cc.id);
+                            }}
+                          >
+                            <FaTrash />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
 
                   {currentItems.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="text-center text-muted">
-                        Không tìm thấy bản ghi chấm công phù hợp.
+                      <td colSpan={9} className="text-center text-muted py-4">
+                        <FaClock className="fs-1 mb-2 opacity-50" />
+                        <div>Không tìm thấy bản ghi chấm công phù hợp.</div>
                       </td>
                     </tr>
                   )}
                 </tbody>
-              </table>
+              </Table>
             </div>
           )}
 
-          <div className="d-flex justify-content-center mt-4 align-items-center gap-3">
-            <Button
-              variant="outline-secondary"
-              disabled={currentPage === 1}
-              onClick={() => paginate(currentPage - 1)}
-            >
-              ← Trang trước
-            </Button>
-            <span>
-              Trang {currentPage} / {totalPages}
-            </span>
-            <Button
-              variant="outline-secondary"
-              disabled={currentPage === totalPages}
-              onClick={() => paginate(currentPage + 1)}
-            >
-              Trang sau →
-            </Button>
-          </div>
-        </div>
-      </div>
-      <ToastContainer position="top-right" autoClose={2000} />
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Card className="shadow-sm border-0 rounded-4 mt-4">
+              <Card.Body className="py-3">
+                <div className="d-flex justify-content-center align-items-center gap-3">
+                  <Button
+                    variant="outline-primary"
+                    disabled={currentPage === 1}
+                    onClick={() => paginate(currentPage - 1)}
+                    style={{ borderColor: "#667eea", color: "#667eea" }}
+                  >
+                    ← Trang trước
+                  </Button>
+                  <span className="fw-semibold" style={{ color: "#4a5568" }}>
+                    Trang {currentPage} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline-primary"
+                    disabled={currentPage === totalPages}
+                    onClick={() => paginate(currentPage + 1)}
+                    style={{ borderColor: "#667eea", color: "#667eea" }}
+                  >
+                    Trang sau →
+                  </Button>
+                </div>
+              </Card.Body>
+            </Card>
+          )}
+        </Card.Body>
+      </Card>
     </div>
   );
 };

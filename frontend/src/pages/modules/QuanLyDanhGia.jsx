@@ -3,12 +3,27 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import {
     Container, Row, Col, Button, Table, Modal, Breadcrumb, OverlayTrigger, Tooltip,
+    Card, Form, Badge
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { 
+    FaHome, 
+    FaSearch, 
+    FaPlus, 
+    FaEdit, 
+    FaTrash, 
+    FaFileExcel, 
+    FaFilePdf,
+    FaChartBar,
+    FaUser,
+    FaBuilding,
+    FaStar,
+    FaLink
+} from "react-icons/fa";
 
 import DanhGiaForm from "../../components/danhgia/DanhGiaForm";
 import DanhGiaCharts from "../../components/danhgia/DanhGiaCharts";
@@ -17,8 +32,9 @@ import { getAllPhongBan } from "../../services/phongBanApi";
 import { getAllNhanVien } from "../../services/nhanSuApi";
 import AppDialog from "../../components/common/AppDialog";
 import useDialog from "../../hooks/useDialog";
+import Loading from "../../components/Loading";
 
-// 🆕 Toast giống QuanLyNhanSu
+// Toast
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -30,6 +46,7 @@ const QuanLyDanhGia = () => {
     const [danhGias, setDanhGias] = useState([]);
     const [selectedDG, setSelectedDG] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const [search, setSearch] = useState("");
     const [selectedDeptId, setSelectedDeptId] = useState("");
@@ -58,7 +75,6 @@ const QuanLyDanhGia = () => {
         if (/^https?:\/\//i.test(ref)) {
             window.open(ref, "_blank", "noopener,noreferrer");
         } else {
-            // Giữ nguyên alert đẹp; có thể thay bằng toast.info nếu muốn
             alert(`Đường dẫn file: ${ref}`, "Thông tin");
         }
     }, [alert]);
@@ -144,6 +160,7 @@ const QuanLyDanhGia = () => {
         });
 
     const fetchDanhGias = useCallback(async () => {
+        setLoading(true);
         try {
             const res = await axios.get(API_URL);
             const raw = Array.isArray(res.data) ? res.data : [];
@@ -151,6 +168,8 @@ const QuanLyDanhGia = () => {
         } catch (error) {
             console.error("❌ Lỗi khi tải đánh giá:", error);
             toast.error("Không thể tải danh sách đánh giá!");
+        } finally {
+            setLoading(false);
         }
     }, [pbMap, nvDeptMap, nvDeptNameMap]);
 
@@ -161,7 +180,7 @@ const QuanLyDanhGia = () => {
         if (danhGias.length) {
             setDanhGias((prev) => enrichDanhGiasWithDept(prev, pbMap, nvDeptMap, nvDeptNameMap));
         }
-    }, [pbMap, nvDeptMap, nvDeptNameMap]); // eslint-disable-line
+    }, [pbMap, nvDeptMap, nvDeptNameMap]);
 
     // Reset trang khi đổi filter
     useEffect(() => { setCurrentPage(1); }, [search, selectedDeptId]);
@@ -176,6 +195,13 @@ const QuanLyDanhGia = () => {
         if (avg >= 8) return "table-success";
         if (avg >= 6.5) return "table-warning";
         return "table-danger";
+    };
+
+    const getRatingBadge = (score) => {
+        if (score >= 9) return <Badge bg="success">{score}</Badge>;
+        if (score >= 8) return <Badge bg="info">{score}</Badge>;
+        if (score >= 6.5) return <Badge bg="warning" text="dark">{score}</Badge>;
+        return <Badge bg="danger">{score}</Badge>;
     };
 
     // ===== CRUD =====
@@ -336,233 +362,362 @@ const QuanLyDanhGia = () => {
         , [pbMap]);
 
     // ===== Render =====
-
-    // Kích thước & offset cho 3 cột sticky (ID, Nhân viên, Phòng ban)
-    const COL_W_ID = 80;       // px
-    const COL_W_NAME = 220;    // px
-    const COL_W_DEPT = 230;    // px
-    const LEFT_NAME = COL_W_ID;
-    const LEFT_DEPT = COL_W_ID + COL_W_NAME;
-
-    const colWidths = [
-        COL_W_ID, COL_W_NAME, COL_W_DEPT,
-        200, 90, 90, 90, 90, 90, 110, 90, 140, 180, 140,
-    ];
+    if (loading) return <Loading />;
 
     return (
-        <Container className="min-vh-100">
-            {/* CSS trượt ngang + sticky 3 cột đầu */}
-            <style>{`
-        .dg-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .dg-freeze thead th, .dg-freeze tbody td { white-space: nowrap; }
-        .dg-freeze .sticky-col { position: sticky; left: 0; z-index: 2; background: #fff; box-shadow: 1px 0 0 rgba(0,0,0,0.06); }
-        .dg-freeze thead .sticky-col { z-index: 3; background: #212529; color: #fff; }
-        .sticky-col.col-id   { left: 0px; min-width: ${COL_W_ID}px;   width: ${COL_W_ID}px;   max-width: ${COL_W_ID}px; }
-        .sticky-col.col-name { left: ${LEFT_NAME}px; min-width: ${COL_W_NAME}px; width: ${COL_W_NAME}px; max-width: ${COL_W_NAME}px; }
-        .sticky-col.col-dept { left: ${LEFT_DEPT}px; min-width: ${COL_W_DEPT}px; width: ${COL_W_DEPT}px; max-width: ${COL_W_DEPT}px; }
-        /*  Căn trái riêng cho 2 cột Nhân viên & Phòng ban (ghi đè text-center của table) */
-  .dg-freeze th.col-name,
-  .dg-freeze th.col-dept,
-  .dg-freeze td.col-name,
-  .dg-freeze td.col-dept {
-    text-align: left !important;
-    padding-left: 12px; /* nhìn thoáng hơn */
-  }
+        <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
+            <ToastContainer position="top-right" autoClose={2000} />
 
-  /* đảm bảo phần tử ellipsis chiếm full bề rộng để canh trái đúng */
-  .td-ellipsis, .td-ellipsis-lg { display: block; max-width: 100%; }
-      
-      `}</style>
-
-            <Breadcrumb className="mt-3">
-                <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
-                <Breadcrumb.Item active>Quản lý đánh giá</Breadcrumb.Item>
-            </Breadcrumb>
-
-            <Row className="mb-3 mt-4">
-                <Col><h3 className="text-center fw-bold">QUẢN LÝ ĐÁNH GIÁ NHÂN SỰ</h3></Col>
-            </Row>
-
-            <Row className="mb-3 g-2 align-items-end">
-                <Col md={4}>
-                    <label className="form-label fw-semibold">Tìm theo tên</label>
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="🔍 Tìm theo tên nhân viên..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </Col>
-
-                <Col md={3}>
-                    <label className="form-label fw-semibold">Phòng ban</label>
-                    <select
-                        className="form-select"
-                        value={selectedDeptId}
-                        onChange={(e) => setSelectedDeptId(e.target.value)}
-                    >
-                        <option value="">Tất cả phòng ban</option>
-                        {deptOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                                {opt.name}
-                            </option>
-                        ))}
-                    </select>
-                </Col>
-
-                <Col md className="text-end">
-                    <div className="d-flex flex-wrap justify-content-end gap-2">
-                        <Button variant="outline-success" onClick={handleExportExcel}>Xuất Excel</Button>
-                        <Button variant="outline-dark" onClick={handleExportPDF}>Xuất PDF</Button>
-                        {canReviewUser() && (
-                            <Button variant="outline-primary" onClick={handleCreate}>+ Thêm đánh giá</Button>
-                        )}
+            {/* Header Section */}
+            <div 
+                className="rounded-4 mb-4 shadow-sm"
+                style={{
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    padding: "2rem",
+                    color: "white"
+                }}
+            >
+                <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                        <Breadcrumb className="mb-3">
+                            <Breadcrumb.Item active style={{ color: "white" }}
+                            >
+                                <FaHome className="me-2" />
+                                Trang chủ
+                            </Breadcrumb.Item>
+                            <Breadcrumb.Item active style={{ color: "white" }}>
+                                Quản lý đánh giá
+                            </Breadcrumb.Item>
+                        </Breadcrumb>
+                        <h1 className="fw-bold mb-2">⭐ Quản lý Đánh giá Nhân sự</h1>
+                        <p className="mb-0 opacity-90">
+                            Đánh giá và theo dõi hiệu suất làm việc của nhân viên
+                        </p>
                     </div>
-                </Col>
-            </Row>
-
-            {/* Bọc bảng trong wrapper để trượt ngang */}
-            <div className="table-responsive dg-table-wrap">
-                <Table bordered hover className="bg-white shadow-sm text-center align-middle table-nowrap table-compact dg-freeze">
-                    <colgroup>
-                        {colWidths.map((w, i) => (<col key={i} style={{ width: w }} />))}
-                    </colgroup>
-
-                    <thead className="table-dark">
-                        <tr>
-                            <th className="sticky-col col-id">ID</th>
-                            <th className="sticky-col col-name">Nhân viên</th>
-                            <th className="sticky-col col-dept">Phòng ban</th>
-                            <th>Người đánh giá</th>
-                            <th>Chuyên cần</th>
-                            <th>Hiệu quả</th>
-                            <th>Kỹ năng</th>
-                            <th>Thái độ</th>
-                            <th>Chủ động</th>
-                            <th>Tổng điểm</th>
-                            <th>Xếp loại</th>
-                            <th>Kỳ — Ngày</th>
-                            <th>Minh chứng</th>
-                            <th>Hành động</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {currentItems.length === 0 ? (
-                            <tr><td colSpan="14" className="text-center">Không có dữ liệu đánh giá</td></tr>
-                        ) : (
-                            currentItems.map((dg) => {
-                                const nvPhongBanId = getNVPhongBanIdFromDG(dg);
-                                const allowRowActions = canReviewUser() && nvPhongBanId && sameDept(nvPhongBanId);
-
-                                const tenNV = dg.nhan_vien?.ho_ten || "";
-                                const tenPBFull =
-                                    dg.nhan_vien?.ten_phong_ban ||
-                                    (dg.nhan_vien?.phong_ban_id ? `PB #${dg.nhan_vien.phong_ban_id}` : "");
-                                const nguoiDG = dg.nguoi_danh_gia?.ho_ten || "";
-
-                                const mc = dg.minh_chung || {};
-                                const mcRefs = {
-                                    chuyen_can: mc.chuyen_can ?? dg.mc_chuyen_can_ref,
-                                    hieu_qua: mc.hieu_qua ?? dg.mc_hieu_qua_ref,
-                                    ky_nang: mc.ky_nang ?? dg.mc_ky_nang_ref,
-                                    thai_do: mc.thai_do ?? dg.mc_thai_do_ref,
-                                    chu_dong: mc.chu_dong ?? dg.mc_chu_dong_ref,
-                                };
-
-                                return (
-                                    <tr key={dg.id} className={getRowClass(dg)}>
-                                        <td className="sticky-col col-id">{dg.id}</td>
-
-                                        <td className="sticky-col col-name" title={tenNV}>
-                                            <span className="d-inline-block td-ellipsis">{tenNV}</span>
-                                        </td>
-
-                                        <td className="sticky-col col-dept" title={tenPBFull}>
-                                            <span className="d-inline-block td-ellipsis td-ellipsis-lg">
-                                                {tenPBFull ? tenPBFull.split("(")[0].trim() : ""}
-                                            </span>
-                                        </td>
-
-                                        <td title={nguoiDG}><span className="d-inline-block td-ellipsis">{nguoiDG}</span></td>
-
-                                        <td>{dg.diem_chuyen_can}</td>
-                                        <td>{dg.diem_hieu_qua}</td>
-                                        <td>{dg.diem_ky_nang}</td>
-                                        <td>{dg.diem_thai_do}</td>
-                                        <td>{dg.diem_chu_dong}</td>
-                                        <td><strong>{(dg.tong_diem ?? 0).toFixed(2)}</strong></td>
-                                        <td>{dg.xep_loai}</td>
-                                        <td>{dg.ky_loai} — {dg.ky_ngay}</td>
-
-                                        {/* Minh chứng */}
-                                        <td>
-                                            <div className="evidence-cell">
-                                                {renderChip("CC", mcRefs.chuyen_can, "chip-cc")}
-                                                {renderChip("HQ", mcRefs.hieu_qua, "chip-hq")}
-                                                {renderChip("KN", mcRefs.ky_nang, "chip-kn")}
-                                                {renderChip("TĐ", mcRefs.thai_do, "chip-td")}
-                                                {renderChip("CĐ", mcRefs.chu_dong, "chip-cd")}
-                                            </div>
-                                        </td>
-
-                                        <td className="text-nowrap">
-                                            {allowRowActions ? (
-                                                <>
-                                                    <Button variant="outline-warning" size="sm" onClick={() => setSelectedDG(dg) || setShowModal(true)}>Sửa</Button>{" "}
-                                                    <Button variant="outline-danger" size="sm" onClick={() => handleDelete(dg.id)}>Xóa</Button>
-                                                </>
-                                            ) : canReviewUser() && !nvPhongBanId ? (
-                                                <small className="text-muted">Thiếu dữ liệu phòng ban</small>
-                                            ) : (
-                                                <small className="text-muted">Không có quyền</small>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </Table>
+                    <Button 
+                        variant="outline-light" 
+                        onClick={() => navigate("/")}
+                        className="border-0"
+                        style={{
+                            background: "rgba(255, 255, 255, 0.1)",
+                            backdropFilter: "blur(10px)"
+                        }}
+                    >
+                        <FaHome className="me-2" />
+                        Trang chủ
+                    </Button>
+                </div>
             </div>
 
-            {/* Phân trang */}
-            <Row className="justify-content-center mt-3">
-                <Col xs="auto" className="text-center">
-                    <div className="d-flex align-items-center gap-3">
-                        <Button
-                            variant="outline-secondary"
-                            disabled={currentPage === 1}
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        >
-                            ← Trước
-                        </Button>
-                        <span className="fw-semibold">
-                            Trang {currentPage} / {totalPages}
-                        </span>
-                        <Button
-                            variant="outline-secondary"
-                            disabled={currentPage === totalPages || totalPages === 0}
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        >
-                            Sau →
-                        </Button>
-                    </div>
-                </Col>
-            </Row>
+            {/* Filter and Actions Card */}
+            <Card className="shadow-sm border-0 rounded-4 mb-4">
+                <Card.Header 
+                    style={{
+                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        color: "white",
+                        fontWeight: "600",
+                        fontSize: "1.1rem"
+                    }}
+                >
+                    <FaSearch className="me-2" />
+                    Tìm kiếm & Bộ lọc
+                </Card.Header>
+                <Card.Body className="p-4">
+                    <Row className="g-3 align-items-end">
+                        <Col md={4}>
+                            <Form.Group>
+                                <Form.Label className="fw-semibold">Tìm theo tên nhân viên</Form.Label>
+                                <div className="position-relative">
+                                    <FaSearch className="position-absolute top-50 start-3 translate-middle-y text-muted" />
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="Nhập tên nhân viên..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        style={{ paddingLeft: "2.5rem" }}
+                                    />
+                                </div>
+                            </Form.Group>
+                        </Col>
 
-            {/* Charts */}
-            <Row className="mb-3">
-                <Col><DanhGiaCharts data={filteredDanhGias} /></Col>
-            </Row>
+                        <Col md={4}>
+                            <Form.Group>
+                                <Form.Label className="fw-semibold">Phòng ban</Form.Label>
+                                <Form.Select
+                                    value={selectedDeptId}
+                                    onChange={(e) => setSelectedDeptId(e.target.value)}
+                                >
+                                    <option value="">Tất cả phòng ban</option>
+                                    {deptOptions.map((opt) => (
+                                        <option key={opt.id} value={opt.id}>
+                                            {opt.name}
+                                        </option>
+                                    ))}
+                                </Form.Select>
+                            </Form.Group>
+                        </Col>
+
+                        <Col md={4}>
+                            <div className="d-flex gap-2 flex-wrap justify-content-end">
+                                <Button
+                                    variant="outline-success"
+                                    onClick={handleExportExcel}
+                                >
+                                    <FaFileExcel className="me-2" />
+                                    Excel
+                                </Button>
+                                <Button
+                                    variant="outline-danger"
+                                    onClick={handleExportPDF}
+                                >
+                                    <FaFilePdf className="me-2" />
+                                    PDF
+                                </Button>
+                                {canReviewUser() && (
+                                    <Button
+                                        variant="primary"
+                                        onClick={handleCreate}
+                                        style={{
+                                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                            border: "none"
+                                        }}
+                                    >
+                                        <FaPlus className="me-2" />
+                                        Thêm đánh giá
+                                    </Button>
+                                )}
+                            </div>
+                        </Col>
+                    </Row>
+                </Card.Body>
+            </Card>
+
+            {/* Data Table Card */}
+            <Card className="shadow-sm border-0 rounded-4 mb-4">
+                <Card.Header 
+                    style={{
+                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        color: "white",
+                        fontWeight: "600",
+                        fontSize: "1.1rem"
+                    }}
+                >
+                    <FaChartBar className="me-2" />
+                    Danh sách Đánh giá
+                </Card.Header>
+                <Card.Body className="p-0">
+                    <div className="table-responsive">
+                        <Table bordered hover className="mb-0">
+                            <thead
+                                style={{ 
+                                    background: "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
+                                    color: "white"
+                                }}
+                            >
+                                <tr>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>ID</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Nhân viên</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Phòng ban</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Người đánh giá</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Chuyên cần</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Hiệu quả</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Kỹ năng</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Thái độ</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Chủ động</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Tổng điểm</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Xếp loại</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Kỳ đánh giá</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Minh chứng</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {currentItems.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="14" className="text-center text-muted py-4">
+                                            <FaChartBar className="fs-1 mb-2 opacity-50" />
+                                            <div>Không có dữ liệu đánh giá</div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    currentItems.map((dg) => {
+                                        const nvPhongBanId = getNVPhongBanIdFromDG(dg);
+                                        const allowRowActions = canReviewUser() && nvPhongBanId && sameDept(nvPhongBanId);
+
+                                        const tenNV = dg.nhan_vien?.ho_ten || "";
+                                        const tenPBFull =
+                                            dg.nhan_vien?.ten_phong_ban ||
+                                            (dg.nhan_vien?.phong_ban_id ? `PB #${dg.nhan_vien.phong_ban_id}` : "");
+                                        const nguoiDG = dg.nguoi_danh_gia?.ho_ten || "";
+
+                                        const mc = dg.minh_chung || {};
+                                        const mcRefs = {
+                                            chuyen_can: mc.chuyen_can ?? dg.mc_chuyen_can_ref,
+                                            hieu_qua: mc.hieu_qua ?? dg.mc_hieu_qua_ref,
+                                            ky_nang: mc.ky_nang ?? dg.mc_ky_nang_ref,
+                                            thai_do: mc.thai_do ?? dg.mc_thai_do_ref,
+                                            chu_dong: mc.chu_dong ?? dg.mc_chu_dong_ref,
+                                        };
+
+                                        return (
+                                            <tr key={dg.id} style={{ transition: "all 0.3s ease" }}>
+                                                <td style={{ padding: "12px", fontWeight: "500" }}>{dg.id}</td>
+                                                <td style={{ padding: "12px", fontWeight: "500" }}>
+                                                    <div className="d-flex align-items-center">
+                                                        <FaUser className="text-primary me-2" />
+                                                        {tenNV}
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <div className="d-flex align-items-center">
+                                                        <FaBuilding className="text-secondary me-2" />
+                                                        {tenPBFull ? tenPBFull.split("(")[0].trim() : ""}
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>{nguoiDG}</td>
+                                                <td style={{ padding: "12px", textAlign: "center" }}>
+                                                    {getRatingBadge(dg.diem_chuyen_can)}
+                                                </td>
+                                                <td style={{ padding: "12px", textAlign: "center" }}>
+                                                    {getRatingBadge(dg.diem_hieu_qua)}
+                                                </td>
+                                                <td style={{ padding: "12px", textAlign: "center" }}>
+                                                    {getRatingBadge(dg.diem_ky_nang)}
+                                                </td>
+                                                <td style={{ padding: "12px", textAlign: "center" }}>
+                                                    {getRatingBadge(dg.diem_thai_do)}
+                                                </td>
+                                                <td style={{ padding: "12px", textAlign: "center" }}>
+                                                    {getRatingBadge(dg.diem_chu_dong)}
+                                                </td>
+                                                <td style={{ padding: "12px", textAlign: "center" }}>
+                                                    <Badge bg="primary" className="fs-6">
+                                                        {(dg.tong_diem ?? 0).toFixed(2)}
+                                                    </Badge>
+                                                </td>
+                                                <td style={{ padding: "12px", textAlign: "center" }}>
+                                                    <Badge 
+                                                        bg={
+                                                            dg.xep_loai === "Xuất sắc" ? "success" :
+                                                            dg.xep_loai === "Tốt" ? "info" :
+                                                            dg.xep_loai === "Khá" ? "warning" : "danger"
+                                                        }
+                                                    >
+                                                        {dg.xep_loai}
+                                                    </Badge>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <small>
+                                                        <div><strong>{dg.ky_loai}</strong></div>
+                                                        <div className="text-muted">{dg.ky_ngay}</div>
+                                                    </small>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <div className="d-flex gap-1 flex-wrap">
+                                                        {renderChip("CC", mcRefs.chuyen_can, "chip-cc")}
+                                                        {renderChip("HQ", mcRefs.hieu_qua, "chip-hq")}
+                                                        {renderChip("KN", mcRefs.ky_nang, "chip-kn")}
+                                                        {renderChip("TĐ", mcRefs.thai_do, "chip-td")}
+                                                        {renderChip("CĐ", mcRefs.chu_dong, "chip-cd")}
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <div className="d-flex gap-1 flex-wrap">
+                                                        {allowRowActions ? (
+                                                            <>
+                                                                <Button
+                                                                    variant="outline-warning"
+                                                                    size="sm"
+                                                                    onClick={() => handleEdit(dg)}
+                                                                >
+                                                                    <FaEdit />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline-danger"
+                                                                    size="sm"
+                                                                    onClick={() => handleDelete(dg.id)}
+                                                                >
+                                                                    <FaTrash />
+                                                                </Button>
+                                                            </>
+                                                        ) : canReviewUser() && !nvPhongBanId ? (
+                                                            <small className="text-muted">Thiếu dữ liệu</small>
+                                                        ) : (
+                                                            <small className="text-muted">Không có quyền</small>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </Table>
+                    </div>
+                </Card.Body>
+            </Card>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <Card className="shadow-sm border-0 rounded-4 mt-4">
+                    <Card.Body className="py-3">
+                        <div className="d-flex justify-content-center align-items-center gap-3">
+                            <Button
+                                variant="outline-primary"
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(currentPage - 1)}
+                                style={{ borderColor: "#667eea", color: "#667eea" }}
+                            >
+                                ← Trang trước
+                            </Button>
+                            <span className="fw-semibold" style={{ color: "#4a5568" }}>
+                                Trang {currentPage} / {totalPages}
+                            </span>
+                            <Button
+                                variant="outline-primary"
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(currentPage + 1)}
+                                style={{ borderColor: "#667eea", color: "#667eea" }}
+                            >
+                                Trang sau →
+                            </Button>
+                        </div>
+                    </Card.Body>
+                </Card>
+            )}
+
+            {/* Charts Section */}
+            <Card className="shadow-sm border-0 rounded-4 mt-4">
+                <Card.Header 
+                    style={{
+                        background: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
+                        color: "white",
+                        fontWeight: "600"
+                    }}
+                >
+                    <FaChartBar className="me-2" />
+                    Thống kê & Biểu đồ
+                </Card.Header>
+                <Card.Body>
+                    <DanhGiaCharts data={filteredDanhGias} />
+                </Card.Body>
+            </Card>
 
             {/* Modal Form */}
-            <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>{selectedDG ? "Cập nhật đánh giá" : "Thêm đánh giá mới"}</Modal.Title>
+            <Modal show={showModal} onHide={() => setShowModal(false)} centered className="rounded-4">
+                <Modal.Header 
+                    closeButton
+                    style={{
+                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        color: "white"
+                    }}
+                >
+                    <Modal.Title>
+                        <FaStar className="me-2" />
+                        {selectedDG ? "Cập nhật đánh giá" : "Thêm đánh giá mới"}
+                    </Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
+                <Modal.Body className="p-4">
                     <DanhGiaForm
                         initialData={selectedDG}
                         onSubmit={async (data) => await handleFormSubmit(data)}
@@ -571,7 +726,7 @@ const QuanLyDanhGia = () => {
                 </Modal.Body>
             </Modal>
 
-            {/* Dialog đẹp thay alert/confirm */}
+            {/* Dialog */}
             <AppDialog
                 show={dlg.show}
                 onHide={hide}
@@ -582,10 +737,7 @@ const QuanLyDanhGia = () => {
                 cancelText={dlg.cancelText}
                 onOk={dlg.onOk}
             />
-
-            {/* 🆕 ToastContainer giống QuanLyNhanSu */}
-            <ToastContainer position="top-right" autoClose={2000} />
-        </Container>
+        </div>
     );
 };
 

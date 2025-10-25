@@ -6,7 +6,7 @@ from app.services.phong_ban_service import *
 def get_phong_ban():
     phong_ban_list = get_all_phong_ban_service()
     if phong_ban_list:
-        return jsonify([pb.to_dict() for pb in phong_ban_list])
+        return phong_ban_list
     else:
         return jsonify({'message': 'Không có dữ liệu phù hợp'}), 404
 

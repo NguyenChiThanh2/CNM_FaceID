@@ -556,10 +556,10 @@ const DanhGiaCharts = ({ data = [] }) => {
                                 <div className="text-center text-muted pt-5">Chưa có dữ liệu xếp hạng</div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={top5} layout="vertical" margin={{ left: 90 }}>
+                                    <BarChart data={top5} layout="vertical" margin={{ }}>
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis type="number" domain={[SCORE_MIN, SCORE_MAX]} />
-                                        <YAxis type="category" dataKey="name" width={140} />
+                                        <YAxis type="category" dataKey="name" width={"90%"} />
                                         <Tooltip content={<NiceTooltip />} />
                                         <Legend />
                                         <Bar dataKey="score" name="Điểm">
