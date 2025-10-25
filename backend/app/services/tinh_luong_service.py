@@ -8,7 +8,7 @@ from typing import Optional
 from app.models.nhan_vien_model import NhanVien
 from app.models.cham_cong_model import ChamCong
 from app.models.hopdong_laodong_model import HopDongLaoDong
-from app.models.quyche_congty_model import QuyCheCongTy
+# from app.models.quyche_congty_model import QuyCheCongTy
 from app.models.bang_luong_model import BangLuong
 from app.models.giay_phep_model import GiayPhep
 from .nguoi_phu_thuoc_service import kiemtra_nguoiphuthuoc
@@ -61,8 +61,11 @@ def get_chinhsach(nhanvien_id: int, ngay: date):
     if hopdong:
         return hopdong
     else:
-        return QuyCheCongTy.query.first()  # chính sách mặc định
+        ho_ten = NhanVien.query.get(nhanvien_id).ho_ten
+        return f"Hợp đồng lao động hết hiệu lực ID= {nhanvien_id}, Tên= {ho_ten}"
+    
 
+    
 def tinh_ngay_cong(thang, nam):
     so_ngay = monthrange(nam, thang)[1]
     ngay_cong = 0
@@ -73,35 +76,85 @@ def tinh_ngay_cong(thang, nam):
             ngay_cong += 1
     return ngay_cong
 
+def lay_cac_ngay_cuoi_tuan(thang, nam):
+    so_ngay = monthrange(nam, thang)[1]  # Số ngày trong tháng
+    ngay_cuoi_tuan = []
+
+    for day in range(1, so_ngay + 1):
+        d = date(nam, thang, day)
+        # weekday() → 0 = Thứ 2, ..., 5 = Thứ 7, 6 = Chủ nhật
+        if d.weekday() >= 5:
+            ngay_cuoi_tuan.append(d.day)
+
+    return ngay_cuoi_tuan
+
 def tinh_tre_som(thoigianvao: datetime, thoigianra: datetime):
-    
-    if thoigianvao is None:
-        thoigianvao = 0
-    if thoigianra is None:
-        thoigianra = 0
-    # Mốc giờ chuẩn
-    gio_vao_chuan = time(8, 0)   # 08:00
-    gio_ra_chuan = time(17, 0)   # 17:00
+    if not thoigianvao or not thoigianra:
+        return 0, 0
+
+    # ---- Các mốc giờ chuẩn ----
+    gio_vao_sang = time(8, 0)
+    gio_ra_sang = time(11, 0)
+    gio_vao_chieu = time(13, 0)
+    gio_ra_chieu = time(17, 0)
+    gio_vao_chieu_som = time(12, 0)  # cho phép vào sớm ca chiều từ 12:00
+    gio_ra_sang_tre = time(13, 0)    # cho phép ra trễ ca sáng đến 12:00
+
     tre_phut = 0
     som_phut = 0
-    # ---- TÍNH ĐI TRỄ ----
+
     try:
-        
-        if thoigianvao.time() > gio_vao_chuan:
-            diff = datetime.combine(thoigianvao.date(), thoigianvao.time()) - \
-                datetime.combine(thoigianvao.date(), gio_vao_chuan)
-            tre_phut = int(diff.total_seconds() // 60)
+        gio_vao = thoigianvao.time()
+        gio_ra = thoigianra.time()
+
+        # ---- CA SÁNG ----
+        # Là ca sáng nếu vào và ra đều <= 12:00
+        if gio_ra <= gio_ra_sang_tre:
+            if gio_vao > gio_vao_sang:
+                tre_phut = int(
+                    (datetime.combine(thoigianvao.date(), gio_vao) -
+                     datetime.combine(thoigianvao.date(), gio_vao_sang)).total_seconds() // 60
+                )
+
+            if gio_ra < gio_ra_sang:
+                som_phut = int(
+                    (datetime.combine(thoigianra.date(), gio_ra_sang) -
+                     datetime.combine(thoigianra.date(), gio_ra)).total_seconds() // 60
+                )
+
+        # ---- CA CHIỀU ----
+        elif gio_vao >= gio_vao_chieu_som:
+            if gio_vao > gio_vao_chieu:
+                tre_phut = int(
+                    (datetime.combine(thoigianvao.date(), gio_vao) -
+                     datetime.combine(thoigianvao.date(), gio_vao_chieu)).total_seconds() // 60
+                )
+
+            if gio_ra < gio_ra_chieu:
+                som_phut = int(
+                    (datetime.combine(thoigianra.date(), gio_ra_chieu) -
+                     datetime.combine(thoigianra.date(), gio_ra)).total_seconds() // 60
+                )
+
+        # ---- LÀM CẢ NGÀY ----
+        else:
+            if gio_vao > gio_vao_sang:
+                tre_phut = int(
+                    (datetime.combine(thoigianvao.date(), gio_vao) -
+                     datetime.combine(thoigianvao.date(), gio_vao_sang)).total_seconds() // 60
+                )
+
+            if gio_ra < gio_ra_chieu:
+                som_phut = int(
+                    (datetime.combine(thoigianra.date(), gio_ra_chieu) -
+                     datetime.combine(thoigianra.date(), gio_ra)).total_seconds() // 60
+                )
+
     except Exception as e:
-        print(f"Lỗi tính đi trễ: {e}")
-    # ---- TÍNH VỀ SỚM ----
-    try:
-        if thoigianra.time() < gio_ra_chuan:
-            diff = datetime.combine(thoigianra.date(), gio_ra_chuan) - \
-                datetime.combine(thoigianra.date(), thoigianra.time())
-            som_phut = int(diff.total_seconds() // 60)
-    except Exception as e:
-        print(f"Lỗi tính về sớm: {e}")
+        print(f"Lỗi tính đi trễ/về sớm: {e}")
+
     return tre_phut, som_phut
+
 
 # ======= TÍNH THUẾ TNCN =======
 def tinh_thue_tncn(thu_nhap, so_nguoi_phu_thuoc=0):
@@ -236,6 +289,12 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
     tong_ngay_cong_thuc = 0.0
     
     
+    luong_cuoi_tuan = 0.0
+    so_ngay_lam_cuoi_tuan = 0.0
+    tong_luong_cuoi_tuan = 0.0
+    tien_luong_cuoi_tuan_mien_thue = 0.0
+    tien_luong_cuoi_tuan_tinh_thue = 0.0
+    
     tong_gio_tang_ca = 0.0
     tong_tien_tang_ca = 0.0
     tien_tang_ca_tinh_thue = 0.0
@@ -317,6 +376,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             db.session.rollback()
             raise Exception(f"Lỗi khi thêm bảng lương: {str(e)}")
     else:
+        
         """Tính số công cho 1 nhân viên trong 1 tháng"""
         try:
             tinh_so_cong = get_tinhsocong_1nhanvien_theothang_service(nhanvien_id, thang, nam)
@@ -338,7 +398,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             ds_ngay_nghi_phep = tinh_ngay_nghi_phep_nam(nhanvien_id, thang, nam)
             ds_ngay_le = lay_ngay_le_trong_thang(thang, nam)
             so_cong_chuan_thang = tinh_ngay_cong(thang, nam)
-            
+            ds_ngay_cuoi_tuan = lay_cac_ngay_cuoi_tuan(thang, nam)
+            # print("Ngày cuối tuần trong tháng:", [d.day for d in ds_ngay_cuoi_tuan])
             # cong = 0.0
             # tong_ngay_cong = 0.0
             if ds_ngay_nghi_phep and len(ds_ngay_nghi_phep) > 0:
@@ -366,7 +427,12 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 is_holiday = False
                 if ds_ngay_le and cc.thoi_gian_vao.date().day in ds_ngay_le:
                     is_holiday = True
-
+                # ======= NGÀY CUỐI TUẦN =======
+                
+                is_weekend = False
+                if ds_ngay_cuoi_tuan and cc.thoi_gian_vao.date().day in ds_ngay_cuoi_tuan:
+                    is_weekend = True
+                
                 # ======= TÍNH CÔNG =======
                 
                 cong = cc.so_cong  # đã tính từ logic chấm công (0.5 hoặc 1)
@@ -382,6 +448,10 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     so_ngay_lam_le += cong
                     luong_le = policy.luong_ngay_le_heso * luong_ngay
                     tong_luong_le += cong * luong_le
+                if is_weekend:
+                    so_ngay_lam_cuoi_tuan += cong
+                    luong_cuoi_tuan = policy.luong_cuoi_tuan_heso * luong_ngay
+                    tong_luong_cuoi_tuan += cong * luong_cuoi_tuan
                 
                 tong_luong += cong * luong_ngay
                 
@@ -409,6 +479,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
 
                 # ======= KHẤU TRỪ ĐI TRỄ =======
                 ditre, vesom = tinh_tre_som(cc.thoi_gian_vao, cc.thoi_gian_ra)
+                # print(f"Nhân viên ID {nhanvien_id} - Ngày {cc.thoi_gian_vao.date()}: Đi trễ {ditre} phút, Về sớm {vesom} phút")
                 if ditre > 0:
                     # khau_tru += ditre * policy.di_tre_phat
                     ditre_vesom += ditre * policy.di_tre_phat
@@ -432,7 +503,6 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     phucap_chuc_vu = policy.phu_cap_chuc_vu
                 if policy.phu_cap_tham_nien:
                     phucap_tham_nien = policy.phu_cap_tham_nien
-                    
             dsthuong = thuong_theo_thang(nhanvien_id, thang, nam)
             
             if dsthuong and len(dsthuong):
@@ -489,6 +559,12 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 luong_le_mien_thue = luong_le - luong_ngay
                 tien_luong_le_mien_thue = so_ngay_lam_le * luong_le_mien_thue
                 tien_luong_le_tinh_thue = so_ngay_lam_le * luong_ngay
+                
+            if luong_cuoi_tuan > 0 and tong_luong_cuoi_tuan > 0:
+                # tong_luong -= tong_luong_le  # trừ lại lương lễ đã cộng vào tổng lương
+                luong_cuoi_tuan_mien_thue = luong_cuoi_tuan - luong_ngay
+                tien_luong_cuoi_tuan_mien_thue = so_ngay_lam_cuoi_tuan * luong_cuoi_tuan_mien_thue
+                tien_luong_cuoi_tuan_tinh_thue = so_ngay_lam_cuoi_tuan * luong_ngay
             
             # ======= TÍNH BẢO HIỂM =======
             phu_cap = phucap_doc_hai + phucap_trach_nhiem + phucap_chuc_vu + phucap_tham_nien + phucap_an_trua + phucap_xang_xe
@@ -497,6 +573,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             tong_luong += phucap_doc_hai + phucap_trach_nhiem + phucap_chuc_vu + phucap_tham_nien 
             if luong_le > 0 and tong_luong_le > 0:
                 tong_luong -= tien_luong_le_tinh_thue  # trừ lại phần lương lễ không đóng bảo hiểm đã cộng vào tổng lương
+            if luong_cuoi_tuan > 0 and tong_luong_cuoi_tuan > 0:
+                tong_luong -= tien_luong_cuoi_tuan_tinh_thue  # trừ lại phần lương cuối tuần không đóng bảo hiểm đã cộng vào tổng lương
             if locals().get("tien_tang_ca") and tien_tang_ca > 0:
                 tong_luong -= tien_tang_ca_tinh_thue  # trừ lại phần tăng ca không đóng bảo hiểm đã cộng vào tổng lương
             
@@ -508,6 +586,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             # Lương sau khi trừ bảo hiểm + tăng ca tính thuế + phụ cấp không đóng bảo hiểm + lương lễ tính thuế
             if luong_le > 0 and tong_luong_le > 0:
                 tong_luong += tien_luong_le_tinh_thue  # cộng lại phần lương lễ tính thuế đã trừ ở trên
+            if luong_cuoi_tuan > 0 and tong_luong_cuoi_tuan > 0:
+                tong_luong += tien_luong_cuoi_tuan_tinh_thue
             if locals().get("tien_tang_ca") and tien_tang_ca > 0:
                 tong_luong += tien_tang_ca_tinh_thue  # cộng lại phần tăng ca tính thuế đã trừ ở trên
                 
@@ -526,8 +606,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 ngaynghi = so_cong_chuan_thang - tong_ngay_cong
                 nghi_khong_phep += ngaynghi * luong_ngay
             # ======= LƯƠNG THỰC LĨNH =======
-            luong_thuc_linh = tong_luong - tong_bao_hiem - thue_tncn - khau_tru + tien_tang_ca_mien_thue + tien_luong_le_mien_thue
-            
+            luong_thuc_linh = tong_luong - tong_bao_hiem - thue_tncn - khau_tru + tien_tang_ca_mien_thue + tien_luong_le_mien_thue + tien_luong_cuoi_tuan_mien_thue
             try:
                 bangluong = BangLuong.query.filter_by(nhan_vien_id=nhanvien_id, thang=thang, nam=nam).first()
                 if bangluong:
@@ -548,6 +627,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     bangluong.thue_tncn = thue_tncn
                     bangluong.tong_luong = tong_luong
                     bangluong.thuc_nhan = luong_thuc_linh
+                    bangluong.tong_ngay_cuoi_tuan = so_ngay_lam_cuoi_tuan
+                    bangluong.tong_tien_cuoi_tuan = tong_luong_cuoi_tuan
 
                     # Xóa chi tiết lương cũ trước khi thêm mới
                     ChiTietLuong.query.filter_by(bang_luong_id=bangluong.id).delete()
@@ -574,6 +655,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                         thue_tncn=thue_tncn,
                         tong_luong=tong_luong,
                         thuc_nhan=luong_thuc_linh,
+                        tong_ngay_cuoi_tuan= so_ngay_lam_cuoi_tuan,
+                        tong_tien_cuoi_tuan= tong_luong_cuoi_tuan,
                     )
                     db.session.add(bangluong)
                     db.session.commit()
@@ -740,28 +823,36 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     if hdld:
                         hdld.phep_nam = len(all_bangluong)
                         db.session.commit()
-                return bangluong
+                return {
+                    "success": True,
+                    "message": f"Tính lương thành công cho nhân viên ID={nhanvien_id}",
+                    "data": bangluong.to_dict()
+                }
+
             
             except Exception as e:
                 db.session.rollback()
                 raise Exception(f"Lỗi khi thêm bảng lương: {str(e)}")
-    
+        else:
+            return {
+                "success": False,
+                "message": f"Chưa có chấm công cho nhân viên ID {nhanvien_id} trong tháng {thang}/{nam}",
+                "data": None
+            }
+              
 # -----------------------------------------------------------------------------------------------------------------
 def tinh_so_cong_cho_1_ngay(id, check_in: Optional[datetime], check_out: Optional[datetime]) -> Decimal:
     if not check_in or not check_out:
+        # Nếu không có chấm công -> kiểm tra xem có giấy phép không
         soconggiayphep = get_tinhsocong_theogiayphep_service(id)
         return soconggiayphep
-    # theo thời gian việt nam
+
     in_t = check_in.time()
     out_t = check_out.time()
 
-    # tính giờ làm việc trong ngày
-    total_hours = Decimal("0")
-    # ca sáng 08:00-12:00
-    a_start, a_end = time(8, 0), time(12, 0)
-    # ca chiều 13:00-17:00
-    b_start, b_end = time(13, 0), time(17, 0)
-
+    # Định nghĩa ca làm việc
+    a_start, a_end = time(8, 0), time(12, 0)   # Ca sáng
+    b_start, b_end = time(13, 0), time(17, 0)  # Ca chiều
 
     def overlap_hours(s: time, e: time, ws: time, we: time) -> Decimal:
         start = max(datetime.combine(date.min, s), datetime.combine(date.min, ws))
@@ -769,18 +860,37 @@ def tinh_so_cong_cho_1_ngay(id, check_in: Optional[datetime], check_out: Optiona
         delta = (end - start).total_seconds() / 3600
         return Decimal(str(max(delta, 0)))
 
+    # Tổng số giờ làm thực tế
+    total_hours = overlap_hours(in_t, out_t, a_start, a_end) + overlap_hours(in_t, out_t, b_start, b_end)
 
-    total_hours += overlap_hours(in_t, out_t, a_start, a_end)
-    total_hours += overlap_hours(in_t, out_t, b_start, b_end)
+    # ---- PHÂN LOẠI CA ----
+    # Nếu nhân viên chỉ làm sáng hoặc chỉ làm chiều
+    if out_t <= a_end:
+        # Chỉ làm ca sáng
+        if total_hours >= Decimal("3.5"):
+            return Decimal("0.5")  # Đủ 4 tiếng coi như 0.5 công
+        elif total_hours >= Decimal("2.5"):
+            return Decimal("0.25")  # Làm ~3 tiếng vẫn được 0.25 công
+        else:
+            return Decimal("0.00")
 
+    elif in_t >= b_start:
+        # Chỉ làm ca chiều
+        if total_hours >= Decimal("3.5"):
+            return Decimal("0.5")
+        elif total_hours >= Decimal("2.5"):
+            return Decimal("0.25")
+        else:
+            return Decimal("0.00")
 
-    # 8 hours -> 1 công; 4 hours -> 0.5 công; trễ 30 phút không tính công ca sáng; về sớm 30 phút không tính công ca chiều
-    if total_hours >= Decimal("7.5"):
-        return Decimal("1.00")
-    if total_hours >= Decimal("3.5"):
-        return Decimal("0.50")
-    return Decimal("0.00")
-    
+    else:
+        # Làm cả ngày (có qua trưa)
+        if total_hours >= Decimal("7.5"):
+            return Decimal("1.00")
+        elif total_hours >= Decimal("3.5"):
+            return Decimal("0.50")
+        else:
+            return Decimal("0.00")
         
 def get_tinhsocong_1nhanvien_theothang_service(nhan_vien_id, thang, nam):
     dschamcong = ChamCong.query.filter(ChamCong.nhan_vien_id == nhan_vien_id,extract('month', ChamCong.ngay) == thang,extract('year', ChamCong.ngay) == nam).all()
@@ -804,14 +914,47 @@ def get_tinhsocong_theogiayphep_service(id):
     elif giay_phep.so_gio == 4:
         return Decimal("0.50")
     
-def tinh_luong_cho_tat_ca_nhan_vien(thang,nam):
-    nhan_viens = NhanVien.query.all()
+# def tinh_luong_cho_tat_ca_nhan_vien(thang,nam):
+#     nhan_viens = NhanVien.query.all()
+#     ket_qua = []
+#     for nv in nhan_viens:
+#         try: 
+#             bangluong_1nv = tinh_luong_cho_1nv(nv.id,thang,nam)
+#             if bangluong_1nv is None:
+#                 print(f"⚠️ Không tính được lương cho nhân viên ID={nv.id}, họ tên={nv.ho_ten}")
+#                 continue
+#             ket_qua.append(bangluong_1nv.to_dict())
+#         except Exception as e:
+#                 raise Exception({str(e)})
+#     return ket_qua
+def tinh_luong_cho_tat_ca_nhan_vien(thang, nam, phongbanid=None):
+
+    # print(f"Tháng: {thang}, Năm: {nam}, Phòng ban ID: {phongbanid}")
+    if phongbanid:
+        nhan_viens = NhanVien.query.filter_by(phong_ban_id=phongbanid).all()
+    else:
+        nhan_viens = NhanVien.query.all()
     ket_qua = []
+    loi_list = []  # Danh sách lỗi để trả về cho frontend
+
     for nv in nhan_viens:
-        try: 
-            bangluong_1nv = tinh_luong_cho_1nv(nv.id,thang,nam)
-            ket_qua.append(bangluong_1nv.to_dict())
+        try:
+            bangluong_1nv = tinh_luong_cho_1nv(nv.id, thang, nam)
+             # Kiểm tra nếu không tính được lương cho nhân viên
+            if bangluong_1nv['success'] is False:
+                # msg = f"Không tính được lương cho nhân viên ID={nv.id}, họ tên={nv.ho_ten}"
+                loi_list.append(bangluong_1nv['message'])
+                continue
+            ket_qua.append(bangluong_1nv['data'])
+
         except Exception as e:
-                raise Exception({str(e)})
-    return ket_qua
-    
+            msg = f"Lỗi khi tính lương cho nhân viên ID={nv.id}, họ tên={nv.ho_ten}: {str(e)}"
+            loi_list.append(msg)
+
+    # ✅ Trả về cả danh sách lương và lỗi
+    # print(ket_qua)
+    return {
+        "success": True,
+        "data": ket_qua,
+        "errors": loi_list
+    }

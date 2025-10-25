@@ -18,12 +18,22 @@ class KhauTru(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Quan hệ N-N với nhân viên thông qua bảng trung gian
+    # nhan_viens = db.relationship(
+    #     'NhanVien',
+    #     secondary='khautru_nhanvien',
+    #     back_populates='khautru_list'
+    # )
     nhan_viens = db.relationship(
-        'NhanVien',
-        secondary='khautru_nhanvien',
-        back_populates='khautru_list'
+        "NhanVien",
+        secondary="khautru_nhanvien",
+        back_populates="khautru_list",
+        overlaps="khautru_nhanvien_list,nhan_vien"
     )
-
+    khautru_nhanvien_list = db.relationship(
+        "KhauTruNhanVien",
+        back_populates="khau_tru",
+        overlaps="khautru_list,nhan_viens"
+    )
     # def __repr__(self):
     #     return f"<KhauTru loai={self.loai_khau_tru}, so_tien={self.so_tien}, ten_khau_tru={self.ten_khau_tru}>"
 
