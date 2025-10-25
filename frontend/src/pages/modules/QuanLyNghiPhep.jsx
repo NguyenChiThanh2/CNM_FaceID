@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import NghiPhepForm from "../../components/nghiphep/NghiPhepForm";
-import { Modal, Button, Table, Breadcrumb } from "react-bootstrap";
+import { Modal, Button, Table, Breadcrumb, Card, Row, Col, Form } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import Loading from "../../../src/components/Loading";
+import { FaHome, FaSearch, FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaFileDownload, FaBaby } from "react-icons/fa";
 
 const API_URL = "http://127.0.0.1:5000/api";
-const HR_DEPARTMENT_ID = 2; // 👈 ĐỔI thành ID thật của phòng Nhân sự
+const HR_DEPARTMENT_ID = 2;
 
 const getUserInfo = () => {
   try {
@@ -39,7 +40,6 @@ const QuanLyNghiPhep = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const navigate = useNavigate();
-  // const [loadingT, setLoadingT] = useState(true);
 
   useEffect(() => {
     fetchNghiPhep();
@@ -47,7 +47,7 @@ const QuanLyNghiPhep = () => {
   }, []);
 
   useEffect(() => {
-    setCurrentPage(1); // reset page khi tìm kiếm hoặc lọc
+    setCurrentPage(1);
   }, [searchKeyword, filterTrangThai]);
 
   const fetchNghiPhep = async () => {
@@ -56,7 +56,6 @@ const QuanLyNghiPhep = () => {
       const response = await axios.get(`${API_URL}/get-all-nghi-phep`);
       let list = response.data || [];
 
-      // 👇 Nếu KHÔNG phải HR → chỉ giữ lại đơn của chính người dùng
       if (userInfo && !isHR) {
         list = list.filter((np) => np.nhan_vien_id === userInfo.id);
       }
@@ -70,7 +69,6 @@ const QuanLyNghiPhep = () => {
     }
   };
 
-
   const fetchNhanVien = async () => {
     setLoading(true);
     try {
@@ -79,7 +77,7 @@ const QuanLyNghiPhep = () => {
     } catch (error) {
       console.error("Lỗi khi gọi API nhân viên:", error);
       toast.error("Có lỗi xảy ra khi tải danh sách nhân viên!");
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -107,7 +105,7 @@ const QuanLyNghiPhep = () => {
       fetchNghiPhep();
     } catch (error) {
       console.error("Lỗi khi hủy đơn nghỉ phép:", error);
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -126,7 +124,7 @@ const QuanLyNghiPhep = () => {
       fetchNhanVien();
     } catch (error) {
       console.error("Lỗi khi duyệt đơn nghỉ phép:", error);
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -144,7 +142,7 @@ const QuanLyNghiPhep = () => {
       fetchNghiPhep();
     } catch (error) {
       console.error("Lỗi khi từ chối đơn nghỉ phép:", error);
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -171,7 +169,6 @@ const QuanLyNghiPhep = () => {
       : "Ngày không hợp lệ";
   };
 
-  // map tên NV (lowercase) để search; null-safe
   const nhanVienMap = nhanVienList.reduce((acc, nv) => {
     acc[nv.id] = (nv.ho_ten || "").toLowerCase();
     return acc;
@@ -198,275 +195,162 @@ const QuanLyNghiPhep = () => {
   const isHR = !!userInfo && userInfo.phong_ban_id === HR_DEPARTMENT_ID;
 
   if (loading)
-      return (
-        <div>
-          <ToastContainer position="top-right" autoClose={2000} />
-          <Loading />
-        </div>
-  );
+    return (
+      <div>
+        <ToastContainer position="top-right" autoClose={2000} />
+        <Loading />
+      </div>
+    );
+
   return (
-    <div className="container min-vh-100">
+    <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
       <ToastContainer position="top-right" autoClose={2000} />
-      <div className="row">
-        <div className="col-12 mt-5">
-          <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>
-              Trang chủ
-            </Breadcrumb.Item>
-            <Breadcrumb.Item active>Quản lý nghỉ phép</Breadcrumb.Item>
-          </Breadcrumb>
 
-          <Button variant="secondary" onClick={() => navigate("/")}>
-            ← Trang chủ
-          </Button>
-
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h2 className="text-center flex-grow-1">Quản lý đơn nghỉ phép</h2>
+      {/* Header Section */}
+      <div 
+        className="rounded-4 mb-4 shadow-sm"
+        style={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          padding: "2rem",
+          color: "white"
+        }}
+      >
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <Breadcrumb className="mb-3">
+              <Breadcrumb.Item 
+                 active style={{ color: "white" }}
+              >
+                <FaHome className="me-2" />
+                Trang chủ
+              </Breadcrumb.Item>
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                Quản lý nghỉ phép
+              </Breadcrumb.Item>
+            </Breadcrumb>
+            <h1 className="fw-bold mb-2">📋 Quản lý Đơn Nghỉ Phép</h1>
+            <p className="mb-0 opacity-90">
+              Quản lý và phê duyệt các đơn xin nghỉ phép của nhân viên
+            </p>
           </div>
+          <Button 
+            variant="outline-light" 
+            onClick={() => navigate("/")}
+            className="border-0"
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(10px)"
+            }}
+          >
+            <FaHome className="me-2" />
+            Trang chủ
+          </Button>
+        </div>
+      </div>
 
-          <div className="row mb-3">
-            <div className="col-md-6 mb-2">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="🔍 Tìm theo tên nhân viên hoặc lý do..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-              />
-            </div>
-            <div className="col-md-6 mb-2">
-              <select
-                className="form-select rounded-pill"
+      {/* Filter and Actions Card */}
+      <Card className="shadow-sm border-0 rounded-4 mb-4">
+        <Card.Body className="p-4">
+          <Row className="g-3">
+            <Col md={6}>
+              <div className="position-relative">
+                <FaSearch className="position-absolute top-50 start-3 translate-middle-y text-muted" />
+                <Form.Control
+                  type="text"
+                  placeholder="Tìm theo tên nhân viên hoặc lý do..."
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  style={{ paddingLeft: "2.5rem" }}
+                />
+              </div>
+            </Col>
+            <Col md={4}>
+              <Form.Select
                 value={filterTrangThai}
                 onChange={(e) => setFilterTrangThai(e.target.value)}
               >
-                <option value="">-- Tất cả trạng thái --</option>
+                <option value="">Tất cả trạng thái</option>
                 <option value="Chờ duyệt">Chờ duyệt</option>
                 <option value="Đã duyệt">Đã duyệt</option>
                 <option value="Từ chối">Từ chối</option>
                 <option value="Đã hủy">Đã hủy</option>
-              </select>
-            </div>
-          </div>
+              </Form.Select>
+            </Col>
+            <Col md={2}>
+              {isHR && (
+                <Button
+                  variant="primary"
+                  className="w-100"
+                  onClick={handleAdd}
+                  style={{
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    border: "none"
+                  }}
+                >
+                  <FaPlus className="me-2" />
+                  Thêm đơn
+                </Button>
+              )}
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
-          {isHR && (
-            <div className="d-flex justify-content-end mb-3">
-              <button
-              className="btn btn-outline-success px-4"
-              onClick={handleAdd}
-            >
-                + Thêm đơn nghỉ phép
-              </button>
-            </div>
-          )}
-
-
-          <div className="table-responsive" style={{ overflowX: "auto" }}>
-            <Table bordered hover striped className="rounded  text-nowrap">
-              <thead className="table-dark text-center">
+      {/* Regular Leave Table */}
+      <Card className="shadow-sm border-0 rounded-4 mb-4">
+        <Card.Header 
+          style={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            fontWeight: "600",
+            fontSize: "1.1rem"
+          }}
+        >
+          📅 Đơn Nghỉ Phép Thông Thường
+        </Card.Header>
+        <Card.Body className="p-0">
+          <div className="table-responsive" style={{ overflowX: "auto", overflowY: "auto", maxHeight: "600px" }}>
+            <Table bordered hover className="mb-2" style={{ minWidth: "1500px" }}>
+              <thead
+                style={{ 
+                  background: "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
+                  color: "white"
+                }}
+              >
                 <tr>
-                  <th>Nhân viên</th>
-                  <th>Từ ngày</th>
-                  <th>Đến hết ngày</th>
-                  <th>Loại nghỉ phép</th>
-                  <th>Tổng ngày nghỉ</th>
-                  <th>Lý do</th>
-                  <th>Trạng thái</th>
-                  <th>File giấy tờ</th>
-                  <th>Hành động</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Nhân viên</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Từ ngày</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Đến ngày</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Loại nghỉ</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Số ngày</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Lý do</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Trạng thái</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>File đính kèm</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Hành động</th>
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="9" className="text-center">
-                      Đang tải dữ liệu...
-                    </td>
-                  </tr>
-                ) : currentItems.length > 0 ? (
+                {currentItems.length > 0 ? (
                   currentItems.map((nghiPhep) =>
-                    nghiPhep.loai_nghi_phep_id != 3 ?  (
-                        <tr key={nghiPhep.id}>
-                          <td>
-                          {nhanVienList.find(
-                            (nv) => nv.id === nghiPhep.nhan_vien_id
-                          )?.ho_ten || "Không rõ"}
+                    nghiPhep.loai_nghi_phep_id != 3 ? (
+                      <tr key={nghiPhep.id} style={{ transition: "all 0.3s ease" }}>
+                        <td style={{ padding: "12px", fontWeight: "500" }}>
+                          {nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}
                         </td>
-                          <td>{formatDate(nghiPhep.tu_ngay)}</td>
-                          <td>{formatDate(nghiPhep.den_ngay)}</td>
-                          <td>{nghiPhep.loai_nghi_phep}</td>
-                          <td>{nghiPhep.so_ngay_nghi}</td>
-                          <td>{nghiPhep.ly_do}</td>
-                          <td className="text-center">
-                            <span
-                              className={`badge ${
-                              nghiPhep.trang_thai === "Chờ duyệt"
-                                  ? "bg-warning text-dark"
-                                  : nghiPhep.trang_thai === "Đã duyệt"
-                                  ? "bg-success"
-                                  : nghiPhep.trang_thai === "Từ chối"
-                                  ? "bg-danger"
-                                  : "bg-secondary"
-                              }`}
-                            >
-                              {nghiPhep.trang_thai}
-                            </span>
-                          </td>
-                          <td>
-                          {nghiPhep.can_cu_phap_ly_file ? (
-                            nghiPhep.loai_nghi_phep_id === 1 ? (
-                              <a
-                                href={`${API_URL}/can_cu_phap_ly_phep_nam/${nghiPhep.can_cu_phap_ly_file}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="link"
-                                style={{
-                                  textDecoration: "none",
-                                  color: "#0d6efd",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                📎 {nghiPhep.can_cu_phap_ly_file}
-                              </a>
-                            ) : nghiPhep.loai_nghi_phep_id === 2 ? (
-                              <a
-                                href={`${API_URL}/can_cu_phap_ly_phep_kl/${nghiPhep.can_cu_phap_ly_file}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="link"
-                                style={{
-                                  textDecoration: "none",
-                                  color: "#0d6efd",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                📎 {nghiPhep.can_cu_phap_ly_file}
-                              </a>
-                            ) : (
-                              <span className="text-muted">Không có</span>
-                            )
-                          ) : (
-                            <span className="text-muted">Không có</span>
-                          )}
+                        <td style={{ padding: "12px" }}>{formatDate(nghiPhep.tu_ngay)}</td>
+                        <td style={{ padding: "12px" }}>{formatDate(nghiPhep.den_ngay)}</td>
+                        <td style={{ padding: "12px" }}>{nghiPhep.loai_nghi_phep}</td>
+                        <td style={{ padding: "12px", textAlign: "center" }}>
+                          <span className="badge bg-primary bg-opacity-10 text-primary">
+                            {nghiPhep.so_ngay_nghi} ngày
+                          </span>
                         </td>
-                        <td>
-                            {isHR && nghiPhep.trang_thai === "Chờ duyệt" && (
-                              <>
-                                <button
-                                className="btn btn-sm btn-outline-success me-1"
-                                onClick={() => handleDuyet(nghiPhep.id)}
-                              >
-                                ✔ Duyệt
-                              </button>
-                                <button
-                                className="btn btn-sm btn-outline-danger me-1"
-                                onClick={() => handleTuChoi(nghiPhep.id)}
-                              >
-                                ✖ Từ chối
-                              </button>
-                                <button
-                                className="btn btn-sm btn-outline-danger me-1"
-                                onClick={() => handleDelete(nghiPhep.id)}
-                              >
-                                🗑 Hủy
-                              </button>
-                              </>
-                            )}
-
-                            {!isHR && nghiPhep.nhan_vien_id === userInfo?.id && 
-                            nghiPhep.trang_thai
-                           === "Chờ duyệt" && (
-                            <>
-                                <button
-                              className="btn btn-sm btn-outline-warning me-1"
-                              onClick={() => handleEdit(nghiPhep)}
-                            >
-                              ✏️ Sửa
-                            </button>
-                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
-                            </>
-                            )}
-                          </td>
-
-                        </tr>
-                    ) : (
-                      ""
-                    )
-                   )
-                ) : (
-                  <tr>
-                    <td colSpan="9" className="text-center text-muted">
-                      Không có đơn nghỉ phép nào phù hợp
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </Table>
-          </div>
-
-          <div className="table-responsive" style={{ overflowX: "auto" }}>
-            <h3 className="text-center mb-3 mt-3">Nghỉ thai sản</h3>
-            <Table bordered hover striped className="rounded text-nowrap">
-              <thead className="table-dark text-center">
-                <tr>
-                  <th>Nhân viên</th>
-                  <th>Ngày dự kiến sinh</th>
-                  <th>Từ ngày</th>
-                  <th>Đến hết ngày</th>
-                  <th>Loại nghỉ phép</th>
-                  <th>Tổng ngày nghỉ</th>
-                  <th>Số con</th>
-                  <th>Phương pháp sinh</th>
-                  <th>File giấy tờ</th>
-                  <th>Lý do</th>
-                  <th>Trạng thái</th>
-                  <th>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="12" className="text-center">
-                      Đang tải dữ liệu...
-                    </td>
-                  </tr>
-                ) : currentItems.length > 0 ? (
-                  currentItems.map((nghiPhep) =>
-                    nghiPhep.loai_nghi_phep_id == 3 ? (
-                      <tr key={nghiPhep.id}>
-                        <td>
-                          {nhanVienList.find(
-                            (nv) => nv.id === nghiPhep.nhan_vien_id
-                          )?.ho_ten || "Không rõ"}
+                        <td style={{ padding: "12px", maxWidth: "200px" }}>
+                          <div className="text-truncate" title={nghiPhep.ly_do}>
+                            {nghiPhep.ly_do}
+                          </div>
                         </td>
-                        <td>{nghiPhep.ngay_du_kien_sinh}</td>
-                        <td>{formatDate(nghiPhep.tu_ngay)}</td>
-                        <td>{formatDate(nghiPhep.den_ngay)}</td>
-                        <td>{nghiPhep.loai_nghi_phep}</td>
-                        <td>{nghiPhep.so_ngay_nghi}</td>
-                        <td>{nghiPhep.so_con}</td>
-                        <td>{nghiPhep.phuong_phap_sinh}</td>
-                        <td>
-                          {nghiPhep.can_cu_phap_ly_file ? (
-                            <a
-                              href={`${API_URL}/can_cu_phap_ly_thai_san/${nghiPhep.can_cu_phap_ly_file}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="link"
-                              style={{
-                                textDecoration: "none",
-                                color: "#0d6efd",
-                                fontWeight: 500,
-                              }}
-                            >
-                              📎{nghiPhep.can_cu_phap_ly_file}
-                            </a>
-                          ) : (
-                            <span className="text-muted">Không có</span>
-                          )}
-                        </td>
-                        <td>{nghiPhep.ly_do}</td>
-                        <td className="text-center">
+                        <td style={{ padding: "12px", textAlign: "center" }}>
                           <span
                             className={`badge ${
                               nghiPhep.trang_thai === "Chờ duyệt"
@@ -481,111 +365,283 @@ const QuanLyNghiPhep = () => {
                             {nghiPhep.trang_thai}
                           </span>
                         </td>
-                        <td>
-                          {/* HR: được duyệt / từ chối / hủy khi Chờ duyệt */}
-                          {isHR && nghiPhep.trang_thai === "Chờ duyệt" && (
-                            <>
-                              <button
-                                className="btn btn-sm btn-outline-success me-1"
-                                onClick={() => handleDuyet(nghiPhep.id)}
-                              >
-                                ✔ Duyệt
-                              </button>
-                              <button
-                                className="btn btn-sm btn-outline-danger me-1"
-                                onClick={() => handleTuChoi(nghiPhep.id)}
-                              >
-                                ✖ Từ chối
-                              </button>
-                              <button
-                                className="btn btn-sm btn-outline-danger me-1"
-                                onClick={() => handleDelete(nghiPhep.id)}
-                              >
-                                🗑 Hủy
-                              </button>
-                            </>
-                          )}
-
-                          {/* Non-HR: chỉ được Sửa/Hủy đơn của CHÍNH MÌNH khi Chờ duyệt */}
-                          {!isHR && nghiPhep.nhan_vien_id === userInfo?.id && 
-                            nghiPhep.trang_thai
-                           === "Chờ duyệt" && (
-                            <>
-                              <button
-                              className="btn btn-sm btn-outline-warning me-1"
-                              onClick={() => handleEdit(nghiPhep)}
+                        <td style={{ padding: "12px" }}>
+                          {nghiPhep.can_cu_phap_ly_file ? (
+                            <a
+                              href={`${API_URL}/can_cu_phap_ly_${nghiPhep.loai_nghi_phep_id === 1 ? 'phep_nam' : nghiPhep.loai_nghi_phep_id === 2 ? 'phep_kl' : 'thai_san'}/${nghiPhep.can_cu_phap_ly_file}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-sm btn-outline-primary"
                             >
-                              ✏️ Sửa
-                            </button>
-                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(nghiPhep.id)}>🗑 Hủy</button>
-                            </>
+                              {nghiPhep.can_cu_phap_ly_file}
+                              
+                            </a>
+                          ) : (
+                            <span className="text-muted">Không có</span>
                           )}
                         </td>
-
+                        <td style={{ padding: "12px" }}>
+                          <div className="d-flex gap-1 flex-wrap">
+                            {isHR && nghiPhep.trang_thai === "Chờ duyệt" && (
+                              <>
+                                <Button
+                                  variant="outline-success"
+                                  size="sm"
+                                  onClick={() => handleDuyet(nghiPhep.id)}
+                                >
+                                  <FaCheck />
+                                </Button>
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleTuChoi(nghiPhep.id)}
+                                >
+                                  <FaTimes />
+                                </Button>
+                              </>
+                            )}
+                            {(isHR || (!isHR && nghiPhep.nhan_vien_id === userInfo?.id)) && 
+                             nghiPhep.trang_thai === "Chờ duyệt" && (
+                              <>
+                                <Button
+                                  variant="outline-warning"
+                                  size="sm"
+                                  onClick={() => handleEdit(nghiPhep)}
+                                >
+                                  <FaEdit />
+                                </Button>
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleDelete(nghiPhep.id)}
+                                >
+                                  <FaTrash />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
                       </tr>
-                    ) : (
-                      ""
-                    )
+                    ) : null
                   )
                 ) : (
                   <tr>
-                    <td colSpan="12" className="text-center text-muted">
-                      Không có đơn nghỉ phép nào phù hợp
+                    <td colSpan="9" className="text-center text-muted py-4">
+                      Không có đơn nghỉ phép thông thường nào
                     </td>
                   </tr>
                 )}
               </tbody>
             </Table>
           </div>
+        </Card.Body>
+      </Card>
 
-          {/* Phân trang */}
-          {totalPages > 1 && (
-            <div className="d-flex justify-content-center align-items-center mt-3 gap-2">
+      {/* Maternity Leave Table */}
+      <Card className="shadow-sm border-0 rounded-4">
+        <Card.Header 
+          style={{
+            background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)",
+            color: "white",
+            fontWeight: "600",
+            fontSize: "1.1rem"
+          }}
+        >
+          <FaBaby className="me-2" />
+          Đơn Nghỉ Thai Sản
+        </Card.Header>
+        <Card.Body className="p-0">
+          <div className="table-responsive" style={{ overflowX: "auto", overflowY: "auto", maxHeight: "600px" }}>
+            <Table bordered hover className="mb-2" style={{ minWidth: "1500px" }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Nhân viên</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Ngày dự sinh</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Từ ngày</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Đến ngày</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Số ngày</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Số con</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Phương pháp</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>File đính kèm</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Lý do</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Trạng thái</th>
+                  <th style={{ padding: "12px", fontWeight: "600" }}>Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentItems.length > 0 ? (
+                  currentItems.map((nghiPhep) =>
+                    nghiPhep.loai_nghi_phep_id == 3 ? (
+                      <tr key={nghiPhep.id} style={{ transition: "all 0.3s ease" }}>
+                        <td style={{ padding: "12px", fontWeight: "500" }}>
+                          {nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}
+                        </td>
+                        <td style={{ padding: "12px" }}>{nghiPhep.ngay_du_kien_sinh}</td>
+                        <td style={{ padding: "12px" }}>{formatDate(nghiPhep.tu_ngay)}</td>
+                        <td style={{ padding: "12px" }}>{formatDate(nghiPhep.den_ngay)}</td>
+                        <td style={{ padding: "12px", textAlign: "center" }}>
+                          <span className="badge bg-primary bg-opacity-10 text-primary">
+                            {nghiPhep.so_ngay_nghi} ngày
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px", textAlign: "center" }}>
+                          <span className="badge bg-info bg-opacity-10 text-info">
+                            {nghiPhep.so_con}
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px" }}>{nghiPhep.phuong_phap_sinh}</td>
+                        <td style={{ padding: "12px" }}>
+                          {nghiPhep.can_cu_phap_ly_file ? (
+                            <a
+                              href={`${API_URL}/can_cu_phap_ly_thai_san/${nghiPhep.can_cu_phap_ly_file}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-sm btn-outline-primary"
+                            >
+                              <FaFileDownload className="me-1" />
+                              File
+                            </a>
+                          ) : (
+                            <span className="text-muted">Không có</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "12px", maxWidth: "150px" }}>
+                          <div className="text-truncate" title={nghiPhep.ly_do}>
+                            {nghiPhep.ly_do}
+                          </div>
+                        </td>
+                        <td style={{ padding: "12px", textAlign: "center" }}>
+                          <span
+                            className={`badge ${
+                              nghiPhep.trang_thai === "Chờ duyệt"
+                                ? "bg-warning text-dark"
+                                : nghiPhep.trang_thai === "Đã duyệt"
+                                ? "bg-success"
+                                : nghiPhep.trang_thai === "Từ chối"
+                                ? "bg-danger"
+                                : "bg-secondary"
+                            }`}
+                          >
+                            {nghiPhep.trang_thai}
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px" }}>
+                          <div className="d-flex gap-1 flex-wrap">
+                            {isHR && nghiPhep.trang_thai === "Chờ duyệt" && (
+                              <>
+                                <Button
+                                  variant="outline-success"
+                                  size="sm"
+                                  onClick={() => handleDuyet(nghiPhep.id)}
+                                >
+                                  <FaCheck />
+                                </Button>
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleTuChoi(nghiPhep.id)}
+                                >
+                                  <FaTimes />
+                                </Button>
+                              </>
+                            )}
+                            {(isHR || (!isHR && nghiPhep.nhan_vien_id === userInfo?.id)) && 
+                             nghiPhep.trang_thai === "Chờ duyệt" && (
+                              <>
+                                <Button
+                                  variant="outline-warning"
+                                  size="sm"
+                                  onClick={() => handleEdit(nghiPhep)}
+                                >
+                                  <FaEdit />
+                                </Button>
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleDelete(nghiPhep.id)}
+                                >
+                                  <FaTrash />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null
+                  )
+                ) : (
+                  <tr>
+                    <td colSpan="11" className="text-center text-muted py-4">
+                      Không có đơn nghỉ thai sản nào
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </div>
+        </Card.Body>
+      </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Card className="shadow-sm border-0 rounded-4 mt-4">
+          <Card.Body className="py-3">
+            <div className="d-flex justify-content-center align-items-center gap-3">
               <Button
-                variant="outline-secondary"
+                variant="outline-primary"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(currentPage - 1)}
+                style={{ borderColor: "#667eea", color: "#667eea" }}
               >
-                ← Trang Trước
+                ← Trang trước
               </Button>
-              <span>
-                Trang {currentPage}/{totalPages}
+              <span className="fw-semibold" style={{ color: "#4a5568" }}>
+                Trang {currentPage} / {totalPages}
               </span>
               <Button
-                variant="outline-secondary"
+                variant="outline-primary"
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(currentPage + 1)}
+                style={{ borderColor: "#667eea", color: "#667eea" }}
               >
-                Trang Sau →
+                Trang sau →
               </Button>
             </div>
-          )}
+          </Card.Body>
+        </Card>
+      )}
 
-          {/* Modal thêm/sửa */}
-          <Modal show={showModal} onHide={handleModalClose} size="lg">
-            <Modal.Header closeButton>
-              <Modal.Title>
-                {editingNghiPhep
-                  ? "Chỉnh sửa đơn nghỉ phép"
-                  : "Thêm đơn nghỉ phép"}
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <NghiPhepForm
-                onAdded={handleFormSubmit}
-                editingNghiPhep={editingNghiPhep}
-                setEditingNghiPhep={setEditingNghiPhep}
-              />
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={handleModalClose}>
-                Đóng
-              </Button>
-            </Modal.Footer>
-          </Modal>
-        </div>
-      </div>
-      
+      {/* Modal */}
+      <Modal
+        show={showModal}
+        onHide={handleModalClose}
+        size="lg"
+        className="rounded-4"
+      >
+        <Modal.Header 
+          closeButton
+          style={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white"
+          }}
+        >
+          <Modal.Title>
+            {editingNghiPhep ? "Chỉnh sửa đơn nghỉ phép" : "Thêm đơn nghỉ phép"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          <NghiPhepForm
+            onAdded={handleFormSubmit}
+            editingNghiPhep={editingNghiPhep}
+            setEditingNghiPhep={setEditingNghiPhep}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={handleModalClose}>
+            Đóng
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

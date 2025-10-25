@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo  } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import {
   Table,
@@ -11,17 +11,26 @@ import {
   Col,
   Popover,
   Spinner,
+  Card,
+  Form,
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
-// import * as XLSX from "xlsx";
-// import { saveAs } from "file-saver";
 import { exportBangLuongToExcel } from "../../utils/exportToExcel";
 import "react-toastify/dist/ReactToastify.css";
 import Loading from "../../../src/components/Loading";
-import { getNhanVienInfo } from "../../utils/auth"; // ✅ thêm
+import { getNhanVienInfo } from "../../utils/auth";
+import {
+  FaSearch,
+  FaCalculator,
+  FaFileExport,
+  FaHome,
+  FaTrash,
+  FaInfoCircle,
+} from "react-icons/fa";
+
 const API_URL = "http://127.0.0.1:5000/api";
-const HR_DEPARTMENT_ID = 2; // ❗ đổi lại ID thật phòng Nhân sự trong DB
+const HR_DEPARTMENT_ID = 2;
 
 const QuanLyLuong = () => {
   const [luongList, setLuongList] = useState([]);
@@ -44,38 +53,33 @@ const QuanLyLuong = () => {
   });
 
   const navigate = useNavigate();
-
-    // ✅ lấy user hiện tại & cờ phân quyền
-  const currentUser = getNhanVienInfo(); // {id, ho_ten, phong_ban_id, ...}
+  const currentUser = getNhanVienInfo();
   const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
 
   useEffect(() => {
     return () => {
-      // Khi component unmount, xóa modal backdrop còn sót
       const backdrops = document.querySelectorAll(".modal-backdrop");
       backdrops.forEach((bd) => bd.remove());
       document.body.classList.remove("modal-open");
-      document.body.style.overflow = ""; // khôi phục scroll
+      document.body.style.overflow = "";
     };
   }, []);
 
   useEffect(() => {
-    // if (hasFetched.current) return; // Nếu đã gọi rồi -> bỏ qua
-    // hasFetched.current = true;
     fetchLuong();
     fetchNhanVien();
     fetchPhongBan();
   }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     if (!showModal) {
       const today = new Date();
       setFormData({
-        nhan_vien_id: isHR ? "" : currentUser?.id || "", // 🟢 non-HR mặc định là chính mình
+        nhan_vien_id: isHR ? "" : currentUser?.id || "",
         thang: today.getMonth() + 1,
         nam: today.getFullYear(),
       });
-      setIsTinhTatCa(false); // 🟢 non-HR không được bật tính tất cả
+      setIsTinhTatCa(false);
     }
   }, [showModal, isHR, currentUser?.id]);
 
@@ -113,7 +117,7 @@ const QuanLyLuong = () => {
   };
 
   const handleDeleteLuong = async (luongId) => {
-    if (!isHR) return; // 🚫 chặn non-HR
+    if (!isHR) return;
     if (!window.confirm("Bạn có chắc chắn muốn xoá dòng lương này?")) return;
     setLoading(true);
     try {
@@ -134,9 +138,8 @@ const QuanLyLuong = () => {
       toast.warning("Vui lòng điền đầy đủ tháng và năm.");
       return;
     }
-    // 🛡️ non-HR không được tính tất cả và chỉ được tính cho chính họ
+
     if (!isHR) {
-      
       let nhan_vien_id = currentUser?.id;
       if (!nhan_vien_id) {
         toast.error("Không xác định được nhân viên hiện tại!");
@@ -152,16 +155,11 @@ const QuanLyLuong = () => {
           nam: parseInt(nam),
           phong_ban_id: selectedPhongBan ? parseInt(selectedPhongBan) : null,
         });
-        // if (response.data.data) {
-        //   toast.success("Đã tính lương cho tất cả nhân viên.");
-        //   setShowModal(false);
-        //   fetchLuong();
-        // }
         const { data, errors } = response.data.data;
         if (errors && errors.length > 0) {
           errors.forEach((msg, i) =>
             toast.warning(msg, { autoClose: 2500, delay: i * 500 })
-          ); // hiển thị cảnh báo từng nhân viên
+          );
         }
         if (data && data.length > 0) {
           toast.success("Đã tính lương cho tất cả nhân viên.");
@@ -186,8 +184,6 @@ const QuanLyLuong = () => {
           nam: parseInt(nam),
         });
 
-        // console.log(response);
-
         if (response.data.success) {
           toast.success(response.data.message || "Tính lương thành công!");
           setShowModal(false);
@@ -207,33 +203,25 @@ const QuanLyLuong = () => {
   const formatCurrency = (amount) =>
     amount?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-  // const nhanVienMap = nhanVienList.reduce((acc, nv) => {
-  //   acc[nv.id] = nv.ho_ten.toLowerCase();
-  //   return acc;
-  // }, {});
-  // Map tên NV (đủ cho HR; non-HR chỉ cần chính họ)
   const nhanVienMap = useMemo(() => {
     return nhanVienList.reduce((acc, nv) => {
       acc[nv.id] = (nv.ho_ten || "").toLowerCase();
       return acc;
     }, {});
   }, [nhanVienList]);
-   // 🧹 Lọc theo quyền + keyword + tháng-năm
+
   const filteredList = useMemo(() => {
     return luongList
       .filter((luong) => {
-        // 1) PHÂN QUYỀN: non-HR chỉ xem được lương của chính mình
         if (!isHR && currentUser?.id && luong.nhan_vien_id !== currentUser.id) {
           return false;
         }
-        // 2) Tìm theo tên (trên toàn dsNV)
         const hoTen = nhanVienMap[luong.nhan_vien_id] || "";
         const searchMatch = hoTen.includes((searchKeyword || "").toLowerCase());
-        // 3) Lọc theo tháng-năm
         const monthMatch =
           selectedMonthNumber && selectedYear
             ? luong.thang === parseInt(selectedMonthNumber) &&
-            luong.nam === parseInt(selectedYear)
+              luong.nam === parseInt(selectedYear)
             : true;
 
         return searchMatch && monthMatch;
@@ -248,150 +236,12 @@ const QuanLyLuong = () => {
     selectedMonthNumber,
     selectedYear,
   ]);
-  // const filteredList = luongList
-  //   .filter((luong) => {
-  //     const hoTen = nhanVienMap[luong.nhan_vien_id] || "";
-  //     const searchMatch = hoTen.includes(searchKeyword.toLowerCase());
-  //     const monthMatch =
-  //       selectedMonthNumber && selectedYear
-  //         ? luong.thang === parseInt(selectedMonthNumber) &&
-  //           luong.nam === parseInt(selectedYear)
-  //         : true;
-  //     return searchMatch && monthMatch;
-  //   })
-  //   .sort((a, b) => b.id - a.id);
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
   const paginatedList = filteredList.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
-  // const exportToExcel = () => {
-  //   if (filteredList.length === 0) {
-  //     toast.warning("Không có dữ liệu để xuất!");
-  //     return;
-  //   }
-
-  //   const dataToExport = filteredList.map((luong, index) => {
-  //     const nv = nhanVienList.find((nv) => nv.id === luong.nhan_vien_id);
-  //     return {
-  //       STT: index + 1,
-  //       "Ghi chú": luong.ghi_chu || "",
-  //       "Nhân viên": nv?.ho_ten || "Không rõ",
-  //       Tháng: `${luong.thang}/${luong.nam}`,
-
-  //       "Ngày công chuẩn": luong.ngay_cong_chuan,
-  //       "Số ngày công": luong.so_ngay_cong,
-  //       "Ngày phép": luong?.ngay_phep || 0,
-  //       "Trừ nghỉ không phép": luong?.tru_nghi_khong_phep || 0,
-  //       "Ngày làm lễ": luong?.ngay_lam_le || 0,
-  //       "Tiền làm lễ": luong?.tien_lam_le || 0,
-
-  //       "Phụ cấp ăn trưa": luong?.phu_cap_an_trua || 0,
-  //       "Phụ cấp xăng, xe": luong?.phu_cap_xang_xe || 0,
-  //       "Phụ cấp độc hại": luong?.phu_cap_doc_hai || 0,
-  //       "Phụ cấp trách nhiệm": luong?.phu_cap_trach_nhiem || 0,
-  //       "Phụ cấp chức vụ": luong?.phu_cap_chuc_vu || 0,
-  //       "Phụ cấp thâm niên": luong?.phu_cap_tham_nien || 0,
-  //       "Phụ cấp khác": luong?.phu_cap_khac || 0,
-  //       "Tổng phụ cấp": luong.tong_phu_cap,
-
-  //       "Thưởng nóng": luong?.thuong_nong || 0,
-  //       "Thưởng lễ": luong?.thuong_le || 0,
-  //       "Thưởng khác": luong?.thuong_khac || 0,
-  //       "Tổng thưởng": luong.tong_thuong,
-
-  //       "Tổng lương": luong.tong_luong,
-
-  //       "Trừ đi trễ, về sớm": luong?.tru_di_tre_ve_som || 0,
-  //       "Trừ vi phạm": luong?.tru_vi_pham || 0,
-  //       "Trừ tạm ứng": luong?.tru_tam_ung || 0,
-  //       "Trừ khác": luong?.tru_khac || 0,
-  //       "Tổng khấu trừ": luong.tong_khau_tru,
-
-  //       BHXH: luong.bhxh,
-  //       BHTN: luong.bhtn,
-  //       BHYT: luong.bhyt,
-  //       "Thuế TNCN": luong.thue_tncn,
-
-  //       "Thực nhận": luong.thuc_nhan,
-  //     };
-  //   });
-
-  //   const worksheet = XLSX.utils.json_to_sheet(dataToExport, { origin: "A3" });
-
-  //   // Thêm tiêu đề chính
-  //   const title = [["BẢNG LƯƠNG NHÂN VIÊN"]];
-  //   const subTitle = [
-  //     [`Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`],
-  //   ];
-  //   XLSX.utils.sheet_add_aoa(worksheet, title, { origin: "A1" });
-  //   XLSX.utils.sheet_add_aoa(worksheet, subTitle, { origin: "A2" });
-
-  //   // Merge tiêu đề
-  //   const totalCols = Object.keys(dataToExport[0]).length;
-  //   worksheet["!merges"] = [
-  //     { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } },
-  //     { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } },
-  //   ];
-
-  //   // Tự điều chỉnh độ rộng cột
-  //   worksheet["!cols"] = Object.keys(dataToExport[0]).map((key) => ({
-  //     wch: Math.max(
-  //       key.length + 2,
-  //       ...dataToExport.map((r) => (r[key] ? r[key].toString().length + 2 : 10))
-  //     ),
-  //   }));
-
-  //   // Tạo workbook và style
-  //   const workbook = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(workbook, worksheet, "Bảng Lương");
-
-  //   // Style (cần plugin xlsx-style hoặc sheetjs Pro để áp dụng hoàn toàn)
-  //   const titleCell = worksheet["A1"];
-  //   if (titleCell) {
-  //     titleCell.s = {
-  //       font: { bold: true, sz: 16, color: { rgb: "1F497D" } },
-  //       alignment: { horizontal: "center", vertical: "center" },
-  //     };
-  //   }
-
-  //   const headerRowIndex = 2;
-  //   for (let c = 0; c < totalCols; c++) {
-  //     const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex, c });
-  //     const cell = worksheet[cellAddress];
-  //     if (cell) {
-  //       cell.s = {
-  //         font: { bold: true, color: { rgb: "FFFFFF" } },
-  //         fill: { fgColor: { rgb: "4F81BD" } },
-  //         alignment: { horizontal: "center", vertical: "center" },
-  //         border: {
-  //           top: { style: "thin", color: { rgb: "999999" } },
-  //           bottom: { style: "thin", color: { rgb: "999999" } },
-  //           left: { style: "thin", color: { rgb: "999999" } },
-  //           right: { style: "thin", color: { rgb: "999999" } },
-  //         },
-  //       };
-  //     }
-  //   }
-
-  //   const excelBuffer = XLSX.write(workbook, {
-  //     bookType: "xlsx",
-  //     type: "array",
-  //     cellStyles: true,
-  //   });
-
-  //   const blob = new Blob([excelBuffer], {
-  //     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  //   });
-
-  //   saveAs(
-  //     blob,
-  //     `BangLuong_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`
-  //   );
-  //   toast.success("Xuất file Excel thành công!");
-  // };
 
   if (loading)
     return (
@@ -402,38 +252,70 @@ const QuanLyLuong = () => {
     );
 
   return (
-    <div className="container min-vh-100">
+    <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
       <ToastContainer position="top-right" autoClose={2000} />
 
-      <div className="row">
-        <div className="col-12 mt-5">
-          <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>
-              Trang chủ
-            </Breadcrumb.Item>
-            <Breadcrumb.Item active>Quản lý lương</Breadcrumb.Item>
-          </Breadcrumb>
-          <Button variant="secondary" onClick={() => navigate("/")}>
-            ← Trang chủ
+      {/* Header Section */}
+      <div
+        className="rounded-4 mb-4 shadow-sm"
+        style={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          padding: "2rem",
+          color: "white",
+        }}
+      >
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <Breadcrumb className="mb-3">
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                <FaHome className="me-2" />
+                Trang chủ
+              </Breadcrumb.Item>
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                Quản lý lương
+              </Breadcrumb.Item>
+            </Breadcrumb>
+            <h1 className="fw-bold mb-2">💰 Quản lý Lương</h1>
+            <p className="mb-0 opacity-90">
+              Quản lý và tính toán lương nhân viên
+            </p>
+          </div>
+          <Button
+            variant="outline-light"
+            onClick={() => navigate("/")}
+            className="border-0"
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <FaHome className="me-2" />
+            Trang chủ
           </Button>
-          <h2 className="mb-4 text-center">Quản lý lương</h2>
-          {/* Bộ lọc */}
-          <div className="row mb-4">
-            <div className="col-md-4 mb-2">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Tìm theo tên nhân viên..."
-                value={searchKeyword}
-                onChange={(e) => {
-                  setSearchKeyword(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
-            <div className="col-md-4 mb-2">
-              <select
-                className="form-control"
+        </div>
+      </div>
+
+      {/* Filter and Actions Card */}
+      <Card className="shadow-sm border-0 rounded-4 mb-4">
+        <Card.Body className="p-4">
+          <Row className="g-3">
+            <Col md={4}>
+              <div className="position-relative">
+                <FaSearch className="position-absolute top-50 start-3 translate-middle-y text-muted" />
+                <Form.Control
+                  type="text"
+                  placeholder="Tìm theo tên nhân viên..."
+                  value={searchKeyword}
+                  onChange={(e) => {
+                    setSearchKeyword(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{ paddingLeft: "2.5rem" }}
+                />
+              </div>
+            </Col>
+            <Col md={3}>
+              <Form.Select
                 value={selectedYear}
                 onChange={(e) => {
                   setSelectedYear(e.target.value);
@@ -449,11 +331,10 @@ const QuanLyLuong = () => {
                     </option>
                   );
                 })}
-              </select>
-            </div>
-            <div className="col-md-4 mb-2">
-              <select
-                className="form-control"
+              </Form.Select>
+            </Col>
+            <Col md={3}>
+              <Form.Select
                 value={selectedMonthNumber}
                 onChange={(e) => {
                   setSelectedMonthNumber(e.target.value);
@@ -469,139 +350,263 @@ const QuanLyLuong = () => {
                     </option>
                   );
                 })}
-              </select>
-            </div>
-            <div className="col-md-4 mb-2">
+              </Form.Select>
+            </Col>
+            <Col md={2}>
+              <Button
+                variant="outline-success"
+                className="w-100"
+                onClick={() =>
+                  exportBangLuongToExcel(filteredList, nhanVienList)
+                }
+              >
+                <FaFileExport className="me-2" />
+                Xuất Excel
+              </Button>
+            </Col>
+          </Row>
+
+          <Row className="g-3 mt-2">
+            <Col md={6}>
               <OverlayTrigger
                 placement="top"
                 overlay={<Tooltip>Tính lương cho 1 nhân viên</Tooltip>}
               >
                 <Button
-                  variant="outline-success"
-                  className="w-100"
-                  onClick={() => setShowModal(true)}
-                >
-                  Tính lương cho 1 nhân viên
-                </Button>
-              </OverlayTrigger>
-            </div>
-            <div className="col-md-4 mb-2">
-              <OverlayTrigger
-                placement="top"
-                overlay={<Tooltip>Tính lương toàn bộ nhân viên</Tooltip>}
-              >
-                <Button
-                  variant="outline-warning"
+                  variant="outline-primary"
                   className="w-100"
                   onClick={() => {
-                    setIsTinhTatCa(true);
+                    setIsTinhTatCa(false);
                     setShowModal(true);
                   }}
+                  style={{
+                    borderColor: "#667eea",
+                    color: "#667eea",
+                    transition: "all 0.3s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "#667eea";
+                    e.target.style.color = "white";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "transparent";
+                    e.target.style.color = "#667eea";
+                  }}
                 >
-                  Tính lương tất cả nhân viên
+                  <FaCalculator className="me-2" />
+                  Tính lương 1 nhân viên
                 </Button>
               </OverlayTrigger>
-            </div>
-            <div className="col-md-2 mb-2 d-flex justify-content-md-end justify-content-center">
-              <Button
-                variant="outline-success"
-                className="w-100 w-md-auto"
-                onClick={() =>
-                  exportBangLuongToExcel(filteredList, nhanVienList)
-                }
-              >
-                Xuất Excel
-              </Button>
-            </div>
-          </div>
-          {/* Bảng lương */}
+            </Col>
+            <Col md={6}>
+              {isHR && (
+                <OverlayTrigger
+                  placement="top"
+                  overlay={<Tooltip>Tính lương toàn bộ nhân viên</Tooltip>}
+                >
+                  <Button
+                    variant="outline-warning"
+                    className="w-100"
+                    onClick={() => {
+                      setIsTinhTatCa(true);
+                      setShowModal(true);
+                    }}
+                    style={{
+                      borderColor: "#f59e0b",
+                      color: "#f59e0b",
+                      transition: "all 0.3s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = "#f59e0b";
+                      e.target.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = "transparent";
+                      e.target.style.color = "#f59e0b";
+                    }}
+                  >
+                    <FaCalculator className="me-2" />
+                    Tính lương tất cả
+                  </Button>
+                </OverlayTrigger>
+              )}
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
+      {/* Table Card */}
+      <Card className="shadow-sm border-0 rounded-4">
+        <Card.Body className="p-0">
           <div
+            className="table-responsive"
             style={{
-              maxHeight: "75vh",
               overflowX: "auto",
               overflowY: "auto",
-              whiteSpace: "nowrap",
-              position: "relative", // Để các cột sticky hoạt động đúng
+              maxHeight: "80vh",
             }}
           >
-            <Table striped bordered hover responsive className="align-middle">
+            <Table
+              bordered
+              hover
+              className="mb-0"
+              style={{ minWidth: "1800px" }}
+            >
               <thead
-                className="table-dark"
-                style={{ position: "sticky", top: 0, zIndex: 3 }}
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 3,
+                  background:
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                }}
               >
                 <tr>
+                  {/* Icon column */}
                   <th
                     style={{
                       position: "sticky",
                       left: 0,
-                      zIndex: 4,
-                      minWidth: "50px", // icon
-                      background: "#212529", // cùng màu header
+                      zIndex: 5,
+                      minWidth: "60px",
+                      width: "60px",
+                      background:
+                        "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
+                      color: "white",
+                      fontWeight: "600",
+                      fontSize: "0.85rem",
+                      textAlign: "center",
+                      borderRight: "1px solid rgba(255,255,255,0.3)",
+                      padding: "12px 4px",
                     }}
-                  ></th>
+                  >
+                    <FaInfoCircle size={14} />
+                  </th>
+
+                  {/* Nhân viên column */}
                   <th
                     style={{
                       position: "sticky",
-                      left: "49px",
-                      zIndex: 4,
-                      minWidth: "180px", // tên NV
-                      background: "#212529",
+                      left: "60px",
+                      zIndex: 5,
+                      minWidth: "200px",
+                      width: "200px",
+                      background:
+                        "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
+                      color: "white",
+                      fontWeight: "600",
+                      fontSize: "0.85rem",
+                      borderRight: "1px solid rgba(255,255,255,0.3)",
+                      padding: "12px 8px",
+                      textAlign: "center",
                     }}
                   >
                     Nhân viên
                   </th>
+
+                  {/* Tháng column */}
                   <th
                     style={{
                       position: "sticky",
-                      left: "228px", // = 50px + 180px
-                      zIndex: 4,
+                      left: "260px",
+                      zIndex: 5,
                       minWidth: "120px",
-                      background: "#212529",
+                      width: "120px",
+                      background:
+                        "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
+                      color: "white",
+                      fontWeight: "600",
+                      fontSize: "0.85rem",
+                      borderRight: "2px solid rgba(255,255,255,0.4)",
+                      padding: "12px 8px",
+                      textAlign: "center",
                     }}
                   >
                     Tháng
                   </th>
-                  <th>Ngày công chuẩn</th>
-                  <th>Số ngày công</th>
-                  <th>Ngày phép</th>
-                  <th>Trừ nghỉ không phép</th>
-                  <th>Ngày làm lễ</th>
-                  <th>Tiền làm lễ</th>
-                  <th>Giờ tăng ca</th>
-                  <th>Tiền tăng ca</th>
-                  <th>Ngày làm cuối tuần</th>
-                  <th>Tiền làm cuối tuần</th>
 
-                  <th>Phụ cấp ăn trưa</th>
-                  <th>Phụ cấp xăng, xe</th>
-                  <th>Phụ cấp độc hại</th>
-                  <th>Phụ cấp trách nhiệm</th>
-                  <th>Phụ cấp chức vụ</th>
-                  <th>Phụ cấp thâm niên</th>
-                  <th>Phụ cấp khác</th>
-                  <th>Tổng phụ cấp</th>
+                  {/* Các columns thông thường với width cố định */}
+                  {[
+                    { name: "Ngày công chuẩn", width: "120px" },
+                    { name: "Số ngày công", width: "110px" },
+                    { name: "Ngày phép", width: "100px" },
+                    { name: "Trừ nghỉ không phép", width: "140px" },
+                    { name: "Ngày làm lễ", width: "110px" },
+                    { name: "Tiền làm lễ", width: "110px" },
+                    { name: "Giờ tăng ca", width: "110px" },
+                    { name: "Tiền tăng ca", width: "110px" },
+                    { name: "Ngày làm cuối tuần", width: "140px" },
+                    { name: "Tiền làm cuối tuần", width: "140px" },
 
-                  <th>Thưởng nóng</th>
-                  <th>Thưởng lễ</th>
-                  <th>Thưởng khác</th>
-                  <th>Tổng Thưởng</th>
+                    { name: "PC ăn trưa", width: "100px" },
+                    { name: "PC xăng xe", width: "100px" },
+                    { name: "PC độc hại", width: "100px" },
+                    { name: "PC trách nhiệm", width: "120px" },
+                    { name: "PC chức vụ", width: "100px" },
+                    { name: "PC thâm niên", width: "110px" },
+                    { name: "PC khác", width: "90px" },
+                    { name: "Tổng phụ cấp", width: "110px" },
 
-                  <th>Tổng lương</th>
+                    { name: "Thưởng nóng", width: "100px" },
+                    { name: "Thưởng lễ", width: "90px" },
+                    { name: "Thưởng khác", width: "100px" },
+                    { name: "Tổng thưởng", width: "100px" },
 
-                  <th>Trừ đi trễ, về sớm</th>
+                    { name: "Tổng lương", width: "110px" },
 
-                  <th>Trừ vi phạm</th>
-                  <th>Trừ tạm ứng</th>
-                  <th>Trừ khác</th>
-                  <th>Tổng khấu trừ</th>
+                    { name: "Trừ đi trễ/về sớm", width: "130px" },
+                    { name: "Trừ vi phạm", width: "100px" },
+                    { name: "Trừ tạm ứng", width: "100px" },
+                    { name: "Trừ khác", width: "80px" },
+                    { name: "Tổng khấu trừ", width: "110px" },
 
-                  <th>BHXH</th>
-                  <th>BHTN</th>
-                  <th>BHYT</th>
-                  <th>Thuế TNCN</th>
-                  <th>Thực nhận</th>
-                  <th>Hành động</th>
+                    { name: "BHXH", width: "80px" },
+                    { name: "BHTN", width: "80px" },
+                    { name: "BHYT", width: "80px" },
+                    { name: "Thuế TNCN", width: "90px" },
+                    { name: "Thực nhận", width: "100px" },
+                  ].map((column, index) => (
+                    <th
+                      key={index}
+                      style={{
+                        color: "white",
+                        fontWeight: "600",
+                        fontSize: "0.8rem",
+                        minWidth: column.width,
+                        width: column.width,
+                        background:
+                          "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        borderRight: "1px solid rgba(255,255,255,0.2)",
+                        padding: "12px 4px",
+                        textAlign: "center",
+                        whiteSpace: "normal",
+                        lineHeight: "1.2",
+                      }}
+                      title={column.name}
+                    >
+                      {column.name}
+                    </th>
+                  ))}
+
+                  {/* Hành động column */}
+                  {isHR && (
+                    <th
+                      style={{
+                        color: "white",
+                        fontWeight: "600",
+                        fontSize: "0.85rem",
+                        minWidth: "120px",
+                        width: "120px",
+                        background:
+                          "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        padding: "12px 8px",
+                        textAlign: "center",
+                      }}
+                    >
+                      Hành động
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -612,7 +617,7 @@ const QuanLyLuong = () => {
                     </td>
                   </tr>
                 ) : paginatedList.length > 0 ? (
-                  paginatedList.map((luong) => {
+                  paginatedList.map((luong, rowIndex) => {
                     const nv = nhanVienList.find(
                       (nv) => nv.id === luong.nhan_vien_id
                     );
@@ -667,41 +672,47 @@ const QuanLyLuong = () => {
                       ) || [];
 
                     return (
-                      <tr key={luong.id}>
+                      <tr
+                        key={luong.id}
+                        style={{ transition: "all 0.3s ease" }}
+                      >
                         <td
                           style={{
                             position: "sticky",
                             left: 0,
                             zIndex: 2,
-                            minWidth: "50px",
-                            background: "#fff",
+                            minWidth: "60px",
+                            width: "60px",
+                            background: rowIndex % 2 === 0 ? "#f8f9fa" : "#fff",
                             textAlign: "center",
+                            borderRight: "1px solid #dee2e6",
                           }}
                         >
                           <OverlayTrigger
                             placement="top"
                             overlay={
-                              <Popover className="bg-primary-subtle text-white">
-                                <Popover.Body as="h5">
+                              <Popover>
+                                <Popover.Body>
                                   <small>{luong?.ghi_chu || ""}</small>
                                 </Popover.Body>
                               </Popover>
                             }
                           >
-                            <h3>
+                            <span>
                               {luong.ghi_chu === "Nghỉ thai sản" ? "🤰" : ""}
-                            </h3>
+                            </span>
                           </OverlayTrigger>
                         </td>
-
                         <td
                           style={{
                             position: "sticky",
-                            left: "49px",
+                            left: "60px",
                             zIndex: 2,
-                            minWidth: "180px",
-                            background: "#fff",
-                            fontWeight: 500,
+                            minWidth: "200px",
+                            width: "200px",
+                            background: rowIndex % 2 === 0 ? "#f8f9fa" : "#fff",
+                            fontWeight: "500",
+                            borderRight: "1px solid #dee2e6",
                           }}
                         >
                           {nv?.ho_ten || "Không rõ"}
@@ -709,14 +720,17 @@ const QuanLyLuong = () => {
                         <td
                           style={{
                             position: "sticky",
-                            left: "228px", // 50px + 180px
+                            left: "260px",
                             zIndex: 2,
                             minWidth: "120px",
-                            background: "#fff",
+                            width: "120px",
+                            background: rowIndex % 2 === 0 ? "#f8f9fa" : "#fff",
+                            borderRight: "2px solid #dee2e6",
                           }}
                         >
                           {`${luong.thang}/${luong.nam}`}
                         </td>
+
                         <td>{luong.ngay_cong_chuan}</td>
                         <td>{luong.so_ngay_cong}</td>
                         <td align="center">
@@ -961,26 +975,30 @@ const QuanLyLuong = () => {
                         <td className="bg-primary bg-opacity-25">
                           <b>{formatCurrency(luong.thuc_nhan)}</b>
                         </td>
-                        <td>
-                          <OverlayTrigger
-                            placement="top"
-                            overlay={<Tooltip>Xoá dòng lương này</Tooltip>}
-                          >
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleDeleteLuong(luong.id)}
+                        {isHR && (
+                          <td>
+                            <OverlayTrigger
+                              placement="top"
+                              overlay={<Tooltip>Xoá dòng lương này</Tooltip>}
                             >
-                              Xoá
-                            </Button>
-                          </OverlayTrigger>
-                        </td>
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                onClick={() => handleDeleteLuong(luong.id)}
+                              >
+                                <FaTrash />
+                              </Button>
+                            </OverlayTrigger>
+                          </td>
+                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan="11" className="text-center text-muted">
+                    <td colSpan="42" className="text-center text-muted py-4">
+                      <FaInfoCircle size={32} className="mb-2 opacity-50" />
+                      <br />
                       Không có bảng lương
                     </td>
                   </tr>
@@ -988,32 +1006,42 @@ const QuanLyLuong = () => {
               </tbody>
             </Table>
           </div>
-          {/* Phân trang giữ nguyên kiểu cũ */}
-          <Row className="justify-content-center mt-3">
-            <Col xs="auto" className="text-center">
-              <div className="d-flex align-items-center gap-3">
-                <Button
-                  variant="outline-secondary"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                >
-                  ← Trước
-                </Button>
-                <span className="fw-semibold">
-                  Trang {currentPage} / {totalPages || 1}
-                </span>
-                <Button
-                  variant="outline-secondary"
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                >
-                  Sau →
-                </Button>
-              </div>
-            </Col>
-          </Row>
-          {/* Modal tính lương */}
-          {/* <Modal show={showModal} onHide={() => setShowModal(false)}>
+        </Card.Body>
+      </Card>
+      {/* Phân trang giữ nguyên kiểu cũ */}
+      {totalPages > 1 && (
+        <Card className="shadow-sm border-0 rounded-4 mt-4">
+          <Card.Body className="py-3">
+            <Row className="justify-content-center">
+              <Col xs="auto">
+                <div className="d-flex align-items-center gap-3">
+                  <Button
+                    variant="outline-primary"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    style={{ borderColor: "#667eea", color: "#667eea" }}
+                  >
+                    ← Trước
+                  </Button>
+                  <span className="fw-semibold" style={{ color: "#4a5568" }}>
+                    Trang {currentPage} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline-primary"
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    style={{ borderColor: "#667eea", color: "#667eea" }}
+                  >
+                    Sau →
+                  </Button>
+                </div>
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+      )}
+      {/* Modal tính lương */}
+      {/* <Modal show={showModal} onHide={() => setShowModal(false)}>
             <Modal.Header closeButton>
               <Modal.Title>Tính lương</Modal.Title>
             </Modal.Header>
@@ -1064,96 +1092,106 @@ const QuanLyLuong = () => {
               </Button>
             </Modal.Footer>
           </Modal> */}
-          <Modal
-            show={showModal}
-            onHide={() => setShowModal(false)}
-            backdrop="static"
-            centered
+      {/* Modal tính lương */}
+      <Modal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        backdrop="static"
+        centered
+        className="rounded-4"
+      >
+        <Modal.Header
+          closeButton
+          style={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+          }}
+        >
+          <Modal.Title>
+            {isTinhTatCa
+              ? "Tính lương cho tất cả nhân viên"
+              : "Tính lương cho 1 nhân viên"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Tháng</Form.Label>
+              <Form.Control
+                type="number"
+                value={formData.thang}
+                onChange={(e) =>
+                  setFormData({ ...formData, thang: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Năm</Form.Label>
+              <Form.Control
+                type="number"
+                value={formData.nam}
+                onChange={(e) =>
+                  setFormData({ ...formData, nam: e.target.value })
+                }
+              />
+            </Form.Group>
+
+            {isTinhTatCa && (
+              <Form.Group className="mb-3">
+                <Form.Label>Chọn phòng ban (tuỳ chọn)</Form.Label>
+                <Form.Select
+                  value={selectedPhongBan}
+                  onChange={(e) => setSelectedPhongBan(e.target.value)}
+                >
+                  <option value="">Tất cả phòng ban</option>
+                  {phongBanList.map((pb) => (
+                    <option key={pb.id} value={pb.id}>
+                      {pb.ten_phong_ban}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            )}
+
+            {!isTinhTatCa && (
+              <Form.Group className="mb-3">
+                <Form.Label>Chọn nhân viên</Form.Label>
+                <Form.Select
+                  value={formData.nhan_vien_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nhan_vien_id: e.target.value })
+                  }
+                >
+                  <option value="">-- Chọn nhân viên --</option>
+                  {nhanVienList.map((nv) => (
+                    <option key={nv.id} value={nv.id}>
+                      {nv.ho_ten}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            )}
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="outline-secondary"
+            onClick={() => setShowModal(false)}
           >
-            <Modal.Header closeButton>
-              <Modal.Title>
-                {isTinhTatCa
-                  ? "Tính lương cho tất cả nhân viên"
-                  : "Tính lương cho 1 nhân viên"}
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <div className="mb-3">
-                <label className="form-label">Tháng</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={formData.thang}
-                  onChange={(e) =>
-                    setFormData({ ...formData, thang: e.target.value })
-                  }
-                />
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Năm</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={formData.nam}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nam: e.target.value })
-                  }
-                />
-              </div>
-
-              {/* Nếu là tính lương tất cả → hiển thị select phòng ban */}
-              {isTinhTatCa && (
-                <div className="mb-3">
-                  <label className="form-label">
-                    Chọn phòng ban (tuỳ chọn)
-                  </label>
-                  <select
-                    className="form-control"
-                    value={selectedPhongBan}
-                    onChange={(e) => setSelectedPhongBan(e.target.value)}
-                  >
-                    <option value="">Tất cả phòng ban</option>
-                    {phongBanList.map((pb) => (
-                      <option key={pb.id} value={pb.id}>
-                        {pb.ten_phong_ban}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Nếu là tính 1 nhân viên */}
-              {!isTinhTatCa && (
-                <div className="mb-3">
-                  <label className="form-label">Chọn nhân viên</label>
-                  <select
-                    className="form-control"
-                    value={formData.nhan_vien_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nhan_vien_id: e.target.value })
-                    }
-                  >
-                    <option value="">-- Chọn nhân viên --</option>
-                    {nhanVienList.map((nv) => (
-                      <option key={nv.id} value={nv.id}>
-                        {nv.ho_ten}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowModal(false)}>
-                Đóng
-              </Button>
-              <Button variant="primary" onClick={handleSubmitLuong}>
-                Xác nhận
-              </Button>
-            </Modal.Footer>
-          </Modal>
-        </div>
-      </div>
+            Đóng
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmitLuong}
+            style={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              border: "none",
+            }}
+          >
+            Xác nhận
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

@@ -3,8 +3,7 @@ import { Button } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import "./style.css";
-
-// ...existing code...
+const URL_HINH = 'http://127.0.0.1:5000/api'; 
 const getUserInfo = () => {
   const storedUser = localStorage.getItem("user");
   if (storedUser) {
@@ -16,6 +15,8 @@ const getUserInfo = () => {
         role: parsed.role?.ma_vai_tro || "user",
         phong_ban_id: nv.phong_ban_id,
         ten_phong_ban: nv.ten_phong_ban || "",
+        avatar: nv.avatar || null,
+        ten_chuc_vu: nv.ten_chuc_vu || "",
       };
     } catch {
       return { username: "Người dùng", role: "user", phong_ban_id: null };
@@ -25,7 +26,7 @@ const getUserInfo = () => {
 };
 
 const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = false, isOpen = true, expandSidebar = () => {} }) => {
-  console.log("Sidebar render:", { isMobile, isOpen, isCollapsed });
+  // console.log("Sidebar render:", { isMobile, isOpen, isCollapsed });
   const navigate = useNavigate();
   const location = useLocation();
   const userInfo = getUserInfo();
@@ -85,7 +86,7 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
   };
 
   // styles
- const width = isMobile ? "320px" : isCollapsed ? "110px" : "265px";
+  const width = isMobile ? "320px" : isCollapsed ? "110px" : "265px";
   const panelStyle = {
     width,
     minWidth: width,
@@ -97,16 +98,15 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
     fontSize: "16px",
     lineHeight: "1.6",
     overflowY: "auto",
-    backgroundColor: "#343a40",
+    background: "linear-gradient(135deg, #2d3748 0%, #4a5568 100%)",
     color: "#fff",
-    zIndex: 4000, // ensure above backdrop and other UI
-    padding: "16px",
+    zIndex: 4000,
+    padding: "20px 16px",
     transition: "width 0.25s ease, transform 0.25s ease, left 0.25s ease",
-    boxShadow: isMobile ? "2px 0 12px rgba(0,0,0,0.3)" : undefined,
-    // Force visible / on-screen even if external CSS sets transform
+    boxShadow: isMobile ? "2px 0 12px rgba(0,0,0,0.3)" : "2px 0 8px rgba(0,0,0,0.1)",
     transform: "translateX(0)",
     visibility: "visible",
- };
+  };
 
   return (
     <>
@@ -117,38 +117,20 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.4)",
-            zIndex: 3000, // below sidebar
+            zIndex: 3000,
           }}
           aria-hidden="true"
         />
       )}
 
-      {/* <div
-        className="sidebar"
-        style={panelStyle}
-        role="navigation"
-        aria-label="Main sidebar"
-        onClick={(e) => {
-          e.stopPropagation();
-          // on desktop, if collapsed then clicking inside expands sidebar
-          if (!isMobile && isCollapsed) {
-            expandSidebar();
-          }
-        }}
-      > */}
       <div
         className="sidebar"
         style={panelStyle}
         role="navigation"
         aria-label="Main sidebar"
         onClick={(e) => {
-          // prevent the click from bubbling to the page container (which collapses / closes)
           e.stopPropagation();
-
-          // On desktop when collapsed, only expand if user clicked a NON-interactive area
           if (!isMobile && isCollapsed) {
-            // If the click target or any ancestor up to the sidebar is an interactive element,
-            // do NOT expand. This prevents buttons/links inside sidebar from triggering expand.
             const interactive = e.target.closest(
               'button, a, input, textarea, select, label, [role="button"], .btn, .nav-item, .nav-link'
             );
@@ -158,66 +140,151 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
           }
         }}
       >
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <h4
-            className="text-light mb-0 fw-bold"
-            style={{ fontSize: isCollapsed ? 14 : 18 }}
+        {/* Header */}
+        <div className="text-center mb-4">
+          <div
+            className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+            style={{
+              width: 70,
+              height: 70,
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"
+            }}
           >
-            {!isCollapsed ? "Quản lý Nhân sự" : ""}
-          </h4>
-
-          {/* collapse/expand button removed per request */}
+            <span style={{ color: "#fff", fontSize: "20px", fontWeight: "bold" }}>
+              {userInfo.avatar != "default.jpg" ? (
+                <img
+                  src={`${URL_HINH}/images/${userInfo.avatar}`}
+                  alt="avatar"
+                  width="65"
+                  height="65"
+                  style={{ objectFit: "cover", borderRadius: "50%" }}
+                />
+              ) : (
+                userInfo.username.charAt(0).toUpperCase()
+              )}              
+            </span>
+          </div>
+          {!isCollapsed && (
+            <>
+              <h5 className="text-white mb-1 fw-bold">{userInfo.username}</h5>
+              <p className="text-light mb-0" style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+                {userInfo.ten_phong_ban || ""}
+              </p>
+              <p className="text-light mb-0" style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+                {userInfo.ten_chuc_vu || "Nhân viên"}
+              </p>
+              
+            </>
+          )}
         </div>
 
-        <div className="d-flex align-items-center justify-content-between mb-3">
+        {/* Logout Button */}
+        <div className="mb-4">
           <Button
-            variant="danger"
-            className="w-100"
+            variant="outline-light"
+            className="w-100 border-0"
             onClick={handleLogout}
             style={{
-              borderRadius: "10px",
+              borderRadius: "8px",
               fontWeight: "600",
               fontSize: "15px",
+              padding: "10px",
+              background: "rgba(136, 7, 7, 1)",
+              backdropFilter: "blur(10px)",
+              transition: "all 0.3s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = "rgba(239, 68, 68, 0.8)";
+              e.target.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = "rgba(136, 7, 7, 1)";
+              e.target.style.transform = "translateY(0)";
             }}
           >
             {!isCollapsed ? "Đăng xuất" : "🚪"}
           </Button>
         </div>
 
-        <ul className="nav flex-column" style={{ paddingLeft: 0 }}>
+        {/* Navigation Menu */}
+        <ul className="nav flex-column" style={{ paddingLeft: 0, gap: "8px" }}>
           {visibleModules.map((module, index) => {
             const isActive = location.pathname === module.path;
             return (
-              <li className="nav-item mb-2" key={index}>
+              <li className="nav-item" key={index}>
                 <Button
                   variant="link"
-                  className={`text-white w-100 text-start p-3 fw-semibold ${
+                  className={`w-100 text-start p-3 fw-semibold border-0 ${
                     isActive ? "active-sidebar" : ""
                   }`}
                   onClick={() => onNavigate(module.path)}
                   style={{
-                    backgroundColor: isActive ? "#a39d9dce" : "#495057",
-                    color: isActive ? "#000" : "#e2e6ea",
+                    background: isActive 
+                      ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
+                      : "rgba(255, 255, 255, 0.05)",
+                    color: isActive ? "#fff" : "#e2e8f0",
                     borderRadius: "8px",
                     textDecoration: "none",
-                    transition: "all 0.3s",
-                    fontWeight: isActive ? "700" : "500",
+                    transition: "all 0.3s ease",
+                    fontWeight: isActive ? "600" : "500",
                     display: "flex",
                     alignItems: "center",
-                    gap: "10px",
+                    gap: "12px",
+                    backdropFilter: "blur(10px)",
+                    border: isActive ? "none" : "1px solid rgba(255, 255, 255, 0.1)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                      e.currentTarget.style.transform = "translateX(4px)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                      e.currentTarget.style.transform = "translateX(0)";
+                    }
                   }}
                 >
-                  <span style={{ width: 28, textAlign: "center" }}>{module.icon}</span>
-                  {!isCollapsed && <span>{module.title}</span>}
+                  <span 
+                    style={{ 
+                      width: 28, 
+                      textAlign: "center",
+                      fontSize: "18px",
+                      filter: isActive ? "brightness(0) invert(1)" : "none"
+                    }}
+                  >
+                    {module.icon}
+                  </span>
+                  {!isCollapsed && (
+                    <span style={{ fontSize: "14px" }}>{module.title}</span>
+                  )}
                 </Button>
               </li>
             );
           })}
         </ul>
+
+        {/* Footer */}
+        {!isCollapsed && (
+          <div className="mt-auto pt-4 text-center">
+            <p 
+              className="text-light mb-0" 
+              style={{ 
+                fontSize: "0.75rem", 
+                opacity: 0.6,
+                borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                paddingTop: "16px"
+              }}
+            >
+              © 2025 Công ty TNHH TC
+            </p>
+          </div>
+        )}
       </div>
     </>
   );
 };
 
 export default Sidebar;
-// ...existing code...

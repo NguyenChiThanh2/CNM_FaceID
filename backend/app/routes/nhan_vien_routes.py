@@ -58,16 +58,18 @@ def login_nhan_vien():
 
     if not nhan_vien or not check_password_hash(nhan_vien.password, password):
         return jsonify({"msg": "Email hoặc mật khẩu không chính xác"}), 401
-
+    
     # Tạo token đăng nhập
     access_token = create_access_token(identity={
         "id": nhan_vien.id,
         "email": nhan_vien.email,
         "ho_ten": nhan_vien.ho_ten,
         "chuc_vu_id": nhan_vien.chuc_vu_id,
-        "phong_ban_id": nhan_vien.phong_ban_id
+        "phong_ban_id": nhan_vien.phong_ban_id,
+        "avatar": nhan_vien.avatar,
+        "ten_phong_ban": nhan_vien.phong_ban.ten_phong_ban if nhan_vien.phong_ban else None,
+        "ten_chuc_vu": nhan_vien.chuc_vu_nv.ten_chuc_vu if nhan_vien.chuc_vu_nv else None
     })
-
     return jsonify({
         "access_token": access_token,
         "nhan_vien": {
@@ -75,7 +77,10 @@ def login_nhan_vien():
             "ho_ten": nhan_vien.ho_ten,
             "email": nhan_vien.email,
             "chuc_vu_id": nhan_vien.chuc_vu_id,
-            "phong_ban_id": nhan_vien.phong_ban_id
+            "phong_ban_id": nhan_vien.phong_ban_id,
+            "avatar": nhan_vien.avatar,
+            "ten_phong_ban": nhan_vien.phong_ban.ten_phong_ban if nhan_vien.phong_ban else None,
+            "ten_chuc_vu": nhan_vien.chuc_vu_nv.ten_chuc_vu if nhan_vien.chuc_vu_nv else None
         }
     }), 200
 
