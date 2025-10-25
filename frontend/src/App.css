@@ -72,3 +72,21 @@ html, body {
   transition: color 0.25s ease-in-out;
 }
 
+.sidebar {
+  min-height: 100vh;
+}
+
+@media (max-width: 991.98px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.d-block {
+    transform: translateX(0);
+  }
+}

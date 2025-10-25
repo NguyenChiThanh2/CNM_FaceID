@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo  } from "react";
 import axios from "axios";
 import {
   Table,
@@ -19,8 +19,9 @@ import { toast, ToastContainer } from "react-toastify";
 import { exportBangLuongToExcel } from "../../utils/exportToExcel";
 import "react-toastify/dist/ReactToastify.css";
 import Loading from "../../../src/components/Loading";
-
+import { getNhanVienInfo } from "../../utils/auth"; // ✅ thêm
 const API_URL = "http://127.0.0.1:5000/api";
+const HR_DEPARTMENT_ID = 2; // ❗ đổi lại ID thật phòng Nhân sự trong DB
 
 const QuanLyLuong = () => {
   const [luongList, setLuongList] = useState([]);
@@ -44,6 +45,10 @@ const QuanLyLuong = () => {
 
   const navigate = useNavigate();
 
+    // ✅ lấy user hiện tại & cờ phân quyền
+  const currentUser = getNhanVienInfo(); // {id, ho_ten, phong_ban_id, ...}
+  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+
   useEffect(() => {
     return () => {
       // Khi component unmount, xóa modal backdrop còn sót
@@ -62,17 +67,17 @@ const QuanLyLuong = () => {
     fetchPhongBan();
   }, []);
 
-  useEffect(() => {
+   useEffect(() => {
     if (!showModal) {
       const today = new Date();
       setFormData({
-        nhan_vien_id: "",
+        nhan_vien_id: isHR ? "" : currentUser?.id || "", // 🟢 non-HR mặc định là chính mình
         thang: today.getMonth() + 1,
         nam: today.getFullYear(),
       });
-      setIsTinhTatCa(false);
+      setIsTinhTatCa(false); // 🟢 non-HR không được bật tính tất cả
     }
-  }, [showModal]);
+  }, [showModal, isHR, currentUser?.id]);
 
   const fetchPhongBan = async () => {
     try {
@@ -99,7 +104,7 @@ const QuanLyLuong = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
-      setNhanVienList(response.data);
+      setNhanVienList(response.data || []);
     } catch (error) {
       toast.error("Không thể tải danh sách nhân viên!", error);
     } finally {
@@ -108,6 +113,7 @@ const QuanLyLuong = () => {
   };
 
   const handleDeleteLuong = async (luongId) => {
+    if (!isHR) return; // 🚫 chặn non-HR
     if (!window.confirm("Bạn có chắc chắn muốn xoá dòng lương này?")) return;
     setLoading(true);
     try {
@@ -128,8 +134,17 @@ const QuanLyLuong = () => {
       toast.warning("Vui lòng điền đầy đủ tháng và năm.");
       return;
     }
+    // 🛡️ non-HR không được tính tất cả và chỉ được tính cho chính họ
+    if (!isHR) {
+      
+      let nhan_vien_id = currentUser?.id;
+      if (!nhan_vien_id) {
+        toast.error("Không xác định được nhân viên hiện tại!");
+        return;
+      }
+    }
 
-    if (isTinhTatCa) {
+    if (isTinhTatCa && isHR) {
       setLoading(true);
       try {
         const response = await axios.post(`${API_URL}/get-tinh-luong-tat-ca`, {
@@ -142,7 +157,6 @@ const QuanLyLuong = () => {
         //   setShowModal(false);
         //   fetchLuong();
         // }
-        console.log(response);
         const { data, errors } = response.data.data;
         if (errors && errors.length > 0) {
           errors.forEach((msg, i) =>
@@ -172,7 +186,7 @@ const QuanLyLuong = () => {
           nam: parseInt(nam),
         });
 
-        console.log(response);
+        // console.log(response);
 
         if (response.data.success) {
           toast.success(response.data.message || "Tính lương thành công!");
@@ -193,23 +207,59 @@ const QuanLyLuong = () => {
   const formatCurrency = (amount) =>
     amount?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-  const nhanVienMap = nhanVienList.reduce((acc, nv) => {
-    acc[nv.id] = nv.ho_ten.toLowerCase();
-    return acc;
-  }, {});
-
-  const filteredList = luongList
-    .filter((luong) => {
-      const hoTen = nhanVienMap[luong.nhan_vien_id] || "";
-      const searchMatch = hoTen.includes(searchKeyword.toLowerCase());
-      const monthMatch =
-        selectedMonthNumber && selectedYear
-          ? luong.thang === parseInt(selectedMonthNumber) &&
+  // const nhanVienMap = nhanVienList.reduce((acc, nv) => {
+  //   acc[nv.id] = nv.ho_ten.toLowerCase();
+  //   return acc;
+  // }, {});
+  // Map tên NV (đủ cho HR; non-HR chỉ cần chính họ)
+  const nhanVienMap = useMemo(() => {
+    return nhanVienList.reduce((acc, nv) => {
+      acc[nv.id] = (nv.ho_ten || "").toLowerCase();
+      return acc;
+    }, {});
+  }, [nhanVienList]);
+   // 🧹 Lọc theo quyền + keyword + tháng-năm
+  const filteredList = useMemo(() => {
+    return luongList
+      .filter((luong) => {
+        // 1) PHÂN QUYỀN: non-HR chỉ xem được lương của chính mình
+        if (!isHR && currentUser?.id && luong.nhan_vien_id !== currentUser.id) {
+          return false;
+        }
+        // 2) Tìm theo tên (trên toàn dsNV)
+        const hoTen = nhanVienMap[luong.nhan_vien_id] || "";
+        const searchMatch = hoTen.includes((searchKeyword || "").toLowerCase());
+        // 3) Lọc theo tháng-năm
+        const monthMatch =
+          selectedMonthNumber && selectedYear
+            ? luong.thang === parseInt(selectedMonthNumber) &&
             luong.nam === parseInt(selectedYear)
-          : true;
-      return searchMatch && monthMatch;
-    })
-    .sort((a, b) => b.id - a.id);
+            : true;
+
+        return searchMatch && monthMatch;
+      })
+      .sort((a, b) => b.id - a.id);
+  }, [
+    luongList,
+    isHR,
+    currentUser?.id,
+    nhanVienMap,
+    searchKeyword,
+    selectedMonthNumber,
+    selectedYear,
+  ]);
+  // const filteredList = luongList
+  //   .filter((luong) => {
+  //     const hoTen = nhanVienMap[luong.nhan_vien_id] || "";
+  //     const searchMatch = hoTen.includes(searchKeyword.toLowerCase());
+  //     const monthMatch =
+  //       selectedMonthNumber && selectedYear
+  //         ? luong.thang === parseInt(selectedMonthNumber) &&
+  //           luong.nam === parseInt(selectedYear)
+  //         : true;
+  //     return searchMatch && monthMatch;
+  //   })
+  //   .sort((a, b) => b.id - a.id);
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
   const paginatedList = filteredList.slice(
