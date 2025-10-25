@@ -46,7 +46,7 @@ export default function A4PreviewModal({
       `}</style>
 
             <Modal.Header closeButton>
-                <Modal.Title>Hợp đồng lao động (A4)</Modal.Title>
+                <Modal.Title>Hợp đồng lao động</Modal.Title>
             </Modal.Header>
 
             <Modal.Body className="a4-modal-body">
