@@ -24,9 +24,14 @@ export default function NhanSuDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const currentUser = getNhanVienInfo();
+  // phòng nhân sự?
   const HR_DEPARTMENT_ID = 2;
+  // id chức vụ "Trưởng phòng"
+  const TRUONG_PHONG_ROLE_ID = 5;
   const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
-
+  const canEditContract =
+    currentUser?.phong_ban_id === HR_DEPARTMENT_ID &&
+    Number(currentUser?.chuc_vu_id) === TRUONG_PHONG_ROLE_ID;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [nhanSu, setNhanSu] = useState(null);
@@ -91,17 +96,33 @@ export default function NhanSuDetail() {
   };
 
   const handleSubmitHD = async (payload) => {
+    // chặn nếu không có quyền
+    if (!canEditContract) {
+      alert("Bạn không có quyền chỉnh sửa/ký hợp đồng. Yêu cầu Trưởng phòng Nhân sự.");
+      return;
+    }
+
     try {
       setSavingHD(true);
-      if (showHDModal === "edit" && hopDong?.id) await updateHopDong(hopDong.id, payload);
-      else await createHopDongForNhanVien(Number(id), payload);
+
+      if (showHDModal === "edit" && hopDong?.id) {
+        await updateHopDong(hopDong.id, payload);
+      } else {
+        await createHopDongForNhanVien(Number(id), payload);
+      }
+
       const fresh = await getHopDongByNhanVienId(Number(id));
       setHopDong(fresh || null);
       setShowHDModal(null);
     } catch (e) {
-      console.error(e); alert(e?.userMessage || "Lưu hợp đồng thất bại.");
-    } finally { setSavingHD(false); }
+      console.error(e);
+      alert(e?.userMessage || "Lưu hợp đồng thất bại.");
+    } finally {
+      setSavingHD(false);
+    }
   };
+
+
 
   const avatarUrl = useMemo(() => nhanSu?.avatar ? `${BASE_URL}/api/images/${nhanSu.avatar}` : "https://via.placeholder.com/120", [nhanSu]);
 
@@ -248,7 +269,7 @@ export default function NhanSuDetail() {
         <div className="mt-4" data-noexport="true">
           <h6>📄 Hợp đồng lao động</h6>
           <div className="d-flex gap-2">
-            {isHR ? (
+            {canEditContract ? (
               hopDong ? (
                 <>
                   <Button size="sm" variant="outline-warning" onClick={openEditHD}>
@@ -264,7 +285,7 @@ export default function NhanSuDetail() {
                 </Button>
               )
             ) : (
-              <p className="text-muted fst-italic">🔒 Chỉ phòng nhân sự được phép chỉnh sửa hợp đồng.</p>
+              <p className="text-muted fst-italic">🔒 Chỉ Trưởng phòng Nhân sự được phép chỉnh sửa hợp đồng.</p>
             )}
 
           </div>
@@ -279,8 +300,8 @@ export default function NhanSuDetail() {
 
         {/* Actions */}
         <div className="d-flex justify-content-end mt-4 gap-2" data-noexport="true">
-          <Button variant="outline-secondary" onClick={() => setShowA4(true)}>Xem hợp đồng (A4)</Button>
-          <Button variant="outline-success" onClick={exportA4ToPDF}>Lưu PDF (A4)</Button>
+          <Button variant="outline-secondary" onClick={() => setShowA4(true)}>Xem hợp đồng</Button>
+          {/* <Button variant="outline-success" onClick={exportA4ToPDF}>Lưu PDF</Button> */}
           {/* <Button variant="outline-primary" onClick={() => setShowModal(true)} disabled={exporting}>
             {exporting ? "Đang xuất..." : "Xuất Excel/Word"}
           </Button> */}

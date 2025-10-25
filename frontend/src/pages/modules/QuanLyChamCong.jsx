@@ -348,7 +348,7 @@ const QuanLyChamCong = () => {
                   {currentItems.length === 0 && (
                     <tr>
                       <td colSpan={9} className="text-center text-muted">
-                        Không có bản ghi phù hợp
+                        Không tìm thấy bản ghi chấm công phù hợp.
                       </td>
                     </tr>
                   )}

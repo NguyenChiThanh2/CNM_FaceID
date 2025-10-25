@@ -28,7 +28,7 @@ const KhauTru = () => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   const [showNhanVienModal, setShowNhanVienModal] = useState(false);
   const [selectedNhanVien, setSelectedNhanVien] = useState([]);

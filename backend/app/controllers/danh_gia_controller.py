@@ -1,59 +1,67 @@
 # app/controllers/danh_gia_controller.py
-from flask import jsonify, request
-from app.services.danh_gia_service import *
-from app import db
+from flask import request, jsonify
+from datetime import date
 
-# Lấy tất cả đánh giá
-def get_all_danh_gia():
-    danh_gia_list = get_all_danh_gia_service()
-    if not danh_gia_list:
-        return jsonify({'message': 'Không có dữ liệu đánh giá'}), 404
-    return jsonify([dg.to_dict() for dg in danh_gia_list]), 200
+from app.services import danh_gia_service
 
-# Lấy đánh giá theo ID
-def get_danh_gia_by_id(id):
-    danh_gia = get_danh_gia_by_id_service(id)
-    if not danh_gia:
-        return jsonify({'message': 'Không tìm thấy đánh giá'}), 404
-    return jsonify(danh_gia.to_dict()), 200
 
-# Lấy tất cả đánh giá của nhân viên theo ID
-def get_danh_gia_by_nhan_vien_id(nhan_vien_id):
-    danh_gia_list = get_danh_gia_by_nhan_vien_id_service(nhan_vien_id)
-    if not danh_gia_list:
-        return jsonify({'message': 'Không có đánh giá nào cho nhân viên này'}), 404
-    return jsonify([dg.to_dict() for dg in danh_gia_list]), 200
+# ============== LIST + FILTER ==============
+def list_danh_gia_controller():
+    try:
+        ky_ngay = request.args.get("ky_ngay")
+        ky_loai = request.args.get("ky_loai")
+        phong_ban_id = request.args.get("phong_ban_id", type=int)
+        reviewer_id = request.args.get("reviewer_id", type=int)
+        nhan_vien_id = request.args.get("nhan_vien_id", type=int)
 
-# Tạo đánh giá mới
-def create_danh_gia():
-    data = request.get_json()
-    if not data or 'nhan_vien_id' not in data or 'thoi_gian' not in data or 'diem_so' not in data:
-        return jsonify({'message': 'Thiếu thông tin'}), 400
-    
-    danh_gia = create_danh_gia_service(
-        nhan_vien_id=data['nhan_vien_id'],
-        thoi_gian=data['thoi_gian'],
-        diem_so=data['diem_so'],
-        nhan_xet=data.get('nhan_xet', None)
-    )
-    return jsonify(danh_gia.to_dict()), 201
+        ky_ngay_val = date.fromisoformat(ky_ngay) if ky_ngay else None
 
-# Cập nhật đánh giá
-def update_danh_gia(id):
-    data = request.get_json()
-    danh_gia = update_danh_gia_service(
-        id,
-        thoi_gian=data.get('thoi_gian'),
-        diem_so=data.get('diem_so'),
-        nhan_xet=data.get('nhan_xet')
-    )
-    if not danh_gia:
-        return jsonify({'message': 'Không tìm thấy đánh giá'}), 404
-    return jsonify(danh_gia.to_dict()), 200
+        rows = danh_gia_service.list_danh_gia_service(
+            ky_ngay=ky_ngay_val,
+            ky_loai=ky_loai,
+            phong_ban_id=phong_ban_id,
+            reviewer_id=reviewer_id,
+            nhan_vien_id=nhan_vien_id
+        )
+        return jsonify([r.to_dict() for r in rows]), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
 
-# Xóa đánh giá
-def delete_danh_gia(id):
-    success = delete_danh_gia_service(id)
-    if not success:
-        return jsonify({'message': 'Không tìm thấy đánh giá'}), 404
-    return jsonify({'message': 'Xóa đánh giá thành công'}), 200
+
+# ============== GET ONE ==============
+def get_danh_gia_controller(id: int):
+    row = danh_gia_service.get_danh_gia_by_id_service(id)
+    if not row:
+        return jsonify({"message": "Không tìm thấy bản đánh giá"}), 404
+    return jsonify(row.to_dict()), 200
+
+
+# ============== CREATE ==============
+def create_danh_gia_controller():
+    payload = request.get_json(silent=True) or {}
+    row, err = danh_gia_service.create_danh_gia_service(payload)
+    if err:
+        return jsonify({"message": err}), 400
+    return jsonify(row.to_dict()), 201
+
+
+# ============== UPDATE ==============
+def update_danh_gia_controller(id: int):
+    payload = request.get_json(silent=True) or {}
+    row, err = danh_gia_service.update_danh_gia_service(id, payload)
+    if err:
+        if "Không tìm thấy" in err:
+            return jsonify({"message": err}), 404
+        return jsonify({"message": err}), 400
+    return jsonify(row.to_dict()), 200
+
+
+# ============== DELETE ==============
+def delete_danh_gia_controller(id: int):
+    ok, err = danh_gia_service.delete_danh_gia_service(id)
+    if not ok:
+        if err and "Không tìm thấy" in err:
+            return jsonify({"message": err}), 404
+        return jsonify({"message": err or "Xóa thất bại"}), 400
+    return jsonify({"message": "Đã xóa đánh giá"}), 200
+
