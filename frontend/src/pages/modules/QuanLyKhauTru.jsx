@@ -1,6 +1,16 @@
 // src/pages/modules/KhauTru.jsx
 import React, { useState, useEffect } from "react";
-import { Row, Col, Button, Table, Modal, Breadcrumb } from "react-bootstrap";
+import { 
+  Row, 
+  Col, 
+  Button, 
+  Table, 
+  Modal, 
+  Breadcrumb, 
+  Card, 
+  Form, 
+  Spinner 
+} from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import KhauTruForm from "../../components/khautru/KhauTruForm";
 import * as XLSX from "xlsx";
@@ -8,6 +18,18 @@ import { saveAs } from "file-saver";
 import { ToastContainer, toast } from "react-toastify";
 import axios from "axios";
 import Loading from "../../../src/components/Loading";
+import { 
+  FaHome, 
+  FaSearch, 
+  FaPlus, 
+  FaEdit, 
+  FaTrash, 
+  FaUsers, 
+  FaUserPlus, 
+  FaFileExport, 
+  FaFileDownload,
+  FaMoneyBillWave 
+} from "react-icons/fa";
 
 const KhauTru = () => {
   // Lấy user từ localStorage
@@ -56,7 +78,6 @@ const KhauTru = () => {
   const fetchKhauTruList = async () => {
     setLoading(true);
     try {
-      // Non-HR phải có currentUser.id
       if (!isHR && !currentUser?.id) {
         setKhauTruList([]);
         toast.error("Không xác định được người dùng. Vui lòng đăng nhập lại.");
@@ -288,377 +309,525 @@ const KhauTru = () => {
     );
 
   return (
-    <div className="container min-vh-100">
+    <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
       <ToastContainer position="top-right" autoClose={2000} />
-      <div className="row">
-        <div className="col-12 mt-5">
-          <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
-            <Breadcrumb.Item active>Quản lý khấu trừ</Breadcrumb.Item>
-          </Breadcrumb>
-          <Button variant="secondary" onClick={() => navigate("/")}>
-            ← Trang chủ
+
+      {/* Header Section */}
+      <div 
+        className="rounded-4 mb-4 shadow-sm"
+        style={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          padding: "2rem",
+          color: "white"
+        }}
+      >
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <Breadcrumb className="mb-3">
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                <FaHome className="me-2" />
+                Trang chủ
+              </Breadcrumb.Item>
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                Quản lý khấu trừ
+              </Breadcrumb.Item>
+            </Breadcrumb>
+            <h1 className="fw-bold mb-2">💰 Quản lý Khấu Trừ</h1>
+            <p className="mb-0 opacity-90">
+              Quản lý các khoản khấu trừ lương và phúc lợi của nhân viên
+            </p>
+          </div>
+          <Button 
+            variant="outline-light" 
+            onClick={() => navigate("/")}
+            className="border-0"
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(10px)"
+            }}
+          >
+            <FaHome className="me-2" />
+            Trang chủ
           </Button>
+        </div>
+      </div>
 
-          <h2 className="text-center mb-4">📋 Quản lý Khấu trừ</h2>
-
-          <Row className="mb-3">
+      {/* Filter and Actions Card */}
+      <Card className="shadow-sm border-0 rounded-4 mb-4">
+        <Card.Body className="p-4">
+          <Row className="g-3">
             <Col md={6}>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="🔍 Tìm kiếm theo tên hoặc mô tả..."
-                value={searchKeyword}
-                onChange={(e) => {
-                  setSearchKeyword(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
+              <div className="position-relative">
+                <FaSearch className="position-absolute top-50 start-3 translate-middle-y text-muted" />
+                <Form.Control
+                  type="text"
+                  placeholder="Tìm kiếm theo tên hoặc mô tả..."
+                  value={searchKeyword}
+                  onChange={(e) => {
+                    setSearchKeyword(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{ paddingLeft: "2.5rem" }}
+                />
+              </div>
             </Col>
-            <Col md={6} className="text-end">
+            <Col md={4}>
+              <Button
+                variant="outline-primary"
+                onClick={exportToExcel}
+                className="w-100"
+                style={{ borderColor: "#667eea", color: "#667eea" }}
+              >
+                <FaFileExport className="me-2" />
+                Xuất Excel
+              </Button>
+            </Col>
+            <Col md={2}>
               {isHR && (
-                <Button variant="outline-success" className="me-2" onClick={handleAdd}>
-                  ➕ Thêm khấu trừ
+                <Button
+                  variant="primary"
+                  className="w-100"
+                  onClick={handleAdd}
+                  style={{
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    border: "none"
+                  }}
+                >
+                  <FaPlus className="me-2" />
+                  Thêm mới
                 </Button>
               )}
-              <Button variant="outline-primary" onClick={exportToExcel}>
-                📤 Xuất Excel
-              </Button>
             </Col>
           </Row>
+        </Card.Body>
+      </Card>
 
-          <Table
-            striped
-            bordered
-            hover
-            responsive
-            className="align-middle rounded text-nowrap"
-            style={{ overflowX: "auto" }}
+      {/* Data Table Card */}
+      <Card className="shadow-sm border-0 rounded-4">
+        <Card.Header 
+          style={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            fontWeight: "600",
+            fontSize: "1.1rem"
+          }}
+        >
+          <FaMoneyBillWave className="me-2" />
+          Danh sách Khấu Trừ
+        </Card.Header>
+        <Card.Body className="p-0">
+          <div 
+            className="table-responsive" 
+            style={{ 
+              overflowX: "auto", 
+              overflowY: "auto", 
+              maxHeight: "600px" 
+            }}
           >
-            <thead className="table-dark text-center">
-              <tr>
-                <th>Tên</th>
-                <th>Mục đích khấu trừ</th>
-                <th>Số tiền</th>
-                <th>Ngày quyết định</th>
-                <th>Ghi chú</th>
-                <th>File giấy tờ</th>
-                {isHR && <th>Hành động</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {currentItems.length > 0 ? (
-                currentItems.map((pl) => (
-                  <tr key={pl.id}>
-                    <td>{pl.ten_khau_tru}</td>
-                    <td>
-                      {{
-                        VI_PHAM: "Trừ vi phạm",
-                        UNG_LUONG: "Trừ ứng lương",
-                        TRU_KHAC: "Khấu trừ khác",
-                      }[pl.loai_khau_tru] || "Không xác định"}
-                    </td>
-                    <td>{formatCurrency(pl.so_tien)}</td>
-                    <td>{formatDate(pl.ngay_quyet_dinh)}</td>
-                    <td>{pl.ghi_chu}</td>
-                    <td>
-                      {pl.file_dinh_kem ? (
-                        <a
-                          href={`${API_BASE}/api/file_dinh_kem_khau_tru/${pl.file_dinh_kem}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="link"
-                          style={{ textDecoration: "none", color: "#0d6efd", fontWeight: 500 }}
-                        >
-                          📎{pl.file_dinh_kem}
-                        </a>
-                      ) : (
-                        <span className="text-muted">Không có</span>
-                      )}
-                    </td>
-                    {isHR && (
-                      <td className="text-center">
-                        <Button
-                          variant="outline-warning"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleEdit(pl)}
-                        >
-                          ✏️ Sửa
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleDelete(pl.id)}
-                        >
-                          🗑️ Xóa
-                        </Button>
-                        <Button
-                          variant="outline-info"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleViewNhanVien(pl.id)}
-                        >
-                          Xem nhân viên
-                        </Button>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          onClick={() => handleShowAddNhanVienModal(pl.id)}
-                        >
-                          Thêm nhân viên
-                        </Button>
-                      </td>
-                    )}
-                  </tr>
-                ))
-              ) : (
+            <Table bordered hover className="mb-2" style={{ minWidth: "1200px" }}>
+              <thead
+                style={{ 
+                  background: "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
+                  color: "white",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 2
+                }}
+              >
                 <tr>
-                  <td colSpan={isHR ? 7 : 6} className="text-center text-muted">
-                    Không có đơn khấu trừ nào phù hợp
-                  </td>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "200px" }}>Tên khấu trừ</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "180px" }}>Mục đích khấu trừ</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "150px" }}>Số tiền</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "150px" }}>Ngày quyết định</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "200px" }}>Ghi chú</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "150px" }}>File giấy tờ</th>
+                  {isHR && <th style={{ padding: "12px", fontWeight: "600", minWidth: "250px" }}>Hành động</th>}
                 </tr>
-              )}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {currentItems.length > 0 ? (
+                  currentItems.map((pl) => (
+                    <tr key={pl.id} style={{ transition: "all 0.3s ease" }}>
+                      <td style={{ padding: "12px", fontWeight: "500" }}>{pl.ten_khau_tru}</td>
+                      <td style={{ padding: "12px" }}>
+                        <span className="badge bg-danger bg-opacity-10 text-danger">
+                          {{
+                            VI_PHAM: "Trừ vi phạm",
+                            UNG_LUONG: "Trừ ứng lương",
+                            TRU_KHAC: "Khấu trừ khác",
+                          }[pl.loai_khau_tru] || "Không xác định"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px", fontWeight: "600", color: "#dc3545" }}>
+                        {formatCurrency(pl.so_tien)}
+                      </td>
+                      <td style={{ padding: "12px" }}>{formatDate(pl.ngay_quyet_dinh)}</td>
+                      <td style={{ padding: "12px", maxWidth: "200px" }}>
+                        <div className="text-truncate" title={pl.ghi_chu}>
+                          {pl.ghi_chu || "Không có ghi chú"}
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        {pl.file_dinh_kem ? (
+                          <a
+                            href={`${API_BASE}/api/file_dinh_kem_khau_tru/${pl.file_dinh_kem}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-sm btn-outline-primary"
+                          >
+                            {pl.file_dinh_kem}
+                          </a>
+                        ) : (
+                          <span className="text-muted">Không có</span>
+                        )}
+                      </td>
+                      {isHR && (
+                        <td style={{ padding: "12px" }}>
+                          <div className="d-flex gap-1 flex-wrap">
+                            <Button
+                              variant="outline-warning"
+                              size="sm"
+                              onClick={() => handleEdit(pl)}
+                              title="Sửa khấu trừ"
+                            >
+                              <FaEdit />
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDelete(pl.id)}
+                              title="Xóa khấu trừ"
+                            >
+                              <FaTrash />
+                            </Button>
+                            <Button
+                              variant="outline-info"
+                              size="sm"
+                              onClick={() => handleViewNhanVien(pl.id)}
+                              title="Xem nhân viên"
+                            >
+                              <FaUsers />
+                            </Button>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={() => handleShowAddNhanVienModal(pl.id)}
+                              title="Thêm nhân viên"
+                            >
+                              <FaUserPlus />
+                            </Button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={isHR ? 7 : 6} className="text-center text-muted py-4">
+                      <FaMoneyBillWave size={32} className="mb-2 opacity-50" />
+                      <br />
+                      Không có đơn khấu trừ nào phù hợp
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </div>
+        </Card.Body>
+      </Card>
 
-          {totalPages > 1 && (
-            <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap">
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Card className="shadow-sm border-0 rounded-4 mt-4">
+          <Card.Body className="py-3">
+            <div className="d-flex justify-content-center align-items-center gap-3">
               <Button
-                variant="outline-secondary"
-                onClick={() => handlePageChange(currentPage - 1)}
+                variant="outline-primary"
                 disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+                style={{ borderColor: "#667eea", color: "#667eea" }}
               >
-                ← Trước
+                ← Trang trước
               </Button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <Button
-                  key={i}
-                  variant={i + 1 === currentPage ? "primary" : "outline-primary"}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </Button>
-              ))}
+              <span className="fw-semibold" style={{ color: "#4a5568" }}>
+                Trang {currentPage} / {totalPages}
+              </span>
               <Button
-                variant="outline-secondary"
-                onClick={() => handlePageChange(currentPage + 1)}
+                variant="outline-primary"
                 disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+                style={{ borderColor: "#667eea", color: "#667eea" }}
               >
-                Sau →
+                Trang sau →
               </Button>
             </div>
-          )}
+          </Card.Body>
+        </Card>
+      )}
 
-          {/* Modal thêm/sửa khấu trừ (HR-only) */}
-          {isHR && (
-            <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
-              <Modal.Header closeButton>
-                <Modal.Title>{selectedKhauTru ? "✏️ Cập nhật khấu trừ" : "➕ Thêm khấu trừ"}</Modal.Title>
-              </Modal.Header>
-              <Modal.Body>
-                <KhauTruForm
-                  selected={selectedKhauTru}
-                  onAdded={handleFormSubmit}
-                  onClose={() => setShowModal(false)}
-                  fetchKhauTruList={fetchKhauTruList}
-                  editingKhauTru={selectedKhauTru}
-                  setEditingKhauTru={setSelectedKhauTru}
-                />
-              </Modal.Body>
-            </Modal>
-          )}
+      {/* Modal thêm/sửa khấu trừ */}
+      {isHR && (
+        <Modal
+          show={showModal}
+          onHide={() => setShowModal(false)}
+          size="lg"
+          className="rounded-4"
+        >
+          <Modal.Header 
+            closeButton
+            style={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white"
+            }}
+          >
+            <Modal.Title>
+              {selectedKhauTru ? "✏️ Cập nhật khấu trừ" : "➕ Thêm khấu trừ"}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="p-4">
+            <KhauTruForm
+              selected={selectedKhauTru}
+              onAdded={handleFormSubmit}
+              onClose={() => setShowModal(false)}
+              fetchKhauTruList={fetchKhauTruList}
+              editingKhauTru={selectedKhauTru}
+              setEditingKhauTru={setSelectedKhauTru}
+            />
+          </Modal.Body>
+        </Modal>
+      )}
 
-          {/* Modal danh sách nhân viên (HR-only) */}
-          {isHR && (
-            <Modal show={showNhanVienModal} onHide={() => setShowNhanVienModal(false)} size="lg">
-              <Modal.Header closeButton>
-                <Modal.Title>Danh sách nhân viên bị khấu trừ</Modal.Title>
-              </Modal.Header>
-              <Modal.Body>
-                {selectedNhanVien.length === 0 ? (
-                  <p className="text-muted">Không có nhân viên nào bị khấu trừ.</p>
-                ) : (
-                  PhongBanList.map((pb) => {
-                    const nvTrongPB = selectedNhanVien.filter((nv) => nv.phong_ban_id === pb.id);
-                    if (nvTrongPB.length === 0) return null;
+      {/* Modal danh sách nhân viên */}
+      {isHR && (
+        <Modal
+          show={showNhanVienModal}
+          onHide={() => setShowNhanVienModal(false)}
+          size="lg"
+          className="rounded-4"
+        >
+          <Modal.Header 
+            closeButton
+            style={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white"
+            }}
+          >
+            <Modal.Title>
+              <FaUsers className="me-2" />
+              Danh sách nhân viên bị khấu trừ
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {selectedNhanVien.length === 0 ? (
+              <div className="text-center text-muted py-4">
+                <FaUsers size={48} className="mb-3 opacity-50" />
+                <p>Không có nhân viên nào bị khấu trừ.</p>
+              </div>
+            ) : (
+              <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+                {PhongBanList.map((pb) => {
+                  const nvTrongPB = selectedNhanVien.filter((nv) => nv.phong_ban_id === pb.id);
+                  if (nvTrongPB.length === 0) return null;
 
-                    return (
-                      <div key={pb.id} className="mb-4">
-                        <h5 className="fw-bold">{pb.ten_phong_ban}</h5>
-                        <hr />
-                        <table className="table table-bordered table-hover">
-                          <thead className="table-light">
+                  return (
+                    <Card key={pb.id} className="mb-3 border-0 shadow-sm">
+                      <Card.Header 
+                        style={{
+                          background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
+                          fontWeight: "600"
+                        }}
+                      >
+                        {pb.ten_phong_ban}
+                      </Card.Header>
+                      <Card.Body className="p-0">
+                        <Table bordered hover className="mb-0">
+                          <thead style={{ background: "#f8f9fa" }}>
                             <tr>
-                              <th>Họ tên</th>
-                              <th>Email</th>
-                              <th>Số tiền thực tế (Nếu có)</th>
-                              <th>Hành động</th>
+                              <th style={{ padding: "10px" }}>Họ tên</th>
+                              <th style={{ padding: "10px" }}>Email</th>
+                              <th style={{ padding: "10px", minWidth: "180px" }}>Số tiền thực tế</th>
+                              <th style={{ padding: "10px", width: "100px" }}>Hành động</th>
                             </tr>
                           </thead>
                           <tbody>
                             {nvTrongPB.map((nv) => (
                               <tr key={nv.id}>
-                                <td>{nv.ho_ten}</td>
-                                <td>{nv.email}</td>
-                                <td>
+                                <td style={{ padding: "10px" }}>{nv.ho_ten}</td>
+                                <td style={{ padding: "10px" }}>{nv.email}</td>
+                                <td style={{ padding: "10px", fontWeight: "500", color: "#dc3545" }}>
                                   {nv.so_tien_thuc_te ? formatCurrency(nv.so_tien_thuc_te) : formatCurrency(0)}
                                 </td>
-                                <td className="text-center">
+                                <td style={{ padding: "10px", textAlign: "center" }}>
                                   <Button
-                                    variant="danger"
+                                    variant="outline-danger"
                                     size="sm"
                                     onClick={() => handleDeleteNhanVienFromKhauTru(nv.id)}
+                                    title="Xóa khỏi khấu trừ"
                                   >
-                                    Xóa
+                                    <FaTrash />
                                   </Button>
                                 </td>
                               </tr>
                             ))}
                           </tbody>
-                        </table>
-                      </div>
-                    );
-                  })
-                )}
-              </Modal.Body>
-              <Modal.Footer>
-                <Button variant="secondary" onClick={() => setShowNhanVienModal(false)}>
-                  Đóng
-                </Button>
-              </Modal.Footer>
-            </Modal>
-          )}
+                        </Table>
+                      </Card.Body>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={() => setShowNhanVienModal(false)}>
+              Đóng
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
 
-          {/* Modal thêm nhân viên (HR-only) */}
-          {isHR && (
-            <Modal
-              show={showAddNhanVienModal}
-              onHide={() => {
-                setShowAddNhanVienModal(false);
-                setSelectedNhanVienIds([]);
-              }}
-              size="lg"
-            >
-              <Modal.Header closeButton>
-                <Modal.Title>Thêm nhân viên bị khấu trừ</Modal.Title>
-              </Modal.Header>
-              <Modal.Body>
-                {nhanVienList.length === 0 ? (
-                  <p className="text-muted">Đang tải danh sách nhân viên...</p>
-                ) : (
-                  <div
-                    style={{
-                      maxHeight: "500px",
-                      overflowY: "auto",
-                      border: "1px solid #ddd",
-                      padding: "10px",
-                      borderRadius: "5px",
+      {/* Modal thêm nhân viên */}
+      {isHR && (
+        <Modal
+          show={showAddNhanVienModal}
+          onHide={() => {
+            setShowAddNhanVienModal(false);
+            setSelectedNhanVienIds([]);
+          }}
+          size="lg"
+          className="rounded-4"
+        >
+          <Modal.Header 
+            closeButton
+            style={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white"
+            }}
+          >
+            <Modal.Title>
+              <FaUserPlus className="me-2" />
+              Thêm nhân viên bị khấu trừ
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {nhanVienList.length === 0 ? (
+              <div className="text-center text-muted py-4">
+                <Spinner animation="border" size="sm" className="me-2" />
+                Đang tải danh sách nhân viên...
+              </div>
+            ) : (
+              <div
+                style={{
+                  maxHeight: "500px",
+                  overflowY: "auto",
+                  border: "1px solid #dee2e6",
+                  padding: "15px",
+                  borderRadius: "8px",
+                }}
+              >
+                {/* Checkbox tổng */}
+                <div className="mb-3 p-2 bg-light rounded">
+                  <Form.Check
+                    type="checkbox"
+                    label="Chọn tất cả nhân viên"
+                    checked={selectedNhanVienIds.length === nhanVienList.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedNhanVienIds(nhanVienList.map((nv) => nv.id));
+                      } else {
+                        setSelectedNhanVienIds([]);
+                      }
                     }}
-                  >
-                    {/* Checkbox tổng */}
-                    <div className="mb-3">
-                      <input
-                        type="checkbox"
-                        className="form-check-input"
-                        checked={selectedNhanVienIds.length === nhanVienList.length}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedNhanVienIds(nhanVienList.map((nv) => nv.id));
-                          } else {
-                            setSelectedNhanVienIds([]);
-                          }
+                  />
+                </div>
+
+                {/* Lặp phòng ban */}
+                {PhongBanList.map((pb) => {
+                  const nhanVienTrongPB = nhanVienList.filter((nv) => nv.phong_ban_id === pb.id);
+                  const allChecked = nhanVienTrongPB.every((nv) => selectedNhanVienIds.includes(nv.id));
+
+                  return (
+                    <Card key={pb.id} className="mb-3 border-0 shadow-sm">
+                      <Card.Header 
+                        style={{
+                          background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
+                          padding: "10px 15px"
                         }}
-                      />
-                      <label className="form-check-label fw-bold ms-2">Chọn tất cả nhân viên</label>
-                    </div>
-
-                    {/* Lặp phòng ban */}
-                    {PhongBanList.map((pb) => {
-                      const nhanVienTrongPB = nhanVienList.filter((nv) => nv.phong_ban_id === pb.id);
-                      const allChecked = nhanVienTrongPB.every((nv) => selectedNhanVienIds.includes(nv.id));
-
-                      return (
-                        <div key={pb.id} className="mb-4 border p-2 rounded">
-                          {/* Checkbox phòng ban */}
-                          <div className="form-check mb-2">
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              checked={allChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedNhanVienIds((prev) => [
-                                    ...new Set([...prev, ...nhanVienTrongPB.map((nv) => nv.id)]),
-                                  ]);
-                                } else {
-                                  setSelectedNhanVienIds((prev) =>
-                                    prev.filter((id) => !nhanVienTrongPB.some((nv) => nv.id === id))
-                                  );
-                                }
-                              }}
-                            />
-                            <label className="form-check-label fw-bold ms-2">{pb.ten_phong_ban}</label>
-                          </div>
-
-                          {/* Danh sách nhân viên */}
-                          {nhanVienTrongPB.map((nv) => (
-                            <div key={nv.id} className="row align-items-center ms-2 mb-2">
-                              {/* Checkbox + label */}
-                              <div className="col-md-8 col-12 d-flex align-items-center">
-                                <input
-                                  className="form-check-input me-2"
+                      >
+                        <Form.Check
+                          type="checkbox"
+                          label={pb.ten_phong_ban}
+                          checked={allChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedNhanVienIds((prev) => [
+                                ...new Set([...prev, ...nhanVienTrongPB.map((nv) => nv.id)]),
+                              ]);
+                            } else {
+                              setSelectedNhanVienIds((prev) =>
+                                prev.filter((id) => !nhanVienTrongPB.some((nv) => nv.id === id))
+                              );
+                            }
+                          }}
+                        />
+                      </Card.Header>
+                      <Card.Body>
+                        {nhanVienTrongPB.map((nv) => (
+                          <div key={nv.id} className="ms-3 mb-3">
+                            <div className="row align-items-center">
+                              <div className="col-md-8 col-12">
+                                <Form.Check
                                   type="checkbox"
-                                  value={nv.id}
+                                  label={`${nv.ho_ten} - ${nv.email}`}
                                   checked={selectedNhanVienIds.includes(nv.id)}
                                   onChange={(e) => handleSelectNhanVien(e, nv.id)}
                                 />
-                                <label className="form-check-label">
-                                  {nv.ho_ten} - {nv.email}
-                                </label>
                               </div>
-
-                              {/* Input số tiền (chỉ hiện nếu là UNG_LUONG) */}
                               {khautruList.find((kt) => kt.id === selectedKhauTruId)?.loai_khau_tru ===
                                 "UNG_LUONG" &&
                                 selectedNhanVienIds.includes(nv.id) && (
                                   <div className="col-md-4 col-12 mt-2 mt-md-0">
-                                    <input
+                                    <Form.Control
                                       type="number"
-                                      className="form-control"
-                                      placeholder="Nhập số tiền (nếu có)"
+                                      placeholder="Số tiền thực tế"
                                       value={soTienThucTe[nv.id] || ""}
                                       onChange={(e) => handleChangeSoTien(nv.id, e.target.value)}
                                     />
                                   </div>
                                 )}
                             </div>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </Modal.Body>
-              <Modal.Footer>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShowAddNhanVienModal(false);
-                    setSelectedNhanVienIds([]);
-                  }}
-                >
-                  Đóng
-                </Button>
-                <Button variant="primary" onClick={handleAddNhanVienToKhauTru}>
-                  Xác nhận
-                </Button>
-              </Modal.Footer>
-            </Modal>
-          )}
-        </div>
-      </div>
+                          </div>
+                        ))}
+                      </Card.Body>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              variant="outline-secondary"
+              onClick={() => {
+                setShowAddNhanVienModal(false);
+                setSelectedNhanVienIds([]);
+              }}
+            >
+              Đóng
+            </Button>
+            <Button 
+              variant="primary"
+              onClick={handleAddNhanVienToKhauTru}
+              style={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                border: "none"
+              }}
+            >
+              Xác nhận
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -278,7 +278,8 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
                 paddingTop: "16px"
               }}
             >
-              © 2025 Công ty TNHH TC
+              © 2025 <br />
+              Lý Anh Khoa - Nguyễn Chí Thanh.
             </p>
           </div>
         )}

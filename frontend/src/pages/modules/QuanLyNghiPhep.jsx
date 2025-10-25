@@ -6,7 +6,7 @@ import { Modal, Button, Table, Breadcrumb, Card, Row, Col, Form } from "react-bo
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import Loading from "../../../src/components/Loading";
-import { FaHome, FaSearch, FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaFileDownload, FaBaby } from "react-icons/fa";
+import { FaHome, FaSearch, FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaFileAlt, FaBaby } from "react-icons/fa";
 
 const API_URL = "http://127.0.0.1:5000/api";
 const HR_DEPARTMENT_ID = 2;
@@ -427,6 +427,7 @@ const QuanLyNghiPhep = () => {
                 ) : (
                   <tr>
                     <td colSpan="9" className="text-center text-muted py-4">
+                      <FaFileAlt size={32} className="mb-2 opacity-50" /><br />
                       Không có đơn nghỉ phép thông thường nào
                     </td>
                   </tr>
@@ -498,8 +499,7 @@ const QuanLyNghiPhep = () => {
                               rel="noopener noreferrer"
                               className="btn btn-sm btn-outline-primary"
                             >
-                              <FaFileDownload className="me-1" />
-                              File
+                              {nghiPhep.can_cu_phap_ly_file}
                             </a>
                           ) : (
                             <span className="text-muted">Không có</span>
@@ -572,6 +572,7 @@ const QuanLyNghiPhep = () => {
                 ) : (
                   <tr>
                     <td colSpan="11" className="text-center text-muted py-4">
+                      <FaFileAlt size={32} className="mb-2 opacity-50" /><br />
                       Không có đơn nghỉ thai sản nào
                     </td>
                   </tr>

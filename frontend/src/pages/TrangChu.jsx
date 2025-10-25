@@ -190,7 +190,7 @@ const TrangChu = () => {
             paddingTop: "1.5rem"
           }}
         >
-          © 2025 Công ty TNHH TC. Bảo lưu mọi quyền.
+          © 2025 Lý Anh Khoa - Nguyễn Chí Thanh.
         </p>
       </div>
     </div>

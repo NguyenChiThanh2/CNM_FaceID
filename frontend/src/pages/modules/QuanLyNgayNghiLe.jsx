@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import NgayNghiLeForm from "../../components/ngaynghile/NgayNghiLeForm";
-import { Modal, Button, Table, Breadcrumb } from "react-bootstrap";
+import { Modal, Button, Table, Breadcrumb, Card, Row, Col, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import Loading from "../../../src/components/Loading";
+import { FaHome, FaSearch, FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaCalendarDay } from "react-icons/fa";
 
 const API_URL = "http://127.0.0.1:5000/api";
 
@@ -103,92 +104,186 @@ const NgayNghiLe = () => {
     );
 
   return (
-    <div className="container min-vh-100">
+    <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
       <ToastContainer position="top-right" autoClose={2000} />
-      <div className="row">
-        <div className="col-12 mt-5">
-          <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>
-              Trang chủ
-            </Breadcrumb.Item>
-            <Breadcrumb.Item active>Quản lý ngày nghỉ có lương</Breadcrumb.Item>
-          </Breadcrumb>
 
-          <Button variant="secondary" onClick={() => navigate("/")}>
-            ← Trang chủ
+      {/* Header Section */}
+      <div 
+        className="rounded-4 mb-4 shadow-sm"
+        style={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          padding: "2rem",
+          color: "white"
+        }}
+      >
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <Breadcrumb className="mb-3">
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                <FaHome className="me-2" />
+                Trang chủ
+              </Breadcrumb.Item>
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                Quản lý ngày nghỉ có lương
+              </Breadcrumb.Item>
+            </Breadcrumb>
+            <h1 className="fw-bold mb-2">🎆 Quản lý Ngày Nghỉ Có Lương</h1>
+            <p className="mb-0 opacity-90">
+              Quản lý các ngày nghỉ lễ và ngày nghỉ có hưởng lương
+            </p>
+          </div>
+          <Button 
+            variant="outline-light" 
+            onClick={() => navigate("/")}
+            className="border-0"
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(10px)"
+            }}
+          >
+            <FaHome className="me-2" />
+            Trang chủ
           </Button>
+        </div>
+      </div>
 
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h2 className="text-center flex-grow-1">Quản lý ngày nghỉ có lương</h2>
-          </div>
+      {/* Filter and Actions Card */}
+      <Card className="shadow-sm border-0 rounded-4 mb-4">
+        <Card.Body className="p-4">
+          <Row className="g-3">
+            <Col md={8}>
+              <div className="position-relative">
+                <FaSearch className="position-absolute top-50 start-3 translate-middle-y text-muted" />
+                <Form.Control
+                  type="text"
+                  placeholder="Tìm theo tên hoặc mô tả ngày nghỉ có lương..."
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  style={{ paddingLeft: "2.5rem" }}
+                />
+              </div>
+            </Col>
+            <Col md={4}>
+              <Button
+                variant="primary"
+                className="w-100"
+                onClick={handleAdd}
+                style={{
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  border: "none"
+                }}
+              >
+                <FaPlus className="me-2" />
+                Thêm ngày nghỉ
+              </Button>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
-          <div className="row mb-3">
-            <div className="col-md-6 mb-2">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="🔍 Tìm theo tên hoặc mô tả ngày nghỉ có lương..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="d-flex justify-content-end mb-3">
-            <button
-              className="btn btn-outline-success px-4"
-              onClick={handleAdd}
-            >
-              + Thêm ngày nghỉ có lương
-            </button>
-          </div>
-
-          <div className="table-responsive">
-            <Table bordered hover striped className="rounded">
-              <thead className="table-dark text-center">
+      {/* Data Table Card */}
+      <Card className="shadow-sm border-0 rounded-4">
+        <Card.Header 
+          style={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            fontWeight: "600",
+            fontSize: "1.1rem"
+          }}
+        >
+          <FaCalendarAlt className="me-2" />
+          Danh sách Ngày Nghỉ Có Lương
+        </Card.Header>
+        <Card.Body className="p-0">
+          <div 
+            className="table-responsive" 
+            style={{ 
+              overflowX: "auto", 
+              overflowY: "auto", 
+              maxHeight: "600px" 
+            }}
+          >
+            <Table bordered hover className="mb-0" style={{ minWidth: "1500px" }}>
+              <thead
+                style={{ 
+                  background: "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
+                  color: "white",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 2
+                }}
+              >
                 <tr>
-                  <th>ID</th>
-                  <th>Ngày nghỉ</th>
-                  <th>Từ ngày</th>
-                  <th>Đến ngày</th>
-                  <th>Mô tả</th>
-                  <th>Hành động</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "80px" }}>ID</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "200px" }}>Tên ngày nghỉ</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "150px" }}>Từ ngày</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "150px" }}>Đến ngày</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "300px" }}>Mô tả</th>
+                  <th style={{ padding: "12px", fontWeight: "600", minWidth: "150px" }}>Hành động</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="text-center">
+                    <td colSpan="6" className="text-center py-4">
+                      <Spinner animation="border" size="sm" className="me-2" />
                       Đang tải dữ liệu...
                     </td>
                   </tr>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.id}</td>
-                      <td>{item.ten_ngay}</td>
-                      <td>{formatDate(item.tu_ngay)}</td>
-                      <td>{formatDate(item.den_ngay)}</td>
-                      <td>{item.mo_ta || "Không có mô tả"}</td>
-                      <td>
-                        <button
-                          className="btn btn-sm btn-outline-warning me-2"
-                          onClick={() => handleEdit(item)}
-                        >
-                          ✏️ Sửa
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDelete(item.id)}
-                        >
-                          🗑 Xóa
-                        </button>
+                    <tr key={item.id} style={{ transition: "all 0.3s ease" }}>
+                      <td style={{ padding: "12px", fontWeight: "500" }}>
+                        <span className="badge bg-primary bg-opacity-10 text-primary">
+                          #{item.id}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px", fontWeight: "500" }}>
+                        <FaCalendarDay className="me-2 text-primary" />
+                        {item.ten_ngay}
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <span className="badge bg-success bg-opacity-10 text-success">
+                          {formatDate(item.tu_ngay)}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <span className="badge bg-info bg-opacity-10 text-info">
+                          {formatDate(item.den_ngay)}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px", maxWidth: "300px" }}>
+                        <div className="text-truncate" title={item.mo_ta}>
+                          {item.mo_ta || "Không có mô tả"}
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <div className="d-flex gap-1 flex-wrap">
+                          <Button
+                            variant="outline-warning"
+                            size="sm"
+                            onClick={() => handleEdit(item)}
+                            title="Sửa ngày nghỉ"
+                          >
+                            <FaEdit />
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() => handleDelete(item.id)}
+                            title="Xóa ngày nghỉ"
+                          >
+                            <FaTrash />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="text-center text-muted">
+                    <td colSpan="6" className="text-center text-muted py-4">
+                      <FaCalendarAlt size={32} className="mb-2 opacity-50" />
+                      <br />
                       Không có ngày nghỉ có lương nào phù hợp
                     </td>
                   </tr>
@@ -196,52 +291,69 @@ const NgayNghiLe = () => {
               </tbody>
             </Table>
           </div>
+        </Card.Body>
+      </Card>
 
-          {/* Phân trang */}
-          {totalPages > 1 && (
-            <div className="d-flex justify-content-center align-items-center mt-3 gap-2">
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Card className="shadow-sm border-0 rounded-4 mt-4">
+          <Card.Body className="py-3">
+            <div className="d-flex justify-content-center align-items-center gap-3">
               <Button
-                variant="outline-secondary"
+                variant="outline-primary"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(currentPage - 1)}
+                style={{ borderColor: "#667eea", color: "#667eea" }}
               >
-                ← Trang Trước
+                ← Trang trước
               </Button>
-              <span>
-                Trang {currentPage}/{totalPages}
+              <span className="fw-semibold" style={{ color: "#4a5568" }}>
+                Trang {currentPage} / {totalPages}
               </span>
               <Button
-                variant="outline-secondary"
+                variant="outline-primary"
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(currentPage + 1)}
+                style={{ borderColor: "#667eea", color: "#667eea" }}
               >
-                Trang Sau →
+                Trang sau →
               </Button>
             </div>
-          )}
+          </Card.Body>
+        </Card>
+      )}
 
-          {/* Modal thêm/sửa */}
-          <Modal show={showModal} onHide={handleModalClose} size="lg">
-            <Modal.Header closeButton>
-              <Modal.Title>
-                {editingNgayNghiLe ? "Chỉnh sửa ngày nghỉ có lương" : "Thêm ngày nghỉ có lương"}
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <NgayNghiLeForm
-                onAdded={handleFormSubmit}
-                editingNgayNghiLe={editingNgayNghiLe}
-                setEditingNgayNghiLe={setEditingNgayNghiLe}
-              />
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={handleModalClose}>
-                Đóng
-              </Button>
-            </Modal.Footer>
-          </Modal>
-        </div>
-      </div>
+      {/* Modal thêm/sửa */}
+      <Modal
+        show={showModal}
+        onHide={handleModalClose}
+        size="lg"
+        className="rounded-4"
+      >
+        <Modal.Header 
+          closeButton
+          style={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white"
+          }}
+        >
+          <Modal.Title>
+            {editingNgayNghiLe ? "✏️ Chỉnh sửa ngày nghỉ có lương" : "➕ Thêm ngày nghỉ có lương"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          <NgayNghiLeForm
+            onAdded={handleFormSubmit}
+            editingNgayNghiLe={editingNgayNghiLe}
+            setEditingNgayNghiLe={setEditingNgayNghiLe}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={handleModalClose}>
+            Đóng
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
