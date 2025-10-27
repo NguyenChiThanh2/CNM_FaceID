@@ -2,7 +2,7 @@
 import React from 'react';
 import '../css/style.css';
 
-const Loading = ({ message = "Đang tải dữ liệu..." }) => {
+const Loading = ({ message = "Đang tải dữ liệu" }) => {
   return (
     <div 
       className="loading-container d-flex justify-content-center align-items-center vh-100"

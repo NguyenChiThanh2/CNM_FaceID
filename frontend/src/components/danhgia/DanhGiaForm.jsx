@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Form, Button, Row, Col } from "react-bootstrap";
 import { getAllNhanVien } from "../../services/nhanSuApi";
 import { getNhanVienInfo } from "../../utils/auth";
+import { ToastContainer, toast } from "react-toastify";
 
 const clamp0to10 = (v) => {
   const n = Number(v);
@@ -52,7 +53,7 @@ const DanhGiaForm = ({ initialData = {}, onSubmit, onClose }) => {
         const list = await getAllNhanVien();
         setNhanViens(Array.isArray(list) ? list : []);
       } catch (err) {
-        console.error("Lỗi khi tải danh sách nhân viên:", err);
+        toast.error("Lỗi khi tải danh sách nhân viên:", err);
         setNhanViens([]);
       } finally {
         setLoadingNV(false);
@@ -98,7 +99,7 @@ const DanhGiaForm = ({ initialData = {}, onSubmit, onClose }) => {
   useEffect(() => {
     if (isEditing && initialData?.nhan_vien?.phong_ban_id && currentUser?.phong_ban_id) {
       if (initialData.nhan_vien.phong_ban_id !== currentUser.phong_ban_id) {
-        alert("Bạn chỉ được đánh giá nhân viên trong cùng phòng ban.");
+        toast.warning("Bạn chỉ được đánh giá nhân viên trong cùng phòng ban.");
         onClose?.();
       }
     }
@@ -135,7 +136,7 @@ const DanhGiaForm = ({ initialData = {}, onSubmit, onClose }) => {
     ];
     const missing = need.filter((k) => !String(formData[k] || "").trim());
     if (missing.length) {
-      alert("Vui lòng nhập đủ 5 minh chứng (URL hoặc đường dẫn file). Thiếu: " + missing.join(", "));
+      toast.warning("Vui lòng nhập đủ 5 minh chứng (URL hoặc đường dẫn file). Thiếu: " + missing.join(", "));
       return false;
     }
     return true;
@@ -172,11 +173,11 @@ const DanhGiaForm = ({ initialData = {}, onSubmit, onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!currentUser?.id) {
-      alert("Không xác định được người đánh giá. Vui lòng đăng nhập lại.");
+      toast.danger("Không xác định được người đánh giá. Vui lòng đăng nhập lại.");
       return;
     }
     if (!formData.nhan_vien_id) {
-      alert("Vui lòng chọn nhân viên được đánh giá.");
+      toast.warning("Vui lòng chọn nhân viên được đánh giá.");
       return;
     }
     if (!validateEvidence()) return;

@@ -299,6 +299,19 @@ const AppLayout = () => {
             <Route path="/404" element={<NotFound />} />
             <Route path="*" element={<Navigate to="/404" />} />
           </Routes>
+
+          <div className="text-center pt-4">
+            <p 
+              className="text-muted mb-4" 
+              style={{ 
+                fontSize: "0.9rem",
+                borderTop: "1px solid #e2e8f0",
+                paddingTop: "1.5rem"
+              }}
+            >
+              © 2025 Lý Anh Khoa - Nguyễn Chí Thanh.
+            </p>
+          </div>
         </main>
       </div>
     </div>

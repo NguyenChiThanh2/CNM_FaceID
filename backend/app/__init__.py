@@ -10,7 +10,11 @@ def create_app():
     app = Flask(__name__)
 
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_database2.db'
+    # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_database2.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+        'DATABASE_URL', 
+        'sqlite:///test_database2.db'
+    ).replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, '..', 'static', 'images', 'avatars')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB

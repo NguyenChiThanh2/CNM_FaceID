@@ -181,7 +181,7 @@ const TrangChu = () => {
       </Container>
 
       {/* Footer */}
-      <div className="text-center mt-5 pt-4">
+      {/* <div className="text-center mt-5 pt-4">
         <p 
           className="text-muted mb-0" 
           style={{ 
@@ -192,7 +192,7 @@ const TrangChu = () => {
         >
           © 2025 Lý Anh Khoa - Nguyễn Chí Thanh.
         </p>
-      </div>
+      </div> */}
     </div>
   );
 };

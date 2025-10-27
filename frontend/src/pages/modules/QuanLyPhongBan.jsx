@@ -297,6 +297,7 @@ const QuanLyPhongBan = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+      
     </div>
   );
 };

@@ -1,23 +1,41 @@
 import React, { useEffect, useRef, useState } from "react";
+import { 
+  Card, 
+  Button, 
+  Breadcrumb, 
+  Spinner, 
+  Alert, 
+  Row, 
+  Col,
+  Badge,
+  Modal
+} from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
+import { 
+  FaHome, 
+  FaCamera, 
+  FaUserCheck, 
+  FaUserTimes, 
+  FaClock,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaLightbulb,
+  FaSyncAlt
+} from "react-icons/fa";
 import { createFaceDetector } from "../../lib/faceDetectorFallback";
 
 const API_BASE = "http://127.0.0.1:5000";
 
 // Nhịp nhận diện & điều kiện
-const RECOGNIZE_EVERY = 1300;         // ms: gọi /api/face/recognize tối đa ~1.3s/lần
-const STABLE_MS = 800;               // ms: giữ ổn định trước khi chụp
-const COOLDOWN_MS = 5000;             // ms: badge UI
-const PAUSE_AFTER_SUCCESS_MS = 3000;  // ms: NGHỈ CAMERA 3s sau khi checkin
-const MIN_GAP_BETWEEN_CHECKINS_MS = 60_000;   // 60s cho mọi người
+const RECOGNIZE_EVERY = 1300;
+const STABLE_MS = 800;
+const COOLDOWN_MS = 5000;
+const PAUSE_AFTER_SUCCESS_MS = 3000;
+const MIN_GAP_BETWEEN_CHECKINS_MS = 60_000;
 const SAME_PERSON_GAP_MS = 120_000;
-// Giảm giật & tiết kiệm CPU
-const KEEP_FACE_MS = 600;   // miss tạm 1-2 frame vẫn giữ khung 600ms
-
-// Khung portrait
+const KEEP_FACE_MS = 600;
 const PORTRAIT_ASPECT = 1.25;
-
-// Ngưỡng ảnh
-const BLUR_THRESHOLD = 20; // hạ tạm để dễ pass
+const BLUR_THRESHOLD = 20;
 const DEBUG = false;
 const MIRRORED = false;
 
@@ -43,7 +61,6 @@ function emaBox(prev, cur, alpha = 0.25) {
 function padPortraitBox(bb, padRatio, overlayW, overlayH, aspect = PORTRAIT_ASPECT) {
   let { x, y, width: w, height: h } = bb;
 
-  // nếu là normalized -> đổi ra pixel
   if (w <= 1 && h <= 1) {
     x *= overlayW; y *= overlayH; w *= overlayW; h *= overlayH;
   }
@@ -70,34 +87,30 @@ export default function FaceCheckin() {
   const videoRef = useRef(null);
   const overlayRef = useRef(null);
   const analysisCanvasRef = useRef(null);
+  const navigate = useNavigate();
 
   const loopHandleRef = useRef(null);
-
   const lastRecognizeAtRef = useRef(0);
   const matchedRef = useRef(null);
   const previewTokenRef = useRef(null);
   const stableStartRef = useRef(null);
-
   const smoothBoxRef = useRef(null);
   const lastFacesRef = useRef([]);
   const lastFaceTsRef = useRef(0);
   const detectorRef = useRef(null);
-
-  const isPausedRef = useRef(false); // ĐANG NGHỈ camera cứng
+  const isPausedRef = useRef(false);
 
   const [ready, setReady] = useState(false);
   const [detectorReady, setDetectorReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(false);
-
-  const [matched, setMatched] = useState(null);        // { id, ho_ten } | null
+  const [matched, setMatched] = useState(null);
   const [previewToken, setPreviewToken] = useState(null);
-  const [stableStart, setStableStart] = useState(null); // hiển thị “đang chờ ...s”
-
-  // ===== Modal đơn giản =====
+  const [stableStart, setStableStart] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalHtml, setModalHtml] = useState("");
   const [modalType, setModalType] = useState("success");
+
   function showModal(html, type = "success") {
     setModalHtml(html);
     setModalType(type);
@@ -183,13 +196,11 @@ export default function FaceCheckin() {
     while (performance.now() - start < durationMs) {
       const dataURL = snapBase64(quality);
       if (dataURL) frames.push(dataURL);
-      // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => setTimeout(r, stepMs));
     }
     return frames;
   }
 
-  // Độ nét ảnh – Variance of Laplacian (approx)
   function varianceOfLaplacian(imageData) {
     const gray = [];
     const data = imageData.data;
@@ -271,20 +282,15 @@ export default function FaceCheckin() {
     loopHandleRef.current = null;
   }
 
-  // ===== Nghỉ camera (dừng loop hoàn toàn) =====
   function hardPauseCamera(ms = PAUSE_AFTER_SUCCESS_MS) {
     if (isPausedRef.current) return;
     isPausedRef.current = true;
     setCooldown(true);
 
-    // Dừng vòng lặp
     cancelLoop(videoRef.current);
-
-    // Tắt tạm video tracks
     const tracks = videoRef.current?.srcObject?.getVideoTracks?.() || [];
     tracks.forEach(t => (t.enabled = false));
 
-    // Reset toàn bộ state nhận diện để tránh auto-chụp khi resume
     setMatched(null); matchedRef.current = null;
     setPreviewToken(null); previewTokenRef.current = null;
     setStableStart(null); stableStartRef.current = null;
@@ -292,22 +298,19 @@ export default function FaceCheckin() {
     smoothBoxRef.current = null;
     clearOverlay();
 
-    // Bật lại sau ms
     setTimeout(() => {
       tracks.forEach(t => (t.enabled = true));
       isPausedRef.current = false;
       setCooldown(false);
 
-      // Khởi động lại loop
       if (ready && detectorReady && !loopHandleRef.current) {
         scheduleLoop(videoRef.current);
       }
     }, ms);
   }
 
-  // ===== Tick nhận diện nhanh =====
   async function recognizeTick(ts) {
-    if (isPausedRef.current) return;                  // đang nghỉ -> bỏ qua
+    if (isPausedRef.current) return;
     if (cooldown || loading) { dlog("skip recognize: cooldown/loading"); return; }
     if (ts - lastRecognizeAtRef.current < RECOGNIZE_EVERY) { return; }
     lastRecognizeAtRef.current = ts;
@@ -339,11 +342,8 @@ export default function FaceCheckin() {
     matchedRef.current = nv;
   }
 
-  // ===== Loop chính =====
   async function loop(ts) {
-    // Nếu đang nghỉ camera -> KHÔNG làm gì, chỉ lên lịch lần sau sau khi resume
     if (isPausedRef.current) {
-      // không schedule liên tục khi pause, nhưng để đơn giản vẫn set lại frame tiếp theo
       scheduleLoop(videoRef.current);
       return;
     }
@@ -363,7 +363,6 @@ export default function FaceCheckin() {
         let faces = await detectorRef.current.detect(v);
         dlog("detector=", detectorRef.current?.name, "faces=", faces?.length, faces?.[0]?.boundingBox);
 
-        // giữ khung 0.6s nếu miss
         const nowTs = performance.now();
         if (!faces || faces.length === 0) {
           if (nowTs - lastFaceTsRef.current < KEEP_FACE_MS && lastFacesRef.current.length) {
@@ -375,15 +374,12 @@ export default function FaceCheckin() {
         }
 
         if (faces && faces.length) {
-          // 1) Nhận diện để lấy tên/token
           await recognizeTick(ts);
 
-          // 2) Vẽ khung
           const nvNow = matchedRef.current;
           const label = nvNow ? ` ${nvNow.ho_ten}` : "Chưa tìm thấy dữ liệu nhân viên";
           drawBoxes(faces, label);
 
-          // 3) Nếu đủ ổn định + ảnh đủ nét → chấm công
           const tokenNow = previewTokenRef.current;
           const stableElapsed = stableStartRef.current ? (performance.now() - stableStartRef.current) : 0;
           const enoughStable = !!(nvNow && stableElapsed >= STABLE_MS);
@@ -410,10 +406,7 @@ export default function FaceCheckin() {
                     "success"
                   );
 
-                  // Nghỉ camera 3s (dừng loop và tắt track)
                   hardPauseCamera(PAUSE_AFTER_SUCCESS_MS);
-
-                  // reset nhận diện cho lượt sau
                   setMatched(null); matchedRef.current = null;
                   setPreviewToken(null); previewTokenRef.current = null;
                   setStableStart(null); stableStartRef.current = null;
@@ -430,7 +423,6 @@ export default function FaceCheckin() {
         } else {
           if (performance.now() - lastFaceTsRef.current >= 400) {
             clearOverlay();
-            // reset khi mất mặt đủ lâu
             setMatched(null); matchedRef.current = null;
             setPreviewToken(null); previewTokenRef.current = null;
             setStableStart(null); stableStartRef.current = null;
@@ -450,7 +442,7 @@ export default function FaceCheckin() {
     }
   }
 
-  // ===== Khởi tạo detector (fallback) =====
+  // ===== Khởi tạo detector =====
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -543,7 +535,6 @@ export default function FaceCheckin() {
     };
   }, [detectorReady]);
 
-  // Start loop khi camera & detector đã sẵn sàng
   useEffect(() => {
     if (ready && detectorReady && !loopHandleRef.current && !isPausedRef.current) {
       scheduleLoop(videoRef.current);
@@ -551,89 +542,266 @@ export default function FaceCheckin() {
     return () => {
       if (loopHandleRef.current) cancelLoop(videoRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, detectorReady]);
 
   return (
-    <div
-      className="container py-5 text-center"
-      style={{
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        backgroundColor: "#dee2e6",
-      }}
-    >
-      <h2 className="mb-3" style={{ fontWeight: 600, color: "#343a40" }}>
-        Chấm công
-      </h2>
-      <p className="text-muted mb-2">
-        💡 Hệ thống nhận diện tên trước, sau đó tự chụp lại sau {STABLE_MS / 1000}s ổn định để chấm công.
-      </p>
-
-      {/* Video + overlay */}
-      <div
-        className="position-relative d-inline-block"
+    <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
+      {/* Header Section */}
+      <div 
+        className="rounded-4 mb-4 shadow-sm"
         style={{
-          width: "100%",
-          maxWidth: 500,
-          borderRadius: 12,
-          border: "2px solid #2b2b2b",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          padding: "2rem",
+          color: "white"
         }}
       >
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          style={{
-            width: "100%",
-            height: "auto",
-            borderRadius: 12,
-            backgroundColor: "#000",
-            display: "block",
-          }}
-        />
-        <canvas
-          ref={overlayRef}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            pointerEvents: "none",
-            borderRadius: 12,
-          }}
-        />
-      </div>
-
-      <div className="mt-3">
-        {matched && (
-          <div className="mb-2">
-            <strong>{stableStart && <span> Giữ 2s để chấm công</span>}</strong>
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <Breadcrumb className="mb-3">
+              <Breadcrumb.Item active style={{ color: "white" }}
+              >
+                <FaHome className="me-2" />
+                Trang chủ
+              </Breadcrumb.Item>
+              <Breadcrumb.Item active style={{ color: "white" }}>
+                Chấm công khuôn mặt
+              </Breadcrumb.Item>
+            </Breadcrumb>
+            <h1 className="fw-bold mb-2">🤖 Chấm công Tự động bằng AI</h1>
+            <p className="mb-0 opacity-90">
+              Hệ thống nhận diện khuôn mặt tự động - Giữ ổn định {STABLE_MS / 1000}s để chấm công
+            </p>
           </div>
-        )}
-        {loading ? (
-          <span className="badge bg-warning text-dark px-3 py-2">Đang xử lý…</span>
-        ) : isPausedRef.current || cooldown ? (
-          <span className="badge bg-secondary px-3 py-2">Tạm nghỉ {PAUSE_AFTER_SUCCESS_MS / 1000}s…</span>
-        ) : ready && detectorReady ? (
-          <span className="badge bg-success px-3 py-2">Sẵn sàng</span>
-        ) : (
-          <span className="badge bg-danger px-3 py-2">Camera/Detector chưa sẵn sàng</span>
-        )}
-      </div>
-
-      {modalOpen && (
-        <div className="modal show d-block" tabIndex="-1" role="dialog" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-dialog-centered" role="document">
-            <div className="modal-content">
-              <div className="modal-header"><h5 className="modal-title">Thông báo</h5></div>
-              <div className="modal-body" dangerouslySetInnerHTML={{ __html: modalHtml }} />
-              <div className="modal-footer"></div>
-            </div>
-          </div>
+          <Button 
+            variant="outline-light" 
+            onClick={() => navigate("/")}
+            className="border-0"
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(10px)"
+            }}
+          >
+            <FaHome className="me-2" />
+            Trang chủ
+          </Button>
         </div>
-      )}
+      </div>
+
+      <Row className="g-4 justify-content-center">
+        {/* Camera Section */}
+        <Col lg={8}>
+          <Card className="shadow-sm border-0 rounded-4">
+            <Card.Header 
+              style={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                fontWeight: "600",
+                fontSize: "1.1rem"
+              }}
+            >
+              <FaCamera className="me-2" />
+              Camera nhận diện
+            </Card.Header>
+            <Card.Body className="p-4 text-center">
+              <div className="position-relative d-inline-block">
+                <div
+                  style={{
+                    width: "100%",
+                    maxWidth: "600px",
+                    borderRadius: "16px",
+                    border: "3px solid #e2e8f0",
+                    boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+                    overflow: "hidden",
+                    backgroundColor: "#000"
+                  }}
+                >
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      display: "block",
+                    }}
+                  />
+                  <canvas
+                    ref={overlayRef}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      pointerEvents: "none",
+                    }}
+                  />
+                </div>
+                
+                {/* Loading Overlay */}
+                {loading && (
+                  <div 
+                    className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center rounded-4"
+                    style={{
+                      background: "rgba(0, 0, 0, 0.8)",
+                      zIndex: 10
+                    }}
+                  >
+                    <div className="text-center text-white">
+                      <Spinner animation="border" variant="light" size="lg" />
+                      <div className="mt-3 fw-semibold fs-5">Đang xử lý chấm công...</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Status Information */}
+              <div className="mt-4">
+                <Row className="g-3 justify-content-center">
+                  <Col xs="auto">
+                    {matched ? (
+                      <Badge bg="success" className="fs-6 px-3 py-2">
+                        <FaUserCheck className="me-2" />
+                        Đã nhận diện: {matched.ho_ten}
+                      </Badge>
+                    ) : (
+                      <Badge bg="secondary" className="fs-6 px-3 py-2">
+                        <FaUserTimes className="me-2" />
+                        Đang tìm khuôn mặt...
+                      </Badge>
+                    )}
+                  </Col>
+                  
+                  <Col xs="auto">
+                    {loading ? (
+                      <Badge bg="warning" text="dark" className="fs-6 px-3 py-2">
+                        <FaSyncAlt className="me-2" />
+                        Đang xử lý...
+                      </Badge>
+                    ) : isPausedRef.current || cooldown ? (
+                      <Badge bg="secondary" className="fs-6 px-3 py-2">
+                        <FaClock className="me-2" />
+                        Tạm nghỉ {PAUSE_AFTER_SUCCESS_MS / 1000}s...
+                      </Badge>
+                    ) : ready && detectorReady ? (
+                      <Badge bg="success" className="fs-6 px-3 py-2">
+                        <FaCheckCircle className="me-2" />
+                        Sẵn sàng
+                      </Badge>
+                    ) : (
+                      <Badge bg="danger" className="fs-6 px-3 py-2">
+                        <FaExclamationTriangle className="me-2" />
+                        Đang khởi tạo...
+                      </Badge>
+                    )}
+                  </Col>
+                </Row>
+
+                {/* Countdown Timer */}
+                {matched && stableStart && (
+                  <div className="mt-3">
+                    <div className="progress" style={{ height: "8px", maxWidth: "300px", margin: "0 auto" }}>
+                      <div 
+                        className="progress-bar progress-bar-striped progress-bar-animated" 
+                        style={{ 
+                          width: `${Math.min(100, (performance.now() - stableStart) / STABLE_MS * 100)}%` 
+                        }}
+                      />
+                    </div>
+                    <small className="text-muted mt-2 d-block">
+                      Giữ ổn định để chấm công... ({Math.max(0, STABLE_MS - (performance.now() - stableStart)).toFixed(0)}ms)
+                    </small>
+                  </div>
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Instructions Section */}
+        <Col lg={4}>
+          <Card className="shadow-sm border-0 rounded-4 h-100">
+            <Card.Header 
+              style={{
+                background: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
+                color: "white",
+                fontWeight: "600"
+              }}
+            >
+              <FaLightbulb className="me-2" />
+              Hướng dẫn sử dụng
+            </Card.Header>
+            <Card.Body>
+              <div className="text-start">
+                <div className="d-flex align-items-start mb-3">
+                  <div className="bg-primary rounded-circle p-2 me-3 flex-shrink-0">
+                    <FaCamera className="text-white" />
+                  </div>
+                  <div>
+                    <h6 className="fw-semibold mb-1">Bước 1: Định vị camera</h6>
+                    <p className="text-muted mb-0 small">Đứng trước camera với khuôn mặt rõ ràng, ánh sáng đầy đủ</p>
+                  </div>
+                </div>
+                
+                <div className="d-flex align-items-start mb-3">
+                  <div className="bg-success rounded-circle p-2 me-3 flex-shrink-0">
+                    <FaUserCheck className="text-white" />
+                  </div>
+                  <div>
+                    <h6 className="fw-semibold mb-1">Bước 2: Chờ nhận diện</h6>
+                    <p className="text-muted mb-0 small">Hệ thống tự động nhận diện và hiển thị tên của bạn</p>
+                  </div>
+                </div>
+                
+                <div className="d-flex align-items-start">
+                  <div className="bg-info rounded-circle p-2 me-3 flex-shrink-0">
+                    <FaCheckCircle className="text-white" />
+                  </div>
+                  <div>
+                    <h6 className="fw-semibold mb-1">Bước 3: Giữ ổn định</h6>
+                    <p className="text-muted mb-0 small">Giữ nguyên vị trí {STABLE_MS / 1000}s để hệ thống chấm công tự động</p>
+                  </div>
+                </div>
+              </div>
+
+              <Alert variant="info" className="mt-4">
+                <strong>💡 Mẹo:</strong>
+                <ul className="mb-0 mt-2 small">
+                  <li>Đảm bảo khuôn mặt được chiếu sáng đều</li>
+                  <li>Giữ khoảng cách 1-2 mét với camera</li>
+                  <li>Tránh đeo kính râm hoặc vật che mặt</li>
+                </ul>
+              </Alert>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Result Modal */}
+      <Modal show={modalOpen} onHide={() => setModalOpen(false)} centered className="rounded-4">
+        <Modal.Body 
+          className="text-center p-5"
+          style={{
+            background: modalType === "success" 
+              ? "linear-gradient(135deg, #48bb78 0%, #38a169 100%)"
+              : "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)",
+            color: "white"
+          }}
+        >
+          <div className="mb-3">
+            {modalType === "success" ? (
+              <FaCheckCircle size={48} />
+            ) : (
+              <FaExclamationTriangle size={48} />
+            )}
+          </div>
+          <div 
+            dangerouslySetInnerHTML={{ 
+              __html: modalHtml.replace(/<strong/g, '<strong style="color: white;"')
+            }} 
+          />
+        </Modal.Body>
+      </Modal>
     </div>
   );
 }

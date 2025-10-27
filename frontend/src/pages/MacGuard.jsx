@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import Loading from "../../src/components/Loading";
+
+
 
 /**
  * Đọc danh sách MAC cho phép từ .env (Vite):
@@ -17,6 +20,7 @@ function norm(mac = "") {
 }
 
 export default function MacGuard({ children }) {
+  // const [loading, setLoading] = useState(false);
   const [state, setState] = useState({ loading: true, allowed: false, reason: "" });
   const location = useLocation();
 
@@ -53,7 +57,13 @@ export default function MacGuard({ children }) {
     check();
   }, [location.key]);
 
-  if (state.loading) return <div className="p-6">Đang kiểm tra thiết bị…</div>;
+  // if (state.loading) return <div className="p-6">Đang kiểm tra thiết bị…</div>;
+  if (state.loading)
+        return (
+          <div>
+            <Loading message = "Đang kiểm tra thiết bị"/>
+          </div>
+        );
   if (!state.allowed) {
     // Điều hướng về 404 (hoặc trang thông báo riêng)
     return <Navigate to="/404" state={{ reason: state.reason }} replace />;
