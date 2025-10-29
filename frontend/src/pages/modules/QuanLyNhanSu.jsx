@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { 
-  Modal, 
-  Button, 
-  Table, 
-  Row, 
-  Col, 
-  Breadcrumb, 
-  Spinner, 
-  Card, 
+import {
+  Modal,
+  Button,
+  Table,
+  Row,
+  Col,
+  Breadcrumb,
+  Spinner,
+  Card,
   Form,
   OverlayTrigger,
-  Tooltip 
+  Tooltip
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import NhanSuAddForm from "../../components/nhansu/NhanSuAddForm";
@@ -24,16 +24,16 @@ import { getNhanVienInfo } from "../../utils/auth";
 import { getHopDongBatchByNhanVienIds } from "../../services/hopDongLaoDongApi";
 import { getAllNhanVien, deleteNhanVien as apiDeleteNhanVien } from "../../services/nhanSuApi";
 import ChungChiModal from "../../components/nhansu/ChungChiModal";
-import { 
-  FaHome, 
-  FaSearch, 
-  FaPlus, 
-  FaEdit, 
-  FaTrash, 
-  FaFileExport, 
-  FaUser, 
+import {
+  FaHome,
+  FaSearch,
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaFileExport,
+  FaUser,
   FaIdCard,
-  FaCertificate 
+  FaCertificate
 } from "react-icons/fa";
 import Loading from "../../../src/components/Loading";
 
@@ -54,7 +54,7 @@ const QuanLyNhanSu = () => {
   const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
   const [contracts, setContracts] = useState({});
 
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   const navigate = useNavigate();
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api";
 
@@ -229,19 +229,19 @@ const QuanLyNhanSu = () => {
   const LEFT_ID = COL_W_IMG;
   const LEFT_NAME = COL_W_IMG + COL_W_ID;
   if (loading)
-      return (
-        <div>
-          <ToastContainer position="top-right" autoClose={2000} />
-          <Loading />
-        </div>
-      );
+    return (
+      <div>
+        <ToastContainer position="top-right" autoClose={2000} />
+        <Loading />
+      </div>
+    );
 
   return (
     <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
       <ToastContainer position="top-right" autoClose={2000} />
 
       {/* Header Section */}
-      <div 
+      <div
         className="rounded-4 mb-4 shadow-sm"
         style={{
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -265,8 +265,8 @@ const QuanLyNhanSu = () => {
               Quản lý thông tin nhân viên toàn diện
             </p>
           </div>
-          <Button 
-            variant="outline-light" 
+          <Button
+            variant="outline-light"
             onClick={() => navigate("/")}
             className="border-0"
             style={{
@@ -346,7 +346,7 @@ const QuanLyNhanSu = () => {
 
       {/* Data Table Card */}
       <Card className="shadow-sm border-0 rounded-4">
-        <Card.Header 
+        <Card.Header
           style={{
             background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
             color: "white",
@@ -364,12 +364,12 @@ const QuanLyNhanSu = () => {
               <div className="mt-2 text-muted">Đang tải dữ liệu...</div>
             </div>
           ) : (
-            <div 
-              className="table-responsive" 
-              style={{ 
-                overflowX: "auto", 
-                overflowY: "auto", 
-                maxHeight: "900px" 
+            <div
+              className="table-responsive"
+              style={{
+                overflowX: "auto",
+                overflowY: "auto",
+                maxHeight: "900px"
               }}
             >
               <style>{`
@@ -408,7 +408,7 @@ const QuanLyNhanSu = () => {
 
               <Table bordered hover className="mb-2 table-freeze" style={{ minWidth: "1400px" }}>
                 <thead
-                  style={{ 
+                  style={{
                     background: "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
                     color: "white",
                     position: "sticky",
@@ -494,47 +494,53 @@ const QuanLyNhanSu = () => {
                         </div>
                       </td>
                       <td>
-                        <span className={`badge ${
-                          nv.trang_thai === "Đang làm việc" ? "bg-success" :
-                          nv.trang_thai === "Đã nghỉ việc" ? "bg-danger" :
-                          "bg-warning text-dark"
-                        }`}>
+                        <span className={`badge ${nv.trang_thai === "Đang làm việc" ? "bg-success" :
+                            nv.trang_thai === "Đã nghỉ việc" ? "bg-danger" :
+                              "bg-warning text-dark"
+                          }`}>
                           {nv.trang_thai}
                         </span>
                       </td>
-                      {isHR && (
-                        <td onClick={(e) => e.stopPropagation()}>
-                          <div className="d-flex gap-1 flex-wrap">
-                            <OverlayTrigger placement="top" overlay={<Tooltip>Chứng chỉ</Tooltip>}>
-                              <Button
-                                variant="outline-info"
-                                size="sm"
-                                onClick={() => openChungChi(nv)}
-                              >
-                                <FaCertificate />
-                              </Button>
-                            </OverlayTrigger>
-                            <OverlayTrigger placement="top" overlay={<Tooltip>Sửa</Tooltip>}>
-                              <Button 
-                                variant="outline-warning" 
-                                size="sm" 
-                                onClick={() => handleEdit(nv)}
-                              >
-                                <FaEdit />
-                              </Button>
-                            </OverlayTrigger>
-                            <OverlayTrigger placement="top" overlay={<Tooltip>Xóa</Tooltip>}>
-                              <Button 
-                                variant="outline-danger" 
-                                size="sm" 
-                                onClick={() => handleDelete(nv.id)}
-                              >
-                                <FaTrash />
-                              </Button>
-                            </OverlayTrigger>
-                          </div>
-                        </td>
-                      )}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="d-flex gap-1 flex-wrap">
+                          {/* Nút chứng chỉ — ai cũng thấy */}
+                          <OverlayTrigger placement="top" overlay={<Tooltip>Chứng chỉ</Tooltip>}>
+                            <Button
+                              variant="outline-info"
+                              size="sm"
+                              onClick={() => openChungChi(nv)}
+                            >
+                              <FaCertificate />
+                            </Button>
+                          </OverlayTrigger>
+
+                          {/* Các nút Sửa/Xóa — chỉ HR mới thấy */}
+                          {isHR && (
+                            <>
+                              <OverlayTrigger placement="top" overlay={<Tooltip>Sửa</Tooltip>}>
+                                <Button
+                                  variant="outline-warning"
+                                  size="sm"
+                                  onClick={() => handleEdit(nv)}
+                                >
+                                  <FaEdit />
+                                </Button>
+                              </OverlayTrigger>
+
+                              <OverlayTrigger placement="top" overlay={<Tooltip>Xóa</Tooltip>}>
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleDelete(nv.id)}
+                                >
+                                  <FaTrash />
+                                </Button>
+                              </OverlayTrigger>
+                            </>
+                          )}
+                        </div>
+                      </td>
+
                     </tr>
                   ))}
                 </tbody>
@@ -588,7 +594,7 @@ const QuanLyNhanSu = () => {
         size="lg"
         className="rounded-4"
       >
-        <Modal.Header 
+        <Modal.Header
           closeButton
           style={{
             background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
