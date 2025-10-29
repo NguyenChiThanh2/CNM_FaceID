@@ -49,11 +49,28 @@ def update_phong_ban_service(id, data):
 def delete_phong_ban_service(ma_phong_ban):
     pb = PhongBan.query.get(ma_phong_ban)
     if not pb:
-        return None
+        # không tìm thấy phòng ban
+        return {"status": "not_found", "phong_ban": None}
 
+    # Kiểm tra xem còn nhân viên thuộc phòng ban này không
+    nhan_vien_count = (
+        db.session.query(func.count(NhanVien.id))
+        .filter(NhanVien.phong_ban_id == pb.id)
+        .scalar()
+    )
+
+    if nhan_vien_count and nhan_vien_count > 0:
+        # còn nhân viên -> không cho xoá
+        return {
+            "status": "has_employee",
+            "count": nhan_vien_count,
+            "phong_ban": pb
+        }
+
+    # An toàn -> xoá
     db.session.delete(pb)
     db.session.commit()
-    return pb
+    return {"status": "deleted", "phong_ban": pb}
 
 def get_nhan_vien_by_phong_ban_id_service(phong_ban_id):
     return NhanVien.query.filter_by(phong_ban_id=phong_ban_id).all()

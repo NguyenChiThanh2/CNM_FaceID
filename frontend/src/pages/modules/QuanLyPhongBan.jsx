@@ -85,7 +85,7 @@ const QuanLyPhongBan = () => {
         await toast.promise(deletePhongBan(id), {
           pending: "Đang xóa phòng ban...",
           success: "Đã xóa phòng ban!",
-          error: "Xóa phòng ban thất bại!",
+          error: "Xóa phòng ban thất bại!, có thể phòng ban đang có nhân viên.",
         });
         fetchPhongBan();
       } catch (err) {

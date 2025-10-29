@@ -37,9 +37,23 @@ def update_phong_ban(id):
 
 # Xóa phòng ban theo ID
 def delete_phong_ban(id):
-    phong_ban = delete_phong_ban_service(id)
-    if not phong_ban:
+    result = delete_phong_ban_service(id)
+
+    if result["status"] == "not_found":
         return jsonify({'message': 'Không tìm thấy phòng ban'}), 404
+
+    if result["status"] == "has_employee":
+        # 409 = Conflict
+        return (
+            jsonify({
+                'message': 'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc',
+                'so_luong_nhan_vien': result["count"],
+                'phong_ban': result["phong_ban"].to_dict()
+            }),
+            409
+        )
+
+    # status = deleted
     return jsonify({'message': 'Xóa phòng ban thành công'})
 
 def get_nhan_vien_by_phong_ban_id(phong_ban_id):

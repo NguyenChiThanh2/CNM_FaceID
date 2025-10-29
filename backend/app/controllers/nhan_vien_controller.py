@@ -42,8 +42,6 @@ def get_nhan_vien_by_trang_thai_controller(trang_thai):
         return jsonify({'message': 'Không tìm thấy nhân viên'}), 404
     return jsonify([nv.to_dict() for nv in nhan_vien_list]), 200
 
-# ========================== CREATE ==========================
-# ========================== CREATE ==========================
 def create_nhan_vien_controller():
     data = request.form.to_dict()
     file = request.files.get('avatar')
@@ -58,7 +56,7 @@ def create_nhan_vien_controller():
         except ValueError:
             return jsonify({'message': 'Ngày sinh không hợp lệ, định dạng phải là YYYY-MM-DD'}), 400
 
-    # --- xử lý ảnh (giữ logic của bạn) ---
+    # Avatar + face_encoding như bạn đã có
     if file and file.filename:
         if not allowed_file(file.filename):
             return jsonify({'message': 'File không hợp lệ. Chỉ chấp nhận jpg, jpeg, png.'}), 400
@@ -83,27 +81,18 @@ def create_nhan_vien_controller():
         data['avatar'] = None
         data['face_encoding'] = None
 
-    # --- mật khẩu mặc định khi tạo mới ---
+    # Mật khẩu mặc định
     raw_pw = data.get('password') or '123456'
     data['password'] = generate_password_hash(raw_pw)
 
-    # --- gọi service & chuẩn hóa phản hồi ---
-    res = nhan_vien_service.create_nhan_vien_service(**data)
-
-    # service có thể trả model, hoặc tuple (dict_error, code) / (model, code)
-    if isinstance(res, tuple):
-        payload, code = res
-        if isinstance(payload, dict) and payload.get('error'):
-            return jsonify({'message': payload['error']}), code
-        # trường hợp service trả (model, 201)
-        return jsonify(payload.to_dict() if hasattr(payload, 'to_dict') else payload), code
+    # GỌI SERVICE (đã trả về tuple (payload, code))
+    res, code = nhan_vien_service.create_nhan_vien_service(**data)
 
     if isinstance(res, dict) and res.get('error'):
-        # fallback nếu service không trả tuple
-        return jsonify({'message': res['error']}), 400
+        return jsonify({'message': res['error']}), code
 
-    return jsonify(res.to_dict()), 201
-
+    # nếu không phải error thì res chính là model
+    return jsonify(res.to_dict()), code
 
 # ---------------------- UPDATE ----------------------
 def update_nhan_vien_controller(nhan_vien_id):
@@ -128,7 +117,7 @@ def update_nhan_vien_controller(nhan_vien_id):
         if not upload_folder or not os.path.exists(upload_folder):
             return jsonify({'message': 'Thư mục upload không tồn tại hoặc chưa cấu hình'}), 500
 
-        # --- xử lý ảnh nếu có ---
+        # xử lý avatar nếu có
         if file and file.filename:
             if not allowed_file(file.filename):
                 return jsonify({'message': 'File không hợp lệ. Chỉ chấp nhận jpg, jpeg, png.'}), 400
@@ -142,6 +131,7 @@ def update_nhan_vien_controller(nhan_vien_id):
                     return jsonify({'message': error_message}), 400
                 data['face_encoding'] = face_encoding
 
+                # xoá avatar cũ
                 if nhan_vien_cu.avatar:
                     old_avatar_path = os.path.join(upload_folder, nhan_vien_cu.avatar)
                     if os.path.exists(old_avatar_path):
@@ -152,36 +142,27 @@ def update_nhan_vien_controller(nhan_vien_id):
                 logger.error(f"Lỗi khi lưu file ảnh mới: {str(e)}")
                 return jsonify({'message': f'Lỗi khi lưu file ảnh mới: {str(e)}'}), 500
 
-        # --- QUAN TRỌNG: xử lý password khi UPDATE ---
-        # 1) Nếu FE gửi reset_password=1 -> reset về 123456
+        # xử lý password
         if data.get('reset_password') == '1':
             data['password'] = generate_password_hash('123456')
             data.pop('reset_password', None)
-        # 2) Nếu FE gửi password rỗng -> không đụng password hiện tại
         elif 'password' in data and not data['password']:
             data.pop('password')
-        # 3) Nếu FE gửi password có giá trị -> hash
         elif data.get('password'):
             data['password'] = generate_password_hash(data['password'])
-       # --- QUAN TRỌNG: xử lý password khi UPDATE ---
-        # data['password'] = generate_password_hash("123456")
-        # --- gọi service update ---
-        res = nhan_vien_service.update_nhan_vien_service(nhan_vien_id, **data)
 
-        if isinstance(res, tuple):
-            payload, code = res
-            if isinstance(payload, dict) and payload.get('error'):
-                return jsonify({'message': payload['error']}), code
-            return jsonify(payload.to_dict() if hasattr(payload, 'to_dict') else payload), code
+        # GỌI SERVICE (đã trả về tuple (payload, code))
+        res, code = nhan_vien_service.update_nhan_vien_service(nhan_vien_id, **data)
 
         if isinstance(res, dict) and res.get('error'):
-            return jsonify({'message': res['error']}), 400
+            return jsonify({'message': res['error']}), code
 
-        return jsonify(res.to_dict()), 200
+        return jsonify(res.to_dict()), code
 
     except Exception as e:
         logger.error(f"Lỗi hệ thống khi cập nhật nhân viên: {str(e)}")
         return jsonify({'message': f'Lỗi hệ thống: {str(e)}'}), 500
+
 # ========================== DELETE ==========================
 def delete_nhan_vien_controller(id):
     result = nhan_vien_service.delete_nhan_vien_service(id)
@@ -217,11 +198,6 @@ def handle_uploaded_image(file_path):
     except Exception as e:
         logger.error(f"Lỗi khi xử lý ảnh: {str(e)}")
         return None, f"Lỗi khi xử lý ảnh: {str(e)}"
-
-
-
-
-
 
 
 def search_nhan_vien_theoten_controller(q):
