@@ -10,13 +10,13 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { 
-    FaHome, 
-    FaSearch, 
-    FaPlus, 
-    FaEdit, 
-    FaTrash, 
-    FaFileExcel, 
+import {
+    FaHome,
+    FaSearch,
+    FaPlus,
+    FaEdit,
+    FaTrash,
+    FaFileExcel,
     FaFilePdf,
     FaChartBar,
     FaUser,
@@ -70,14 +70,17 @@ const QuanLyDanhGia = () => {
     const sameDept = (nvPhongBanId) =>
         !!(currentUser?.phong_ban_id && nvPhongBanId && nvPhongBanId === currentUser.phong_ban_id);
 
-    const openRef = useCallback((ref) => {
-        if (!ref) return;
-        if (/^https?:\/\//i.test(ref)) {
-            window.open(ref, "_blank", "noopener,noreferrer");
-        } else {
-            alert(`Đường dẫn file: ${ref}`, "Thông tin");
-        }
-    }, [alert]);
+    const openRef = useCallback(
+        (ref) => {
+            if (!ref) return;
+            if (/^https?:\/\//i.test(ref)) {
+                window.open(ref, "_blank", "noopener,noreferrer");
+            } else {
+                alert(`Đường dẫn file: ${ref}`, "Thông tin");
+            }
+        },
+        [alert]
+    );
 
     const renderChip = (label, refVal, colorClass = "") => {
         const disabled = !refVal || !String(refVal).trim();
@@ -103,7 +106,9 @@ const QuanLyDanhGia = () => {
             try {
                 const pbs = await getAllPhongBan();
                 const map = {};
-                (pbs || []).forEach((pb) => { map[pb.id] = pb.ten_phong_ban; });
+                (pbs || []).forEach((pb) => {
+                    map[pb.id] = pb.ten_phong_ban;
+                });
                 setPbMap(map);
             } catch (err) {
                 console.error("Lỗi khi tải phòng ban:", err);
@@ -137,6 +142,8 @@ const QuanLyDanhGia = () => {
     const enrichDanhGiasWithDept = (list, pbMapArg, nvDeptMapArg, nvDeptNameMapArg) =>
         (list || []).map((dg) => {
             const nv = dg?.nhan_vien || {};
+
+            // xác định phong_ban_id cuối cùng
             let phong_ban_id =
                 nv.phong_ban_id ?? dg?.nhan_vien_phong_ban_id ?? dg?.phong_ban_id ?? null;
 
@@ -144,6 +151,7 @@ const QuanLyDanhGia = () => {
                 phong_ban_id = nvDeptMapArg[nv.id];
             }
 
+            // xác định tên phòng ban cuối cùng
             let ten_phong_ban =
                 nv.ten_phong_ban ||
                 (nv?.id && nvDeptNameMapArg[nv.id]) ||
@@ -173,9 +181,11 @@ const QuanLyDanhGia = () => {
         }
     }, [pbMap, nvDeptMap, nvDeptNameMap]);
 
-    useEffect(() => { fetchDanhGias(); }, [fetchDanhGias]);
+    useEffect(() => {
+        fetchDanhGias();
+    }, [fetchDanhGias]);
 
-    // enrich lại khi map sẵn sàng
+    // enrich lại khi map sẵn sàng / thay đổi
     useEffect(() => {
         if (danhGias.length) {
             setDanhGias((prev) => enrichDanhGiasWithDept(prev, pbMap, nvDeptMap, nvDeptNameMap));
@@ -183,19 +193,13 @@ const QuanLyDanhGia = () => {
     }, [pbMap, nvDeptMap, nvDeptNameMap]);
 
     // Reset trang khi đổi filter
-    useEffect(() => { setCurrentPage(1); }, [search, selectedDeptId]);
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, selectedDeptId]);
 
     // ===== Row helpers =====
     const getNVPhongBanIdFromDG = (dg) =>
         dg?.nhan_vien?.phong_ban_id ?? dg?.nhan_vien_phong_ban_id ?? dg?.phong_ban_id ?? null;
-
-    const getRowClass = (dg) => {
-        const avg = dg.tong_diem ?? 0;
-        if (avg >= 9) return "table-primary";
-        if (avg >= 8) return "table-success";
-        if (avg >= 6.5) return "table-warning";
-        return "table-danger";
-    };
 
     const getRatingBadge = (score) => {
         if (score >= 9) return <Badge bg="success">{score}</Badge>;
@@ -205,14 +209,16 @@ const QuanLyDanhGia = () => {
     };
 
     // ===== CRUD =====
+    const canUserCreateOrEdit = () => canReviewUser();
+
     const handleCreate = () => {
-        if (!canReviewUser()) return toast.error("Bạn không có quyền tạo đánh giá.");
+        if (!canUserCreateOrEdit()) return toast.error("Bạn không có quyền tạo đánh giá.");
         setSelectedDG(null);
         setShowModal(true);
     };
 
     const handleEdit = (dg) => {
-        if (!canReviewUser()) return toast.error("Bạn không có quyền sửa đánh giá.");
+        if (!canUserCreateOrEdit()) return toast.error("Bạn không có quyền sửa đánh giá.");
         const nvPhongBanId = getNVPhongBanIdFromDG(dg);
         if (!nvPhongBanId) return toast.error("Không xác định được phòng ban của nhân viên. Không thể sửa.");
         if (!sameDept(nvPhongBanId)) return toast.error("Chỉ được đánh giá nhân viên trong cùng phòng ban.");
@@ -221,7 +227,7 @@ const QuanLyDanhGia = () => {
     };
 
     const handleDelete = (id) => {
-        if (!canReviewUser()) return toast.error("Bạn không có quyền xóa đánh giá.");
+        if (!canUserCreateOrEdit()) return toast.error("Bạn không có quyền xóa đánh giá.");
         confirm(
             "Bạn có chắc muốn xóa đánh giá này không?",
             async () => {
@@ -277,9 +283,15 @@ const QuanLyDanhGia = () => {
     // ===== Filter / Pagination / Export =====
     const filteredDanhGias = useMemo(() => {
         return danhGias.filter((dg) => {
-            const nameOk = (dg.nhan_vien?.ho_ten || "").toLowerCase().includes(search.toLowerCase());
+            const nameOk = (dg.nhan_vien?.ho_ten || "")
+                .toLowerCase()
+                .includes(search.toLowerCase());
+
             const deptId = getNVPhongBanIdFromDG(dg);
-            const deptOk = selectedDeptId ? deptId === Number(selectedDeptId) : true;
+            const deptOk = selectedDeptId
+                ? deptId === Number(selectedDeptId)
+                : true;
+
             return nameOk && deptOk;
         });
     }, [danhGias, search, selectedDeptId]);
@@ -355,52 +367,86 @@ const QuanLyDanhGia = () => {
         doc.save("bao_cao_danh_gia.pdf");
     };
 
-    const deptOptions = useMemo(() =>
-        Object.entries(pbMap)
-            .map(([id, name]) => ({ id: Number(id), name }))
-            .sort((a, b) => a.name.localeCompare(b.name, "vi"))
-        , [pbMap]);
+    const deptOptions = useMemo(
+        () =>
+            Object.entries(pbMap)
+                .map(([id, name]) => ({ id: Number(id), name }))
+                .sort((a, b) => a.name.localeCompare(b.name, "vi")),
+        [pbMap]
+    );
 
     // ===== Render =====
-    if (loading) return <Loading />;
-
     return (
-        <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
+        <div
+            className="p-4 ps-5"
+            style={{ minHeight: "100vh", position: "relative" }}
+        >
+            {/* Toast luôn luôn mounted */}
             <ToastContainer position="top-right" autoClose={2000} />
 
+            {/* Loading overlay (khi loading = true) */}
+            {loading && (
+                <div
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "rgba(255,255,255,0.6)",
+                        backdropFilter: "blur(2px)",
+                        zIndex: 9999,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexDirection: "column",
+                        fontSize: "1rem",
+                        fontWeight: "500",
+                        color: "#4a5568",
+                    }}
+                >
+                    <Loading />
+                    <div className="mt-2">Đang tải dữ liệu...</div>
+                </div>
+            )}
+
             {/* Header Section */}
-            <div 
+            <div
                 className="rounded-4 mb-4 shadow-sm"
                 style={{
                     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                     padding: "2rem",
-                    color: "white"
+                    color: "white",
                 }}
             >
                 <div className="d-flex justify-content-between align-items-center">
                     <div>
                         <Breadcrumb className="mb-3">
-                            <Breadcrumb.Item active style={{ color: "white" }}
+                            <Breadcrumb.Item
+                                active
+                                style={{ color: "white" }}
                             >
                                 <FaHome className="me-2" />
                                 Trang chủ
                             </Breadcrumb.Item>
-                            <Breadcrumb.Item active style={{ color: "white" }}>
+                            <Breadcrumb.Item
+                                active
+                                style={{ color: "white" }}
+                            >
                                 Quản lý đánh giá
                             </Breadcrumb.Item>
                         </Breadcrumb>
-                        <h1 className="fw-bold mb-2">⭐ Quản lý Đánh giá Nhân sự</h1>
+                        <h1 className="fw-bold mb-2">
+                            ⭐ Quản lý Đánh giá Nhân sự
+                        </h1>
                         <p className="mb-0 opacity-90">
                             Đánh giá và theo dõi hiệu suất làm việc của nhân viên
                         </p>
                     </div>
-                    <Button 
-                        variant="outline-light" 
+                    <Button
+                        variant="outline-light"
                         onClick={() => navigate("/")}
                         className="border-0"
                         style={{
                             background: "rgba(255, 255, 255, 0.1)",
-                            backdropFilter: "blur(10px)"
+                            backdropFilter: "blur(10px)",
                         }}
                     >
                         <FaHome className="me-2" />
@@ -411,12 +457,13 @@ const QuanLyDanhGia = () => {
 
             {/* Filter and Actions Card */}
             <Card className="shadow-sm border-0 rounded-4 mb-4">
-                <Card.Header 
+                <Card.Header
                     style={{
-                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        background:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                         color: "white",
                         fontWeight: "600",
-                        fontSize: "1.1rem"
+                        fontSize: "1.1rem",
                     }}
                 >
                     <FaSearch className="me-2" />
@@ -426,14 +473,18 @@ const QuanLyDanhGia = () => {
                     <Row className="g-3 align-items-end">
                         <Col md={4}>
                             <Form.Group>
-                                <Form.Label className="fw-semibold">Tìm theo tên nhân viên</Form.Label>
+                                <Form.Label className="fw-semibold">
+                                    Tìm theo tên nhân viên
+                                </Form.Label>
                                 <div className="position-relative">
                                     <FaSearch className="position-absolute top-50 start-3 translate-middle-y text-muted" />
                                     <Form.Control
                                         type="text"
                                         placeholder="Nhập tên nhân viên..."
                                         value={search}
-                                        onChange={(e) => setSearch(e.target.value)}
+                                        onChange={(e) =>
+                                            setSearch(e.target.value)
+                                        }
                                         style={{ paddingLeft: "2.5rem" }}
                                     />
                                 </div>
@@ -442,12 +493,18 @@ const QuanLyDanhGia = () => {
 
                         <Col md={4}>
                             <Form.Group>
-                                <Form.Label className="fw-semibold">Phòng ban</Form.Label>
+                                <Form.Label className="fw-semibold">
+                                    Phòng ban
+                                </Form.Label>
                                 <Form.Select
                                     value={selectedDeptId}
-                                    onChange={(e) => setSelectedDeptId(e.target.value)}
+                                    onChange={(e) =>
+                                        setSelectedDeptId(e.target.value)
+                                    }
                                 >
-                                    <option value="">Tất cả phòng ban</option>
+                                    <option value="">
+                                        Tất cả phòng ban
+                                    </option>
                                     {deptOptions.map((opt) => (
                                         <option key={opt.id} value={opt.id}>
                                             {opt.name}
@@ -473,13 +530,14 @@ const QuanLyDanhGia = () => {
                                     <FaFilePdf className="me-2" />
                                     PDF
                                 </Button>
-                                {canReviewUser() && (
+                                {canUserCreateOrEdit() && (
                                     <Button
                                         variant="primary"
                                         onClick={handleCreate}
                                         style={{
-                                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                                            border: "none"
+                                            background:
+                                                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                            border: "none",
                                         }}
                                     >
                                         <FaPlus className="me-2" />
@@ -494,12 +552,13 @@ const QuanLyDanhGia = () => {
 
             {/* Data Table Card */}
             <Card className="shadow-sm border-0 rounded-4 mb-4">
-                <Card.Header 
+                <Card.Header
                     style={{
-                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        background:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                         color: "white",
                         fontWeight: "600",
-                        fontSize: "1.1rem"
+                        fontSize: "1.1rem",
                     }}
                 >
                     <FaChartBar className="me-2" />
@@ -509,9 +568,10 @@ const QuanLyDanhGia = () => {
                     <div className="table-responsive">
                         <Table bordered hover className="mb-0">
                             <thead
-                                style={{ 
-                                    background: "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
-                                    color: "white"
+                                style={{
+                                    background:
+                                        "linear-gradient(135deg, #667eea 0%, #5a6fd8 100%)",
+                                    color: "white",
                                 }}
                             >
                                 <tr>
@@ -534,116 +594,275 @@ const QuanLyDanhGia = () => {
                             <tbody>
                                 {currentItems.length === 0 ? (
                                     <tr>
-                                        <td colSpan="14" className="text-center text-muted py-4">
+                                        <td
+                                            colSpan="14"
+                                            className="text-center text-muted py-4"
+                                        >
                                             <FaChartBar className="fs-1 mb-2 opacity-50" />
-                                            <div>Không có dữ liệu đánh giá</div>
+                                            <div>
+                                                Không có dữ liệu đánh giá
+                                            </div>
                                         </td>
                                     </tr>
                                 ) : (
                                     currentItems.map((dg) => {
                                         const nvPhongBanId = getNVPhongBanIdFromDG(dg);
-                                        const allowRowActions = canReviewUser() && nvPhongBanId && sameDept(nvPhongBanId);
+                                        const allowRowActions =
+                                            canUserCreateOrEdit() &&
+                                            nvPhongBanId &&
+                                            sameDept(nvPhongBanId);
 
-                                        const tenNV = dg.nhan_vien?.ho_ten || "";
+                                        const tenNV =
+                                            dg.nhan_vien?.ho_ten || "";
                                         const tenPBFull =
                                             dg.nhan_vien?.ten_phong_ban ||
-                                            (dg.nhan_vien?.phong_ban_id ? `PB #${dg.nhan_vien.phong_ban_id}` : "");
-                                        const nguoiDG = dg.nguoi_danh_gia?.ho_ten || "";
+                                            (dg.nhan_vien?.phong_ban_id
+                                                ? `PB #${dg.nhan_vien.phong_ban_id}`
+                                                : "");
+                                        const nguoiDG =
+                                            dg.nguoi_danh_gia?.ho_ten || "";
 
                                         const mc = dg.minh_chung || {};
                                         const mcRefs = {
-                                            chuyen_can: mc.chuyen_can ?? dg.mc_chuyen_can_ref,
-                                            hieu_qua: mc.hieu_qua ?? dg.mc_hieu_qua_ref,
-                                            ky_nang: mc.ky_nang ?? dg.mc_ky_nang_ref,
-                                            thai_do: mc.thai_do ?? dg.mc_thai_do_ref,
-                                            chu_dong: mc.chu_dong ?? dg.mc_chu_dong_ref,
+                                            chuyen_can:
+                                                mc.chuyen_can ??
+                                                dg.mc_chuyen_can_ref,
+                                            hieu_qua:
+                                                mc.hieu_qua ??
+                                                dg.mc_hieu_qua_ref,
+                                            ky_nang:
+                                                mc.ky_nang ??
+                                                dg.mc_ky_nang_ref,
+                                            thai_do:
+                                                mc.thai_do ??
+                                                dg.mc_thai_do_ref,
+                                            chu_dong:
+                                                mc.chu_dong ??
+                                                dg.mc_chu_dong_ref,
                                         };
 
                                         return (
-                                            <tr key={dg.id} style={{ transition: "all 0.3s ease" }}>
-                                                <td style={{ padding: "12px", fontWeight: "500" }}>{dg.id}</td>
-                                                <td style={{ padding: "12px", fontWeight: "500" }}>
+                                            <tr
+                                                key={dg.id}
+                                                style={{
+                                                    transition:
+                                                        "all 0.3s ease",
+                                                }}
+                                            >
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                        fontWeight: "500",
+                                                    }}
+                                                >
+                                                    {dg.id}
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                        fontWeight: "500",
+                                                    }}
+                                                >
                                                     <div className="d-flex align-items-center">
                                                         <FaUser className="text-primary me-2" />
                                                         {tenNV}
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: "12px" }}>
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                    }}
+                                                >
                                                     <div className="d-flex align-items-center">
                                                         <FaBuilding className="text-secondary me-2" />
-                                                        {tenPBFull ? tenPBFull.split("(")[0].trim() : ""}
+                                                        {tenPBFull
+                                                            ? tenPBFull
+                                                                .split("(")[0]
+                                                                .trim()
+                                                            : ""}
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: "12px" }}>{nguoiDG}</td>
-                                                <td style={{ padding: "12px", textAlign: "center" }}>
-                                                    {getRatingBadge(dg.diem_chuyen_can)}
+                                                <td style={{ padding: "12px" }}>
+                                                    {nguoiDG}
                                                 </td>
-                                                <td style={{ padding: "12px", textAlign: "center" }}>
-                                                    {getRatingBadge(dg.diem_hieu_qua)}
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                        textAlign: "center",
+                                                    }}
+                                                >
+                                                    {getRatingBadge(
+                                                        dg.diem_chuyen_can
+                                                    )}
                                                 </td>
-                                                <td style={{ padding: "12px", textAlign: "center" }}>
-                                                    {getRatingBadge(dg.diem_ky_nang)}
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                        textAlign: "center",
+                                                    }}
+                                                >
+                                                    {getRatingBadge(
+                                                        dg.diem_hieu_qua
+                                                    )}
                                                 </td>
-                                                <td style={{ padding: "12px", textAlign: "center" }}>
-                                                    {getRatingBadge(dg.diem_thai_do)}
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                        textAlign: "center",
+                                                    }}
+                                                >
+                                                    {getRatingBadge(
+                                                        dg.diem_ky_nang
+                                                    )}
                                                 </td>
-                                                <td style={{ padding: "12px", textAlign: "center" }}>
-                                                    {getRatingBadge(dg.diem_chu_dong)}
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                        textAlign: "center",
+                                                    }}
+                                                >
+                                                    {getRatingBadge(
+                                                        dg.diem_thai_do
+                                                    )}
                                                 </td>
-                                                <td style={{ padding: "12px", textAlign: "center" }}>
-                                                    <Badge bg="primary" className="fs-6">
-                                                        {(dg.tong_diem ?? 0).toFixed(2)}
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                        textAlign: "center",
+                                                    }}
+                                                >
+                                                    {getRatingBadge(
+                                                        dg.diem_chu_dong
+                                                    )}
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                        textAlign: "center",
+                                                    }}
+                                                >
+                                                    <Badge
+                                                        bg="primary"
+                                                        className="fs-6"
+                                                    >
+                                                        {(
+                                                            dg.tong_diem ??
+                                                            0
+                                                        ).toFixed(2)}
                                                     </Badge>
                                                 </td>
-                                                <td style={{ padding: "12px", textAlign: "center" }}>
-                                                    <Badge 
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                        textAlign: "center",
+                                                    }}
+                                                >
+                                                    <Badge
                                                         bg={
-                                                            dg.xep_loai === "Xuất sắc" ? "success" :
-                                                            dg.xep_loai === "Tốt" ? "info" :
-                                                            dg.xep_loai === "Khá" ? "warning" : "danger"
+                                                            dg.xep_loai ===
+                                                                "Xuất sắc"
+                                                                ? "success"
+                                                                : dg.xep_loai ===
+                                                                    "Tốt"
+                                                                    ? "info"
+                                                                    : dg.xep_loai ===
+                                                                        "Khá"
+                                                                        ? "warning"
+                                                                        : "danger"
                                                         }
                                                     >
                                                         {dg.xep_loai}
                                                     </Badge>
                                                 </td>
-                                                <td style={{ padding: "12px" }}>
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                    }}
+                                                >
                                                     <small>
-                                                        <div><strong>{dg.ky_loai}</strong></div>
-                                                        <div className="text-muted">{dg.ky_ngay}</div>
+                                                        <div>
+                                                            <strong>
+                                                                {dg.ky_loai}
+                                                            </strong>
+                                                        </div>
+                                                        <div className="text-muted">
+                                                            {dg.ky_ngay}
+                                                        </div>
                                                     </small>
                                                 </td>
-                                                <td style={{ padding: "12px" }}>
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                    }}
+                                                >
                                                     <div className="d-flex gap-1 flex-wrap">
-                                                        {renderChip("CC", mcRefs.chuyen_can, "chip-cc")}
-                                                        {renderChip("HQ", mcRefs.hieu_qua, "chip-hq")}
-                                                        {renderChip("KN", mcRefs.ky_nang, "chip-kn")}
-                                                        {renderChip("TĐ", mcRefs.thai_do, "chip-td")}
-                                                        {renderChip("CĐ", mcRefs.chu_dong, "chip-cd")}
+                                                        {renderChip(
+                                                            "CC",
+                                                            mcRefs.chuyen_can,
+                                                            "chip-cc"
+                                                        )}
+                                                        {renderChip(
+                                                            "HQ",
+                                                            mcRefs.hieu_qua,
+                                                            "chip-hq"
+                                                        )}
+                                                        {renderChip(
+                                                            "KN",
+                                                            mcRefs.ky_nang,
+                                                            "chip-kn"
+                                                        )}
+                                                        {renderChip(
+                                                            "TĐ",
+                                                            mcRefs.thai_do,
+                                                            "chip-td"
+                                                        )}
+                                                        {renderChip(
+                                                            "CĐ",
+                                                            mcRefs.chu_dong,
+                                                            "chip-cd"
+                                                        )}
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: "12px" }}>
+                                                <td
+                                                    style={{
+                                                        padding: "12px",
+                                                    }}
+                                                >
                                                     <div className="d-flex gap-1 flex-wrap">
                                                         {allowRowActions ? (
                                                             <>
                                                                 <Button
                                                                     variant="outline-warning"
                                                                     size="sm"
-                                                                    onClick={() => handleEdit(dg)}
+                                                                    onClick={() =>
+                                                                        handleEdit(
+                                                                            dg
+                                                                        )
+                                                                    }
                                                                 >
                                                                     <FaEdit />
                                                                 </Button>
                                                                 <Button
                                                                     variant="outline-danger"
                                                                     size="sm"
-                                                                    onClick={() => handleDelete(dg.id)}
+                                                                    onClick={() =>
+                                                                        handleDelete(
+                                                                            dg.id
+                                                                        )
+                                                                    }
                                                                 >
                                                                     <FaTrash />
                                                                 </Button>
                                                             </>
-                                                        ) : canReviewUser() && !nvPhongBanId ? (
-                                                            <small className="text-muted">Thiếu dữ liệu</small>
+                                                        ) : canUserCreateOrEdit() &&
+                                                            !nvPhongBanId ? (
+                                                            <small className="text-muted">
+                                                                Thiếu dữ liệu
+                                                            </small>
                                                         ) : (
-                                                            <small className="text-muted">Không có quyền</small>
+                                                            <small className="text-muted">
+                                                                Không có quyền
+                                                            </small>
                                                         )}
                                                     </div>
                                                 </td>
@@ -665,19 +884,34 @@ const QuanLyDanhGia = () => {
                             <Button
                                 variant="outline-primary"
                                 disabled={currentPage === 1}
-                                onClick={() => setCurrentPage(currentPage - 1)}
-                                style={{ borderColor: "#667eea", color: "#667eea" }}
+                                onClick={() =>
+                                    setCurrentPage(currentPage - 1)
+                                }
+                                style={{
+                                    borderColor: "#667eea",
+                                    color: "#667eea",
+                                }}
                             >
                                 ← Trang trước
                             </Button>
-                            <span className="fw-semibold" style={{ color: "#4a5568" }}>
+                            <span
+                                className="fw-semibold"
+                                style={{ color: "#4a5568" }}
+                            >
                                 Trang {currentPage} / {totalPages}
                             </span>
                             <Button
                                 variant="outline-primary"
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage(currentPage + 1)}
-                                style={{ borderColor: "#667eea", color: "#667eea" }}
+                                disabled={
+                                    currentPage === totalPages
+                                }
+                                onClick={() =>
+                                    setCurrentPage(currentPage + 1)
+                                }
+                                style={{
+                                    borderColor: "#667eea",
+                                    color: "#667eea",
+                                }}
                             >
                                 Trang sau →
                             </Button>
@@ -688,11 +922,12 @@ const QuanLyDanhGia = () => {
 
             {/* Charts Section */}
             <Card className="shadow-sm border-0 rounded-4 mt-4">
-                <Card.Header 
+                <Card.Header
                     style={{
-                        background: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
+                        background:
+                            "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
                         color: "white",
-                        fontWeight: "600"
+                        fontWeight: "600",
                     }}
                 >
                     <FaChartBar className="me-2" />
@@ -704,23 +939,33 @@ const QuanLyDanhGia = () => {
             </Card>
 
             {/* Modal Form */}
-            <Modal show={showModal} onHide={() => setShowModal(false)} centered className="rounded-4">
-                <Modal.Header 
+            <Modal
+                show={showModal}
+                onHide={() => setShowModal(false)}
+                centered
+                className="rounded-4"
+            >
+                <Modal.Header
                     closeButton
                     style={{
-                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        color: "white"
+                        background:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        color: "white",
                     }}
                 >
                     <Modal.Title>
                         <FaStar className="me-2" />
-                        {selectedDG ? "Cập nhật đánh giá" : "Thêm đánh giá mới"}
+                        {selectedDG
+                            ? "Cập nhật đánh giá"
+                            : "Thêm đánh giá mới"}
                     </Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="p-4">
                     <DanhGiaForm
                         initialData={selectedDG}
-                        onSubmit={async (data) => await handleFormSubmit(data)}
+                        onSubmit={async (data) =>
+                            await handleFormSubmit(data)
+                        }
                         onClose={() => setShowModal(false)}
                     />
                 </Modal.Body>
