@@ -1,10 +1,10 @@
 // src/pages/dangNhap.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import { FaUser, FaLock } from "react-icons/fa";
 import { loginApi } from "../services/authService";
-import { Tent } from "lucide-react";
+import "react-toastify/dist/ReactToastify.css";
 
 const DangNhap = () => {
   const [emailOrPhone, setEmailOrPhone] = useState("");
@@ -12,6 +12,7 @@ const DangNhap = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // nếu đã login rồi thì đá về trang chủ
   useEffect(() => {
     const saved = localStorage.getItem("user");
     if (saved) navigate("/", { replace: true });
@@ -27,14 +28,18 @@ const DangNhap = () => {
 
     try {
       setLoading(true);
-      const res = await loginApi(emailOrPhone.trim(), password.trim());
 
+      // call API
+      const res = await loginApi(emailOrPhone.trim(), password.trim());
       const { access_token, nhan_vien } = res.data || {};
+
+      // validate response
       if (!access_token || !nhan_vien) {
         toast.error("Phản hồi đăng nhập không hợp lệ");
         return;
       }
 
+      // lưu thông tin user
       localStorage.setItem(
         "user",
         JSON.stringify({
@@ -53,13 +58,20 @@ const DangNhap = () => {
         })
       );
 
-      navigate("/", { replace: true });
+      // ✅ báo thành công
+      toast.success("Đăng nhập thành công!");
+
+      // điều hướng về trang chủ sau 1 chút để user thấy toast
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 800);
     } catch (error) {
+      // lấy message BE trả về nếu có
       const msg =
         error?.response?.data?.msg ||
         error?.response?.data?.message ||
-        "Email/SĐT hoặc mật khẩu không đúng!";
-      toast.error(msg);
+        "Email hoặc mật khẩu không đúng!";
+      toast.error(msg); // ❌ báo lỗi
     } finally {
       setLoading(false);
     }
@@ -80,10 +92,13 @@ const DangNhap = () => {
         left: 0,
         right: 0,
         bottom: 0,
-        overflow: "hidden"
+        overflow: "hidden",
       }}
       onKeyDown={(e) => e.key === "Enter" && handleLogin()}
     >
+      {/* Toast container để hiện thông báo */}
+      <ToastContainer position="top-right" autoClose={2000} />
+
       {/* Background Pattern */}
       <div
         style={{
@@ -97,7 +112,7 @@ const DangNhap = () => {
             radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
             radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%)
           `,
-          zIndex: 0
+          zIndex: 0,
         }}
       />
 
@@ -110,7 +125,7 @@ const DangNhap = () => {
           backgroundColor: "rgba(255, 255, 255, 0.95)",
           backdropFilter: "blur(10px)",
           border: "1px solid rgba(255, 255, 255, 0.2)",
-          zIndex: 1
+          zIndex: 1,
         }}
       >
         {/* Header */}
@@ -122,7 +137,7 @@ const DangNhap = () => {
                 width: 60,
                 height: 60,
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"
+                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
               }}
             >
               <FaUser className="text-white" size={24} />
@@ -150,7 +165,7 @@ const DangNhap = () => {
               style={{
                 backgroundColor: "#f8f9fa",
                 borderColor: "#e2e8f0",
-                transition: "all 0.3s ease"
+                transition: "all 0.3s ease",
               }}
             >
               <FaUser className="text-secondary" />
@@ -164,11 +179,12 @@ const DangNhap = () => {
               style={{
                 borderColor: "#e2e8f0",
                 backgroundColor: "#fff",
-                transition: "all 0.3s ease"
+                transition: "all 0.3s ease",
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = "#667eea";
-                e.target.style.boxShadow = "0 0 0 2px rgba(102, 126, 234, 0.1)";
+                e.target.style.boxShadow =
+                  "0 0 0 2px rgba(102, 126, 234, 0.1)";
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = "#e2e8f0";
@@ -192,7 +208,7 @@ const DangNhap = () => {
               style={{
                 fontSize: "0.85rem",
                 color: "#667eea",
-                transition: "color 0.3s ease"
+                transition: "color 0.3s ease",
               }}
               onMouseEnter={(e) => (e.target.style.color = "#764ba2")}
               onMouseLeave={(e) => (e.target.style.color = "#667eea")}
@@ -206,7 +222,7 @@ const DangNhap = () => {
               style={{
                 backgroundColor: "#f8f9fa",
                 borderColor: "#e2e8f0",
-                transition: "all 0.3s ease"
+                transition: "all 0.3s ease",
               }}
             >
               <FaLock className="text-secondary" />
@@ -220,11 +236,12 @@ const DangNhap = () => {
               style={{
                 borderColor: "#e2e8f0",
                 backgroundColor: "#fff",
-                transition: "all 0.3s ease"
+                transition: "all 0.3s ease",
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = "#667eea";
-                e.target.style.boxShadow = "0 0 0 2px rgba(102, 126, 234, 0.1)";
+                e.target.style.boxShadow =
+                  "0 0 0 2px rgba(102, 126, 234, 0.1)";
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = "#e2e8f0";
@@ -239,7 +256,8 @@ const DangNhap = () => {
           className="btn w-100 fw-semibold py-2 mb-3 border-0"
           disabled={loading}
           style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background:
+              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
             color: "#fff",
             fontSize: "1rem",
             transition: "all 0.3s ease",
@@ -268,7 +286,11 @@ const DangNhap = () => {
             <div className="d-flex align-items-center justify-content-center">
               <div
                 className="spinner-border spinner-border-sm me-2"
-                style={{ width: "1rem", height: "1rem", borderWidth: "2px" }}
+                style={{
+                  width: "1rem",
+                  height: "1rem",
+                  borderWidth: "2px",
+                }}
               />
               <span>Đang đăng nhập...</span>
             </div>
@@ -282,7 +304,10 @@ const DangNhap = () => {
           className="text-center mt-4 pt-3"
           style={{ borderTop: "1px solid #e2e8f0" }}
         >
-          <p className="text-muted mb-0" style={{ fontSize: "0.85rem" }}>
+          <p
+            className="text-muted mb-0"
+            style={{ fontSize: "0.85rem" }}
+          >
             © 2025 Công ty TNHH TC. Bảo lưu mọi quyền.
           </p>
         </div>
