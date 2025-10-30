@@ -1,21 +1,21 @@
 import React, { useEffect, useRef, useState } from "react";
-import { 
-  Card, 
-  Button, 
-  Breadcrumb, 
-  Spinner, 
-  Alert, 
-  Row, 
+import {
+  Card,
+  Button,
+  Breadcrumb,
+  Spinner,
+  Alert,
+  Row,
   Col,
   Badge,
   Modal
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { 
-  FaHome, 
-  FaCamera, 
-  FaUserCheck, 
-  FaUserTimes, 
+import {
+  FaHome,
+  FaCamera,
+  FaUserCheck,
+  FaUserTimes,
   FaClock,
   FaCheckCircle,
   FaExclamationTriangle,
@@ -35,7 +35,7 @@ const MIN_GAP_BETWEEN_CHECKINS_MS = 60_000;
 const SAME_PERSON_GAP_MS = 120_000;
 const KEEP_FACE_MS = 600;
 const PORTRAIT_ASPECT = 1.25;
-const BLUR_THRESHOLD = 20;
+const BLUR_THRESHOLD = 15;
 const DEBUG = false;
 const MIRRORED = false;
 
@@ -234,7 +234,8 @@ export default function FaceCheckin() {
       });
       const data = await res.json();
       dlog("recognize:", res.status, data);
-      return { ok: res.ok && data?.ok !== false, data };
+      // trả thêm status để biết 400/404
+      return { ok: res.ok && data?.ok !== false, status: res.status, data };
     } catch (e) {
       dlog("recognize error:", e);
       return null;
@@ -316,7 +317,23 @@ export default function FaceCheckin() {
     lastRecognizeAtRef.current = ts;
 
     const res = await apiRecognize();
-    if (!res || !res.ok) {
+    if (!res) {
+      // request lỗi hẳn -> clear
+      setMatched(null); matchedRef.current = null;
+      setPreviewToken(null); previewTokenRef.current = null;
+      setStableStart(null); stableStartRef.current = null;
+      return;
+    }
+
+    // === CASE 1: BE bảo mặt quá nhỏ -> giữ nguyên matched hiện tại ===
+    if (!res.ok && res.status === 400 && res.data?.reason === "face_too_small") {
+      dlog("face too small -> keep previous matched");
+      // không reset matched, chỉ vẽ lại khung ở loop
+      return;
+    }
+
+    // === CASE 2: không khớp nhân viên nào -> clear như cũ ===
+    if (!res.ok) {
       dlog("recognize failed or not ok");
       setMatched(null); matchedRef.current = null;
       setPreviewToken(null); previewTokenRef.current = null;
@@ -324,6 +341,7 @@ export default function FaceCheckin() {
       return;
     }
 
+    // === CASE 3: OK, có nhân viên ===
     const nv = res.data?.nhan_vien || null;
     const token = res.data?.preview_token || null;
 
@@ -341,6 +359,7 @@ export default function FaceCheckin() {
     setPreviewToken(token);
     matchedRef.current = nv;
   }
+
 
   async function loop(ts) {
     if (isPausedRef.current) {
@@ -547,7 +566,7 @@ export default function FaceCheckin() {
   return (
     <div className="p-4 ps-5" style={{ minHeight: "100vh" }}>
       {/* Header Section */}
-      <div 
+      <div
         className="rounded-4 mb-4 shadow-sm"
         style={{
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -572,8 +591,8 @@ export default function FaceCheckin() {
               Hệ thống nhận diện khuôn mặt tự động - Giữ ổn định {STABLE_MS / 1000}s để chấm công
             </p>
           </div>
-          <Button 
-            variant="outline-light" 
+          <Button
+            variant="outline-light"
             onClick={() => navigate("/")}
             className="border-0"
             style={{
@@ -591,7 +610,7 @@ export default function FaceCheckin() {
         {/* Camera Section */}
         <Col lg={8}>
           <Card className="shadow-sm border-0 rounded-4">
-            <Card.Header 
+            <Card.Header
               style={{
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 color: "white",
@@ -637,10 +656,10 @@ export default function FaceCheckin() {
                     }}
                   />
                 </div>
-                
+
                 {/* Loading Overlay */}
                 {loading && (
-                  <div 
+                  <div
                     className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center rounded-4"
                     style={{
                       background: "rgba(0, 0, 0, 0.8)",
@@ -671,7 +690,7 @@ export default function FaceCheckin() {
                       </Badge>
                     )}
                   </Col>
-                  
+
                   <Col xs="auto">
                     {loading ? (
                       <Badge bg="warning" text="dark" className="fs-6 px-3 py-2">
@@ -701,10 +720,10 @@ export default function FaceCheckin() {
                 {matched && stableStart && (
                   <div className="mt-3">
                     <div className="progress" style={{ height: "8px", maxWidth: "300px", margin: "0 auto" }}>
-                      <div 
-                        className="progress-bar progress-bar-striped progress-bar-animated" 
-                        style={{ 
-                          width: `${Math.min(100, (performance.now() - stableStart) / STABLE_MS * 100)}%` 
+                      <div
+                        className="progress-bar progress-bar-striped progress-bar-animated"
+                        style={{
+                          width: `${Math.min(100, (performance.now() - stableStart) / STABLE_MS * 100)}%`
                         }}
                       />
                     </div>
@@ -721,7 +740,7 @@ export default function FaceCheckin() {
         {/* Instructions Section */}
         <Col lg={4}>
           <Card className="shadow-sm border-0 rounded-4 h-100">
-            <Card.Header 
+            <Card.Header
               style={{
                 background: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
                 color: "white",
@@ -742,7 +761,7 @@ export default function FaceCheckin() {
                     <p className="text-muted mb-0 small">Đứng trước camera với khuôn mặt rõ ràng, ánh sáng đầy đủ</p>
                   </div>
                 </div>
-                
+
                 <div className="d-flex align-items-start mb-3">
                   <div className="bg-success rounded-circle p-2 me-3 flex-shrink-0">
                     <FaUserCheck className="text-white" />
@@ -752,7 +771,7 @@ export default function FaceCheckin() {
                     <p className="text-muted mb-0 small">Hệ thống tự động nhận diện và hiển thị tên của bạn</p>
                   </div>
                 </div>
-                
+
                 <div className="d-flex align-items-start">
                   <div className="bg-info rounded-circle p-2 me-3 flex-shrink-0">
                     <FaCheckCircle className="text-white" />
@@ -768,10 +787,11 @@ export default function FaceCheckin() {
                 <strong>💡 Mẹo:</strong>
                 <ul className="mb-0 mt-2 small">
                   <li>Đảm bảo khuôn mặt được chiếu sáng đều</li>
-                  <li>Giữ khoảng cách 1-2 mét với camera</li>
+                  <li>Giữ khoảng cách 0.5 – 1 mét với camera (gần quá sẽ out nét)</li>
                   <li>Tránh đeo kính râm hoặc vật che mặt</li>
                 </ul>
               </Alert>
+
             </Card.Body>
           </Card>
         </Col>
@@ -779,10 +799,10 @@ export default function FaceCheckin() {
 
       {/* Result Modal */}
       <Modal show={modalOpen} onHide={() => setModalOpen(false)} centered className="rounded-4">
-        <Modal.Body 
+        <Modal.Body
           className="text-center p-5"
           style={{
-            background: modalType === "success" 
+            background: modalType === "success"
               ? "linear-gradient(135deg, #48bb78 0%, #38a169 100%)"
               : "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)",
             color: "white"
@@ -795,10 +815,10 @@ export default function FaceCheckin() {
               <FaExclamationTriangle size={48} />
             )}
           </div>
-          <div 
-            dangerouslySetInnerHTML={{ 
+          <div
+            dangerouslySetInnerHTML={{
               __html: modalHtml.replace(/<strong/g, '<strong style="color: white;"')
-            }} 
+            }}
           />
         </Modal.Body>
       </Modal>

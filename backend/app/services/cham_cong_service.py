@@ -17,7 +17,7 @@ from typing import Optional
 
 # ====== Cấu hình ======
 FACE_JWT_SECRET = os.getenv("FACE_JWT_SECRET", "dev-secret")
-THRESH = float(os.getenv("FACE_MATCH_THRESH", "0.4"))
+THRESH = float(os.getenv("FACE_MATCH_THRESH", "0.41"))
 CHECKIN_DIR = os.path.join("static", "checkin_images")
 os.makedirs(CHECKIN_DIR, exist_ok=True)
 # ====== STRICT MODE ======
@@ -366,7 +366,7 @@ def passive_liveness_score(frames_bgr):
             continue
         if (PARA_RATIO_NEAR_L <= ratio <= PARA_RATIO_NEAR_H) and (cosdir >= PARA_COS_NEAR):
             screen_like_hits += 1
-        elif (ratio >= 1.5) or (cosdir <= 0.80):
+        elif (ratio >= 1.25) or (cosdir <= 0.90):
             live_like_hits += 1
 
     # 6) bezel -> fail ngay

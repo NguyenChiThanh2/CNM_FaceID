@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 import os, jwt, hashlib, numpy as np
 from datetime import datetime, timedelta
@@ -10,32 +9,29 @@ face_bp = Blueprint("face_bp", __name__)
 
 # ===== Config =====
 SECRET        = os.getenv("FACE_JWT_SECRET", "dev-secret")
-THRESH        = float(os.getenv("FACE_MATCH_THRESH", "0.38"))  # khuyến nghị nới ~0.5 cho kính
-DET_MODEL     = os.getenv("FACE_DET_MODEL", "hog")            # "hog" | "cnn"
-UPSAMPLE      = int(os.getenv("FACE_UPSAMPLE", "1"))          # 0|1|2
-ENC_JITTERS   = int(os.getenv("FACE_ENC_JITTERS", "2"))       # 0..10 (2-5 là hợp lý)
-ENC_MODEL     = os.getenv("FACE_ENC_MODEL", "large")          # "small" | "large"
-MIN_FACE_PX   = int(os.getenv("MIN_FACE_PX", "120"))          # cạnh ngắn tối thiểu của bbox
-# Nếu read_image_from_base64 trả về BGR (OpenCV), đặt READ_IS_BGR=1 để chuyển sang RGB
+# nới nhẹ để nhận mặt xa / sáng xấu / hơi lệch
+THRESH        = float(os.getenv("FACE_MATCH_THRESH", "0.39"))
+DET_MODEL     = os.getenv("FACE_DET_MODEL", "hog")      # "hog" | "cnn"
+UPSAMPLE      = int(os.getenv("FACE_UPSAMPLE", "1"))    # 0|1|2
+ENC_JITTERS   = int(os.getenv("FACE_ENC_JITTERS", "2")) # 0..10
+ENC_MODEL     = os.getenv("FACE_ENC_MODEL", "large")    # "small" | "large"
+# em muốn nhận xa nên để mặc định 50
+MIN_FACE_PX   = int(os.getenv("MIN_FACE_PX", "50"))
 READ_IS_BGR   = os.getenv("READ_IS_BGR", "0") == "1"
 
+
 def _ensure_rgb(img):
-    # face_recognition yêu cầu RGB
     if READ_IS_BGR:
         return img[:, :, ::-1]
     return img
+
 
 def _bbox_size(loc):
     top, right, bottom, left = loc
     return (bottom - top) * (right - left)
 
+
 def best_match(input_encoding, all_nv, thresh=THRESH):
-    """
-    Hỗ trợ:
-      - nv.face_encodings: list các encoding (có kính/không kính, điều kiện ánh sáng khác nhau)
-      - nv.face_encoding : 1 encoding duy nhất (tương thích cũ)
-    Chọn NV có khoảng cách NHỎ NHẤT; chấp nhận nếu <= thresh.
-    """
     matched, min_d = None, float("inf")
     for nv in all_nv:
         enc_list = []
@@ -56,6 +52,7 @@ def best_match(input_encoding, all_nv, thresh=THRESH):
         return matched, min_d
     return None, min_d
 
+
 @face_bp.route("/api/face/recognize", methods=["POST"])
 def recognize():
     data = request.get_json(silent=True) or {}
@@ -63,10 +60,13 @@ def recognize():
     if not b64:
         return jsonify(ok=False, message="Thiếu ảnh"), 400
 
-    img = read_image_from_base64(b64)      # có thể là BGR hoặc RGB tuỳ util
-    img = _ensure_rgb(img)                 # đảm bảo RGB cho face_recognition
+    img = read_image_from_base64(b64)
+    if img is None:
+        return jsonify(ok=False, message="Ảnh không hợp lệ"), 400
 
-    # 1) Tìm khuôn mặt với detector + upsample (giúp mặt nhỏ/đeo kính)
+    img = _ensure_rgb(img)
+
+    # 1) detect
     locs = face_recognition.face_locations(
         img,
         number_of_times_to_upsample=UPSAMPLE,
@@ -75,15 +75,25 @@ def recognize():
     if not locs:
         return jsonify(ok=False, message="Không thấy khuôn mặt"), 400
 
-    # 2) Chọn mặt lớn nhất
+    # 2) pick biggest
     locs.sort(key=_bbox_size, reverse=True)
     top, right, bottom, left = locs[0]
 
-    # 3) Chặn nếu mặt quá nhỏ (xa camera → dễ sai khi đeo kính)
-    if min(bottom - top, right - left) < MIN_FACE_PX:
-        return jsonify(ok=False, message="Khuôn mặt quá nhỏ, vui lòng tiến gần hơn"), 400
+    face_w = right - left
+    face_h = bottom - top
+    face_min = min(face_w, face_h)
 
-    # 4) Encode robust hơn với jitters + model='large'
+    # 3) mặt quá nhỏ -> báo rõ để FE đừng reset
+    if face_min < MIN_FACE_PX:
+        return jsonify(
+            ok=False,
+            message="Khuôn mặt quá nhỏ, vui lòng tiến gần hơn",
+            face_min=face_min,
+            required=MIN_FACE_PX,
+            reason="face_too_small"
+        ), 400
+
+    # 4) encode
     encs = face_recognition.face_encodings(
         img,
         known_face_locations=[(top, right, bottom, left)],
@@ -95,12 +105,18 @@ def recognize():
 
     probe = encs[0]
 
-    # 5) So khớp với nhiều encoding (nếu có), chọn min distance
+    # 5) match
     nv, dist = best_match(probe, NhanVien.query.all(), THRESH)
     if not nv:
-        return jsonify(ok=False, message="Không khớp nhân viên nào"), 404
+        return jsonify(
+            ok=False,
+            message="Không khớp nhân viên nào",
+            distance=float(dist),
+            face_min=face_min,
+            reason="no_employee"
+        ), 404
 
-    # 6) Trả về preview_token (giữ nguyên như bạn đang dùng)
+    # 6) token
     enc_sha = hashlib.sha256(probe.tobytes()).hexdigest()
     token = jwt.encode(
         {
@@ -119,4 +135,5 @@ def recognize():
         nhan_vien={"id": nv.id, "ho_ten": nv.ho_ten},
         preview_token=token,
         distance=float(dist),
+        face_min=face_min,
     ), 200
