@@ -3,6 +3,7 @@ from app.models.nghi_phep_model import NghiPhep
 from app.models.loai_nghi_phep_model import LoaiNghiPhep
 from app.models.hopdong_laodong_model import HopDongLaoDong
 from datetime import datetime
+from sqlalchemy import extract, and_, or_, func
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime, date, timedelta
@@ -389,3 +390,24 @@ def cancle_nghi_phep_service(id):
     except Exception as e:
         print(f"Error in cancle_nghi_phep_service: {str(e)}") 
         raise e
+
+
+def get_tong_ngay_nghi_trong_nam(id):
+    nam_hien_tai = datetime.now().year
+
+    # Lọc ra các đơn nghỉ phép hợp lệ
+    nghiphep = NghiPhep.query.filter(
+        NghiPhep.nhan_vien_id == id,
+        NghiPhep.trang_thai == "Đã duyệt",
+        NghiPhep.loai_nghi_phep_id != 3,
+        NghiPhep.loai_nghi_phep_id != 2,
+        or_(
+            extract('year', NghiPhep.tu_ngay) == nam_hien_tai,
+            extract('year', NghiPhep.den_ngay) == nam_hien_tai
+        )
+    )
+
+    # Tính tổng số ngày nghỉ
+    tong_ngay_nghi = nghiphep.with_entities(func.sum(NghiPhep.so_ngay_nghi)).scalar() or 0
+
+    return tong_ngay_nghi

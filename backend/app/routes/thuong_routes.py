@@ -51,3 +51,6 @@ def get_nhan_vien_by_thuong(thuong_id):
 def remove_nhan_vien_from_thuong():
     return remove_nhan_vien_from_thuong_controller()
 
+@thuong_bp.route("/get-thang-13-nhan-vien", methods=["POST"])
+def get_thang13_nhan_vien_router():
+    return get_thang13_nhan_vien_controller()

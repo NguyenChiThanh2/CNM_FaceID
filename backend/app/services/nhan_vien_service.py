@@ -1,4 +1,6 @@
 from app.models import  NhanVien
+from .nghi_phep_service import get_tong_ngay_nghi_trong_nam
+from .hopdong_laodong_service import get_phep_nam_hop_dong_hien_tai
 from sqlalchemy.exc import SQLAlchemyError
 from app import db
 from sqlalchemy import func ,and_
@@ -41,7 +43,13 @@ def get_all_nhan_vien_service():
     return NhanVien.query.all()
 
 def get_nhan_vien_by_id_service(id):
-    return NhanVien.query.get(id)
+    thongtin = NhanVien.query.get(id)
+    phep_nam = get_phep_nam_hop_dong_hien_tai(id)
+    tong_ngay_nghi = get_tong_ngay_nghi_trong_nam(id)
+    so_ngay_nghi_con_lai = phep_nam - tong_ngay_nghi
+    thongtin.so_ngay_phep_con_lai = so_ngay_nghi_con_lai
+    # print(thongtin.__dict__)
+    return thongtin
 def get_nhan_vien_by_trang_thai_service(trang_thai):
     return NhanVien.query.filter_by(trang_thai=trang_thai).all()
 

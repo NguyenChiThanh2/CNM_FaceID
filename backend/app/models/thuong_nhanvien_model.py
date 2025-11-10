@@ -7,10 +7,13 @@ class ThuongNhanVien(db.Model):
     nhanvien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False)
     thuong_id = db.Column(db.Integer, db.ForeignKey('thuong.id', ondelete="CASCADE"), nullable=False)
     trang_thai = db.Column(db.String(50), default="Chưa chi trả")
-    ngay_chi = db.Column(db.Date)
+    so_tien_thuc_te = db.Column(db.Numeric(15, 2), nullable=True)
 
     thuong = db.relationship('Thuong', back_populates='thuong_nhanvien', lazy=True)
     nhanvien = db.relationship('NhanVien', back_populates='thuong_nhanvien', lazy=True)
+
+    def __repr__(self):
+        return f"<ThuongNhanVien loai={self.thuong.loai_thuong}, so_tien={self.thuong.so_tien}, ten_thuong={self.thuong.ten_thuong}, so_tien_thuc_te={self.so_tien_thuc_te} >"
 
     def to_dict(self):
         return {
@@ -20,7 +23,7 @@ class ThuongNhanVien(db.Model):
             "thuong_id": self.thuong_id,
             "ten_thuong": self.thuong.ten_thuong if self.thuong else None,
             "trang_thai": self.trang_thai,
-            "ngay_chi": self.ngay_chi.isoformat() if self.ngay_chi else None,
+            'so_tien_thuc_te': float(self.so_tien_thuc_te) if self.so_tien_thuc_te is not None else None,
             "thuong": self.thuong.to_dict() if self.thuong else None
         }
 

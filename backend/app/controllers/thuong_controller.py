@@ -63,8 +63,10 @@ def delete_thuong(thuong_id):
 
 def add_nhan_vien_to_thuong_controller(data):
     try:
-        thuong_id = data.get("thuong_id")
-        nhan_vien_ids = data.get("nhan_vien_ids", [])
+        payload = data.get("payload")
+        thuong_id = payload["thuong_id"]
+        nhan_vien_ids = payload.get("nhan_vien_ids", [])
+        print(nhan_vien_ids)
 
         if not thuong_id or not isinstance(nhan_vien_ids, list):
             return jsonify({"error": "Dữ liệu không hợp lệ"}), 400
@@ -103,3 +105,20 @@ def remove_nhan_vien_from_thuong_controller():
     except Exception as e:
         return jsonify({"message": f"Lỗi server: {str(e)}"}), 500
     
+def get_thang13_nhan_vien_controller():
+    try:
+        data = request.json
+        nhanvien_id = data.get("id")
+        ngay_quyet_dinh = data.get("ngay_quyet_dinh")
+        # print("Ngày quyết định nhận được ở controller:", ngay_quyet_dinh)
+        result = get_thang13_nhan_vien_service(nhanvien_id, ngay_quyet_dinh)
+        if result is None:
+            return jsonify({"message": "Không tìm thấy nhân viên này"}), 404
+        
+        return jsonify({
+            "nhanvien_id": nhanvien_id,
+            "so_tien": result
+        }), 200
+    except Exception as e:
+        print("Lỗi controller:", e)
+        return jsonify({"error": str(e)}), 500
