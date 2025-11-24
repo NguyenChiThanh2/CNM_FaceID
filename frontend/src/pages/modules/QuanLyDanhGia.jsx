@@ -207,6 +207,18 @@ const QuanLyDanhGia = () => {
         if (score >= 6.5) return <Badge bg="warning" text="dark">{score}</Badge>;
         return <Badge bg="danger">{score}</Badge>;
     };
+    const getRecommendation = (dg) => {
+        const score = dg.tong_diem ?? 0;
+
+        if (score >= 8.5) {
+            return <Badge bg="success">Ký tiếp hợp đồng</Badge>;
+        } else if (score >= 7) {
+            return <Badge bg="warning" text="dark">Xem xét</Badge>;
+        } else {
+            return <Badge bg="danger">Không ký tiếp hợp đồng</Badge>;
+        }
+    };
+
 
     // ===== CRUD =====
     const canUserCreateOrEdit = () => canReviewUser();
@@ -589,6 +601,8 @@ const QuanLyDanhGia = () => {
                                     <th style={{ padding: "12px", fontWeight: "600" }}>Kỳ đánh giá</th>
                                     <th style={{ padding: "12px", fontWeight: "600" }}>Minh chứng</th>
                                     <th style={{ padding: "12px", fontWeight: "600" }}>Hành động</th>
+                                    <th style={{ padding: "12px", fontWeight: "600" }}>Khuyến nghị</th>
+
                                 </tr>
                             </thead>
                             <tbody>
@@ -866,6 +880,10 @@ const QuanLyDanhGia = () => {
                                                         )}
                                                     </div>
                                                 </td>
+                                                <td style={{ padding: "12px", textAlign: "center" }}>
+                                                    {getRecommendation(dg)}
+                                                </td>
+
                                             </tr>
                                         );
                                     })

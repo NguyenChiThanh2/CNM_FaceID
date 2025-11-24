@@ -443,17 +443,7 @@ export default function NhanSuDetail() {
                       <div className="fw-semibold">{nz(nhanSu.dia_chi)}</div>
                     </div>
                   </div>
-                  <div className="d-flex align-items-center mb-3 p-2 rounded-3 bg-light">
-                    <FaGift className="text-primary me-3 fs-5" />
-                    <div>
-                      <small className="text-muted">Ngày phép còn lại</small>
-                      <div className="fw-semibold">
-                        <Badge bg="info" className="fs-6">
-                          {nz(nhanSu.so_ngay_phep_con_lai, 0)} ngày
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
+              
                 </Col>
               </Row>
             </Col>
@@ -554,14 +544,14 @@ export default function NhanSuDetail() {
               )}
 
               {hopDong ? (
-                <div className="border rounded-3 p-3 bg-light">
-                  <div className="row g-2 small">
+                <div >
+                  {/* <div className="row g-2 small">className="border rounded-3 p-3 bg-light"
                     <div className="col-6"><strong>Loại hợp đồng:</strong> {nz(hopDong.loai_hop_dong)}</div>
                     <div className="col-6"><strong>Ngày bắt đầu:</strong> {fmtDate(hopDong.ngay_bat_dau)}</div>
                     <div className="col-6"><strong>Ngày kết thúc:</strong> {fmtDate(hopDong.ngay_ket_thuc)}</div>
                     <div className="col-6"><strong>Lương cơ bản:</strong> {fmtVND(hopDong.luong_co_ban)}</div>
                     <div className="col-12"><strong>Vị trí công việc:</strong> {nz(hopDong.vi_tri_cong_viec)}</div>
-                  </div>
+                  </div> */}
                 </div>
               ) : (
                 <div className="text-center text-muted py-4">
@@ -590,7 +580,7 @@ export default function NhanSuDetail() {
                     <FaFileExport className="me-1" />
                     Xuất PDF
                   </Button> */}
-                  <Button 
+                  {/* <Button 
                     variant="outline-secondary" 
                     size="sm" 
                     onClick={printA4}
@@ -598,7 +588,7 @@ export default function NhanSuDetail() {
                   >
                     <FaPrint className="me-1" />
                     In
-                  </Button>
+                  </Button> */}
                 </div>
               )}
             </Card.Body>
