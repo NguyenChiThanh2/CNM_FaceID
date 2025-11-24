@@ -382,7 +382,12 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     )
                     db.session.add(bangluong)
                     db.session.commit()
-                return bangluong
+                # return bangluong
+                return {
+                        "success": True,
+                        "message": f"Tính lương thành công cho nhân viên ID={nhanvien_id}",
+                        "data": bangluong.to_dict()
+                    }
             except Exception as e:
                 db.session.rollback()
                 raise Exception(f"Lỗi khi thêm bảng lương: {str(e)}")
@@ -393,7 +398,8 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
             ds_ngay_le = lay_ngay_le_trong_thang(thang, nam)
             ds_ngay_nghi_phep = [ngay for ngay in ds_ngay_nghi_phep if ngay not in ds_ngay_cuoi_tuan]
             ds_ngay_nghi_phep = [ngay for ngay in ds_ngay_nghi_phep if ngay not in ds_ngay_le]
-            # print("Ngày nghỉ phép sau khi loại cuối tuần:", ds_ngay_nghi_phep)
+            # print("Công chuẩn:", so_cong_chuan_thang)
+            # print("Ngày:", ds_ngay_le)
             """Tính số công cho 1 nhân viên trong 1 tháng"""
             try:
                 tinh_so_cong = get_tinhsocong_1nhanvien_theothang_service(nhanvien_id, thang, nam)
@@ -441,8 +447,9 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                             tong_ngay_cong_thuc -= 1
                             tong_ngay_cong -= 1 
                         if cc.thoi_gian_vao.date().day in ds_ngay_le:
-                            tong_ngay_cong_thuc -= 1
-                            tong_ngay_cong -= 1 
+                            tong_ngay_cong_thuc -= cc.so_cong
+                            tong_ngay_cong -= cc.so_cong 
+                        
                         
                         policy = get_chinhsach(nhanvien_id, cc.thoi_gian_vao.date())
                         
@@ -460,6 +467,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                         
                         cong = cc.so_cong  # đã tính từ logic chấm công (0.5 hoặc 1)
                         tong_ngay_cong += cong
+                        
                         # tong_ngay_cong_thuc += cong
                         # print("Công tính:", tong_ngay_cong, "Công thực", tong_ngay_cong_thuc, "cong", cong, "Ngày", cc.thoi_gian_vao.date(), "ngày nghỉ phép", ds_ngay_nghi_phep)
                         # print("Ngày lễ trong tháng:", ds_ngay_le)
@@ -1010,6 +1018,7 @@ def tinh_luong_cho_tat_ca_nhan_vien(thang, nam, phongbanid=None):
             else:
                 bangluong_1nv = tinh_luong_cho_1nv(nv.id, thang, nam)
                 # Kiểm tra nếu không tính được lương cho nhân viên
+                # print(bangluong_1nv)
                 if bangluong_1nv['success'] is False:
                     # msg = f"Không tính được lương cho nhân viên ID={nv.id}, họ tên={nv.ho_ten}"
                     loi_list.append(bangluong_1nv['message'])
@@ -1017,6 +1026,7 @@ def tinh_luong_cho_tat_ca_nhan_vien(thang, nam, phongbanid=None):
                 ket_qua.append(bangluong_1nv['data'])
 
         except Exception as e:
+            
             msg = f"Lỗi khi tính lương cho nhân viên ID={nv.id}, họ tên={nv.ho_ten}: {str(e)}"
             loi_list.append(msg)
 

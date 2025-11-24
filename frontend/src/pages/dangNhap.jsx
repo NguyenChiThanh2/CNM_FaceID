@@ -144,7 +144,7 @@ const DangNhap = () => {
             </div>
           </div>
           <h3 className="fw-bold mb-2" style={{ color: "#2d3748" }}>
-            Đăng nhập hệ thống
+            Đăng nhập
           </h3>
           <p className="text-muted" style={{ fontSize: "0.9rem" }}>
             Chào mừng bạn trở lại
@@ -173,7 +173,7 @@ const DangNhap = () => {
             <input
               type="text"
               className="form-control border-start-0"
-              placeholder="Email hoặc số điện thoại"
+              placeholder="Email"
               value={emailOrPhone}
               onChange={(e) => setEmailOrPhone(e.target.value)}
               style={{
@@ -202,7 +202,7 @@ const DangNhap = () => {
             >
               Mật khẩu
             </label>
-            <a
+            {/* <a
               href="#"
               className="text-decoration-none"
               style={{
@@ -214,7 +214,7 @@ const DangNhap = () => {
               onMouseLeave={(e) => (e.target.style.color = "#667eea")}
             >
               Quên mật khẩu?
-            </a>
+            </a> */}
           </div>
           <div className="input-group">
             <span
@@ -308,7 +308,7 @@ const DangNhap = () => {
             className="text-muted mb-0"
             style={{ fontSize: "0.85rem" }}
           >
-            © 2025 Công ty TNHH TC. Bảo lưu mọi quyền.
+            © 2025 Khóa luận tốt nghiệp.
           </p>
         </div>
       </div>

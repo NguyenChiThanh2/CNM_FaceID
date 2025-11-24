@@ -576,7 +576,7 @@ export default function FaceCheckin() {
       >
         <div className="d-flex justify-content-between align-items-center">
           <div>
-            <Breadcrumb className="mb-3">
+            {/* <Breadcrumb className="mb-3">
               <Breadcrumb.Item active style={{ color: "white" }}
               >
                 <FaHome className="me-2" />
@@ -585,13 +585,13 @@ export default function FaceCheckin() {
               <Breadcrumb.Item active style={{ color: "white" }}>
                 Chấm công khuôn mặt
               </Breadcrumb.Item>
-            </Breadcrumb>
-            <h1 className="fw-bold mb-2">🤖 Chấm công Tự động bằng AI</h1>
+            </Breadcrumb> */}
+            <h1 className="fw-bold mb-2">🤖 Chấm công Tự động</h1>
             <p className="mb-0 opacity-90">
-              Hệ thống nhận diện khuôn mặt tự động - Giữ ổn định {STABLE_MS / 1000}s để chấm công
+              Hệ thống nhận diện khuôn mặt tự động - Giữ ổn định để chấm công
             </p>
           </div>
-          <Button
+          {/* <Button
             variant="outline-light"
             onClick={() => navigate("/")}
             className="border-0"
@@ -602,7 +602,7 @@ export default function FaceCheckin() {
           >
             <FaHome className="me-2" />
             Trang chủ
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -778,7 +778,7 @@ export default function FaceCheckin() {
                   </div>
                   <div>
                     <h6 className="fw-semibold mb-1">Bước 3: Giữ ổn định</h6>
-                    <p className="text-muted mb-0 small">Giữ nguyên vị trí {STABLE_MS / 1000}s để hệ thống chấm công tự động</p>
+                    <p className="text-muted mb-0 small">Giữ nguyên vị trí để hệ thống chấm công tự động</p>
                   </div>
                 </div>
               </div>

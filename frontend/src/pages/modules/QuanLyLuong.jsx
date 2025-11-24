@@ -167,7 +167,9 @@ const QuanLyLuong = () => {
         setShowModal(false);
         fetchLuong();
       } catch (error) {
-        toast.error("Lỗi khi tính lương cho tất cả nhân viên.", error);
+        const msg = error.response?.data?.message || "Lỗi hệ thống!";
+        toast.error(msg);
+        // toast.error("Lỗi khi tính lương cho tất cả nhân viên.", error);
       } finally {
         setLoading(false);
       }
@@ -183,7 +185,7 @@ const QuanLyLuong = () => {
           thang: parseInt(thang),
           nam: parseInt(nam),
         });
-
+        // console.log(response);
         if (response.data.success) {
           toast.success(response.data.message || "Tính lương thành công!");
           setShowModal(false);

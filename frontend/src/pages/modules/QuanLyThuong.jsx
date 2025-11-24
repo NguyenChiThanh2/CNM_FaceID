@@ -685,7 +685,7 @@ const Thuong = () => {
               <p>Không có nhân viên nào được thưởng.</p>
             </div>
           ) : (
-            <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+            <div style={{ maxHeight: "500px", overflowY: "auto" }}>
               {PhongBanList.map((pb) => {
                 const nvTrongPB = selectedNhanVien.filter(
                   (nv) => nv.phong_ban_id === pb.id

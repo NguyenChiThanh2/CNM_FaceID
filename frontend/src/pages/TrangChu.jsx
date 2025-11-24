@@ -42,7 +42,7 @@ const TrangChu = () => {
     { title: "Tính lương", icon: "💰", path: "/tinh-luong", color: "#667eea" },
     { title: "Thưởng", icon: "🎁", path: "/thuong", color: "#764ba2" },
     { title: "Khấu trừ", icon: "❌", path: "/khau-tru", color: "#6B73FF" },
-    { title: "Người phụ thuộc", icon: "👪", path: "/nguoi-phu-thuoc", color: "#8B5FBF" },
+    { title: "Người phụ thuộc", icon: "👨‍👩‍👧‍👦", path: "/nguoi-phu-thuoc", color: "#8B5FBF" },
     { title: "Phúc lợi", icon: "⚜️", path: "/phuc-loi", color: "#667eea" },
     { title: "QL nghỉ có lương", icon: "🎆", path: "/ngay-nghi-le", color: "#764ba2" },
     { title: "Đánh giá", icon: "📈", path: "/danh-gia", color: "#6B73FF" },
