@@ -1,0 +1,200 @@
+/* QuanLyLuong.css */
+.quan-ly-luong-container {
+  min-height: 100vh;
+}
+
+.quan-ly-luong-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+  color: white;
+  border-radius: 1rem;
+}
+
+.quan-ly-luong-header .breadcrumb-item {
+  color: white !important;
+}
+
+.glass-button {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: none;
+}
+
+.table-container {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 80vh;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.sticky-icon-column {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  min-width: 60px;
+  width: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #5a6fd8 100%);
+  color: white;
+  border-right: 1px solid rgba(255,255,255,0.3);
+}
+
+.sticky-name-column {
+  position: sticky;
+  left: 60px;
+  z-index: 5;
+  min-width: 200px;
+  width: 200px;
+  background: linear-gradient(135deg, #667eea 0%, #5a6fd8 100%);
+  color: white;
+  border-right: 1px solid rgba(255,255,255,0.3);
+}
+
+.sticky-month-column {
+  position: sticky;
+  left: 260px;
+  z-index: 5;
+  min-width: 120px;
+  width: 120px;
+  background: linear-gradient(135deg, #667eea 0%, #5a6fd8 100%);
+  color: white;
+  border-right: 2px solid rgba(255,255,255,0.4);
+}
+
+.table-column-header {
+  color: white;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-right: 1px solid rgba(255,255,255,0.2);
+  background: linear-gradient(135deg, #667eea 0%, #5a6fd8 100%);
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.hover-gradient-primary {
+  border-color: #667eea;
+  color: #667eea;
+  transition: all 0.3s ease;
+}
+
+.hover-gradient-primary:hover {
+  background: #667eea;
+  color: white;
+}
+
+.hover-gradient-warning {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  transition: all 0.3s ease;
+}
+
+.hover-gradient-warning:hover {
+  background: #f59e0b;
+  color: white;
+}
+
+.positive-amount {
+  color: #198754;
+  background-color: rgba(25, 135, 84, 0.1) !important;
+}
+
+.negative-amount {
+  color: #dc3545;
+  background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.total-amount {
+  background-color: rgba(13, 110, 253, 0.15) !important;
+  font-weight: bold;
+}
+
+.modal-gradient-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.rounded-card {
+  border-radius: 1rem;
+  border: none;
+}
+
+
+
+
+
+
+.custom-tabs .nav-link {
+  border: none;
+  color: #6c757d;
+  font-weight: 500;
+  padding: 12px 24px;
+}
+
+.custom-tabs .nav-link.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px;
+}
+
+.custom-tabs .nav-link:hover {
+  color: #667eea;
+}
+
+/* Chart container styles */
+.salary-charts-container {
+  padding: 10px 0;
+}
+
+.chart-card {
+  transition: transform 0.2s ease;
+}
+
+.chart-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Custom tooltip */
+.custom-tooltip {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Button hover effects */
+.hover-gradient-primary {
+  border-color: #667eea;
+  color: #667eea;
+  transition: all 0.3s ease;
+}
+
+.hover-gradient-primary:hover {
+  background: #667eea;
+  color: white;
+}
+
+.hover-gradient-warning {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  transition: all 0.3s ease;
+}
+
+.hover-gradient-warning:hover {
+  background: #f59e0b;
+  color: white;
+}
+
+/* Responsive charts */
+@media (max-width: 768px) {
+  .salary-charts-container .col-xl-6 {
+    margin-bottom: 20px;
+  }
+}
