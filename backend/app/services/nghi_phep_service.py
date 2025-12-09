@@ -62,7 +62,7 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
         if ngay_du_kien_sinh < date.today():
             raise ValueError("Ngày dự kiến sinh phải là ngày trong tương lai")
 
-        # 2. Thời gian nghỉ tối thiểu 6 tháng
+        # # 2. Thời gian nghỉ tối thiểu 6 tháng
         # min_nghi = timedelta(days=180)  # ~ 6 tháng
         # if (den_ngay - tu_ngay) < min_nghi:
         #     raise ValueError("Thời gian nghỉ thai sản tối thiểu phải từ 6 tháng trở lên")
@@ -174,11 +174,11 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
         
         ngay_du_kien_sinh = parse_date(ngay_du_kien_sinh).date()
 
-        # 1. Ngày dự kiến sinh phải trong tương lai
+        # # 1. Ngày dự kiến sinh phải trong tương lai
         # if ngay_du_kien_sinh < date.today():
         #     raise ValueError("Ngày dự kiến sinh phải là ngày trong tương lai")
 
-        # 2. Thời gian nghỉ tối thiểu 6 tháng
+        # # 2. Thời gian nghỉ tối thiểu 6 tháng
         # min_nghi = timedelta(days=180)  # ~ 6 tháng
         # if (den_ngay - tu_ngay) < min_nghi:
         #     raise ValueError("Thời gian nghỉ thai sản tối thiểu phải từ 6 tháng trở lên")
@@ -235,15 +235,14 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
     nghi_phep.phuong_phap_sinh = phuong_phap_sinh
     
     if loai_nghi_phep_id == "3" and trang_thai == "Đã duyệt":
-        # Xử lý file khi thay đổi loại nghỉ phép từ loại khác sang loại thai sản
+        # Nếu là nghỉ thai sản và đã duyệt, đảm bảo ngày dự kiến sinh không bị xóa
         if file:
             filename = secure_filename(file.filename)
             ext = os.path.splitext(filename)[1]
             ten_file_moi = f"xinlamlaisom_nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
             file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
-            nghi_phep.file_bo_sung=ten_file_moi
+            nghi_phep.file_bo_sung = ten_file_moi
     else:
-
         if lnp_bandau != loai_nghi_phep_id and nghi_phep.can_cu_phap_ly_file:
             filename = nghi_phep.can_cu_phap_ly_file
             if not filename:

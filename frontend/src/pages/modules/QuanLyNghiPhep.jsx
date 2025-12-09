@@ -501,7 +501,6 @@ const QuanLyNghiPhep = () => {
                               className="btn btn-sm btn-outline-primary"
                             >
                               {nghiPhep.can_cu_phap_ly_file}
-                              {nghiPhep.file_bo_sung}
                             </a>
                           ) : (
                             <span className="text-muted">Không có</span>
