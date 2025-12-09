@@ -19,6 +19,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
     so_con: "",
     phuong_phap_sinh: "",
     can_cu_phap_ly: null,
+    file_bo_sung: null,
   });
   const [nhanVienList, setNhanVienList] = useState([]);
   const [loaiNghiPhepList, setLoaiNghiPhepList] = useState([]);
@@ -79,10 +80,29 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
     }));
   };
   const handleDateChange = (date, field) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: date.toISOString().split("T")[0], // lưu dưới dạng yyyy-mm-dd
-    }));
+    if (!date) return;
+
+    const formattedDate = date.toISOString().split("T")[0];
+
+    // Nếu là nghỉ thai sản và đổi TU_NGAY → tự set DEN_NGAY = +6 tháng
+    if (field === "tu_ngay" && parseInt(formData.loai_nghi_phep_id) === 3) {
+      const endDate = new Date(date);
+      endDate.setMonth(endDate.getMonth() + 6);
+
+      const formattedEndDate = endDate.toISOString().split("T")[0];
+
+      setFormData((prev) => ({
+        ...prev,
+        tu_ngay: formattedDate,
+        den_ngay: formattedEndDate,
+      }));
+    } else {
+      // Trường hợp bình thường
+      setFormData((prev) => ({
+        ...prev,
+        [field]: formattedDate,
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -173,7 +193,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
           >
             <option value="">Chọn nhân viên</option>
             {nhanVienList.map((nv) => (
-              <option key={nv.id} value={nv.id}>
+              <option key={nv.id} value={nv.id} disabled={formData.trang_thai === "Đã duyệt"}>
                 {nv.ho_ten}
               </option>
             ))}
@@ -188,6 +208,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
             value={formData.loai_nghi_phep_id}
             onChange={handleChange}
             required
+            disabled={formData.trang_thai === "Đã duyệt"}
           >
             <option value="">Chọn loại nghỉ phép</option>
             {loaiNghiPhepList.map((loai) => (
@@ -215,6 +236,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
                 className="form-control"
                 dateFormat="yyyy-MM-dd"
                 placeholderText="Chọn ngày dự kiến sinh"
+                disabled={formData.trang_thai === "Đã duyệt"}
               />
             </div>
 
@@ -228,6 +250,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
                 onChange={handleChange}
                 min="1"
                 placeholder="Nhập số con"
+                disabled={formData.trang_thai === "Đã duyệt"}
               />
             </div>
 
@@ -238,6 +261,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
                 name="phuong_phap_sinh"
                 value={formData.phuong_phap_sinh}
                 onChange={handleChange}
+                disabled={formData.trang_thai === "Đã duyệt"}
               >
                 <option value="">Chọn phương pháp</option>
                 <option value="Sinh thường">Sinh thường</option>
@@ -273,6 +297,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
               dateFormat="yyyy-MM-dd"
               placeholderText="Chọn ngày bắt đầu"
               required
+              disabled={formData.trang_thai === "Đã duyệt"}
             />
           </div>
         </div>
@@ -289,7 +314,9 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
               dateFormat="yyyy-MM-dd"
               placeholderText="Chọn ngày kết thúc"
               required
+              // disabled={formData.trang_thai === "Đã duyệt"}
             />
+
           </div>
         </div>
 
@@ -302,6 +329,7 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
             onChange={handleChange}
             rows="3"
             required
+            disabled={formData.trang_thai === "Đã duyệt"}
           />
         </div>
 

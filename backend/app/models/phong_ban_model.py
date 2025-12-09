@@ -22,3 +22,4 @@ class PhongBan(db.Model):
             'ten_phong_ban': self.ten_phong_ban,
             'mo_ta': self.mo_ta
         }
+      

@@ -55,6 +55,7 @@ const QuanLyNghiPhep = () => {
     try {
       const response = await axios.get(`${API_URL}/get-all-nghi-phep`);
       let list = response.data || [];
+      console.log(response.data); 
 
       if (userInfo && !isHR) {
         list = list.filter((np) => np.nhan_vien_id === userInfo.id);
@@ -500,9 +501,22 @@ const QuanLyNghiPhep = () => {
                               className="btn btn-sm btn-outline-primary"
                             >
                               {nghiPhep.can_cu_phap_ly_file}
+                              {nghiPhep.file_bo_sung}
                             </a>
                           ) : (
                             <span className="text-muted">Không có</span>
+                          )}
+                          {nghiPhep.file_bo_sung ? (
+                            <a
+                              href={`${API_URL}/can_cu_phap_ly_thai_san/${nghiPhep.file_bo_sung}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-sm btn-outline-primary"
+                            >
+                              {nghiPhep.file_bo_sung}
+                            </a>
+                          ) : (
+                            <span className="text-muted"></span>
                           )}
                         </td>
                         <td style={{ padding: "12px", maxWidth: "150px" }}>
@@ -543,6 +557,18 @@ const QuanLyNghiPhep = () => {
                                 >
                                   <FaTimes />
                                 </Button>
+                              </>
+                            )}
+                            {isHR && nghiPhep.trang_thai === "Đã duyệt" && (
+                              <>
+                                <Button
+                                  variant="outline-success"
+                                  size="sm"
+                                  onClick={() => handleEdit(nghiPhep)}
+                                >
+                                  xin làm sớm
+                                </Button>
+                                
                               </>
                             )}
                             {(isHR || (!isHR && nghiPhep.nhan_vien_id === userInfo?.id)) && 

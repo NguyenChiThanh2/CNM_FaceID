@@ -63,9 +63,9 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
             raise ValueError("Ngày dự kiến sinh phải là ngày trong tương lai")
 
         # 2. Thời gian nghỉ tối thiểu 6 tháng
-        min_nghi = timedelta(days=180)  # ~ 6 tháng
-        if (den_ngay - tu_ngay) < min_nghi:
-            raise ValueError("Thời gian nghỉ thai sản tối thiểu phải từ 6 tháng trở lên")
+        # min_nghi = timedelta(days=180)  # ~ 6 tháng
+        # if (den_ngay - tu_ngay) < min_nghi:
+        #     raise ValueError("Thời gian nghỉ thai sản tối thiểu phải từ 6 tháng trở lên")
 
         # 3. Nghỉ trước sinh không vượt quá 2 tháng
         max_nghi_truoc = ngay_du_kien_sinh - timedelta(days=60)
@@ -175,13 +175,13 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
         ngay_du_kien_sinh = parse_date(ngay_du_kien_sinh).date()
 
         # 1. Ngày dự kiến sinh phải trong tương lai
-        if ngay_du_kien_sinh < date.today():
-            raise ValueError("Ngày dự kiến sinh phải là ngày trong tương lai")
+        # if ngay_du_kien_sinh < date.today():
+        #     raise ValueError("Ngày dự kiến sinh phải là ngày trong tương lai")
 
         # 2. Thời gian nghỉ tối thiểu 6 tháng
-        min_nghi = timedelta(days=180)  # ~ 6 tháng
-        if (den_ngay - tu_ngay) < min_nghi:
-            raise ValueError("Thời gian nghỉ thai sản tối thiểu phải từ 6 tháng trở lên")
+        # min_nghi = timedelta(days=180)  # ~ 6 tháng
+        # if (den_ngay - tu_ngay) < min_nghi:
+        #     raise ValueError("Thời gian nghỉ thai sản tối thiểu phải từ 6 tháng trở lên")
 
         # 3. Nghỉ trước sinh không vượt quá 2 tháng
         max_nghi_truoc = ngay_du_kien_sinh - timedelta(days=60)
@@ -233,76 +233,86 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
     nghi_phep.ngay_du_kien_sinh = ngay_du_kien_sinh
     nghi_phep.so_con = so_con
     nghi_phep.phuong_phap_sinh = phuong_phap_sinh
-
-    if lnp_bandau != loai_nghi_phep_id and nghi_phep.can_cu_phap_ly_file:
-        filename = nghi_phep.can_cu_phap_ly_file
-        if not filename:
-            return
-        LOAI_NGHI_PHEP_FOLDER = {
-            "1": UPLOAD_FOLDER_PHEPNAM,
-            "2": UPLOAD_FOLDER_PHEPKL,
-            "3": UPLOAD_FOLDER,  # Thai sản
-        }
-
-        # Đảm bảo thư mục tồn tại
-        for folder in LOAI_NGHI_PHEP_FOLDER.values():
-            os.makedirs(folder, exist_ok=True)
-            
-        old_folder = LOAI_NGHI_PHEP_FOLDER.get(str(lnp_bandau))
-        new_folder = LOAI_NGHI_PHEP_FOLDER.get(str(loai_nghi_phep_id))
-
-        if not old_folder or not new_folder:
-            print("❌ Loại nghỉ phép không hợp lệ")
-            return
-
-        old_path = os.path.join(old_folder, filename)
-        new_path = os.path.join(new_folder, filename)
-
-        # Nếu thay đổi loại nghỉ phép -> move file
-        if old_folder != new_folder and os.path.exists(old_path):
-            os.makedirs(new_folder, exist_ok=True)
-            shutil.move(old_path, new_path)
-
-        # Đổi tên file để rõ ràng hơn
-        ext = os.path.splitext(filename)[1]
-        prefix = "nghiphepnam" if loai_nghi_phep_id == "1" else \
-                "nghiphepcoluong" if loai_nghi_phep_id == "2" else \
-                "nghiphepthaisan"
-
-        new_filename = f"{prefix}_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
-
-        final_path = os.path.join(new_folder, new_filename)
-        os.rename(new_path, final_path)
-
-        nghi_phep.can_cu_phap_ly_file = new_filename
-    # Xử lý file
-    if file:  # Nếu có file mới
-        # Xoá file cũ
-        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file)):
-            os.remove(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file))
-        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER_PHEPNAM, nghi_phep.can_cu_phap_ly_file)):
-            os.remove(os.path.join(UPLOAD_FOLDER_PHEPNAM, nghi_phep.can_cu_phap_ly_file)) 
-        if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file)):
-            os.remove(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file)) 
-
-        # Lưu file mới
-        filename = secure_filename(file.filename)
-        ext = os.path.splitext(filename)[1]
-        
-        if loai_nghi_phep_id == "1":
-            ten_file_moi = f"nghiphepnam_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
-            file.save(os.path.join(UPLOAD_FOLDER_PHEPNAM, ten_file_moi))
-        elif loai_nghi_phep_id == "2":
-            ten_file_moi = f"nghiphepkhongluong_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
-            file.save(os.path.join(UPLOAD_FOLDER_PHEPKL, ten_file_moi))
-        else:
-            ten_file_moi = f"nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+    
+    if loai_nghi_phep_id == "3" and trang_thai == "Đã duyệt":
+        # Xử lý file khi thay đổi loại nghỉ phép từ loại khác sang loại thai sản
+        if file:
+            filename = secure_filename(file.filename)
+            ext = os.path.splitext(filename)[1]
+            ten_file_moi = f"xinlamlaisom_nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
             file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
-            
-        nghi_phep.can_cu_phap_ly_file=ten_file_moi
+            nghi_phep.file_bo_sung=ten_file_moi
+    else:
 
-    elif file_status == "keep":
-        pass  # giữ nguyên file cũ
+        if lnp_bandau != loai_nghi_phep_id and nghi_phep.can_cu_phap_ly_file:
+            filename = nghi_phep.can_cu_phap_ly_file
+            if not filename:
+                return
+            LOAI_NGHI_PHEP_FOLDER = {
+                "1": UPLOAD_FOLDER_PHEPNAM,
+                "2": UPLOAD_FOLDER_PHEPKL,
+                "3": UPLOAD_FOLDER,  # Thai sản
+            }
+
+            # Đảm bảo thư mục tồn tại
+            for folder in LOAI_NGHI_PHEP_FOLDER.values():
+                os.makedirs(folder, exist_ok=True)
+                
+            old_folder = LOAI_NGHI_PHEP_FOLDER.get(str(lnp_bandau))
+            new_folder = LOAI_NGHI_PHEP_FOLDER.get(str(loai_nghi_phep_id))
+
+            if not old_folder or not new_folder:
+                print("❌ Loại nghỉ phép không hợp lệ")
+                return
+
+            old_path = os.path.join(old_folder, filename)
+            new_path = os.path.join(new_folder, filename)
+
+            # Nếu thay đổi loại nghỉ phép -> move file
+            if old_folder != new_folder and os.path.exists(old_path):
+                os.makedirs(new_folder, exist_ok=True)
+                shutil.move(old_path, new_path)
+
+            # Đổi tên file để rõ ràng hơn
+            ext = os.path.splitext(filename)[1]
+            prefix = "nghiphepnam" if loai_nghi_phep_id == "1" else \
+                    "nghiphepcoluong" if loai_nghi_phep_id == "2" else \
+                    "nghiphepthaisan"
+
+            new_filename = f"{prefix}_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
+
+            final_path = os.path.join(new_folder, new_filename)
+            os.rename(new_path, final_path)
+
+            nghi_phep.can_cu_phap_ly_file = new_filename
+        # Xử lý file
+        if file:  # Nếu có file mới
+            # Xoá file cũ
+            if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file)):
+                os.remove(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file))
+            if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER_PHEPNAM, nghi_phep.can_cu_phap_ly_file)):
+                os.remove(os.path.join(UPLOAD_FOLDER_PHEPNAM, nghi_phep.can_cu_phap_ly_file)) 
+            if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file)):
+                os.remove(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file)) 
+
+            # Lưu file mới
+            filename = secure_filename(file.filename)
+            ext = os.path.splitext(filename)[1]
+            
+            if loai_nghi_phep_id == "1":
+                ten_file_moi = f"nghiphepnam_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+                file.save(os.path.join(UPLOAD_FOLDER_PHEPNAM, ten_file_moi))
+            elif loai_nghi_phep_id == "2":
+                ten_file_moi = f"nghiphepkhongluong_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+                file.save(os.path.join(UPLOAD_FOLDER_PHEPKL, ten_file_moi))
+            else:
+                ten_file_moi = f"nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+                file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
+                
+            nghi_phep.can_cu_phap_ly_file=ten_file_moi
+
+        elif file_status == "keep":
+            pass  # giữ nguyên file cũ
     try:
         db.session.commit()
         return nghi_phep

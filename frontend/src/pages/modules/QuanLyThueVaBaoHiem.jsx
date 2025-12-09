@@ -126,6 +126,7 @@ const QuanLyThueVaBaoHiem = () => {
           totalBHYT: 0,
           totalBHTN: 0,
           totalAll: 0,
+          totalLuong: 0,
           monthCount: 0,
           // Thêm thông tin nhân viên
           employeeName: currentUser?.ho_ten || 'Không rõ',
@@ -138,6 +139,7 @@ const QuanLyThueVaBaoHiem = () => {
       yearlyData[year].totalBHYT += luong.bhyt || 0;
       yearlyData[year].totalBHTN += luong.bhtn || 0;
       yearlyData[year].totalAll += (luong.thue_tncn || 0) + (luong.bhxh || 0) + (luong.bhyt || 0) + (luong.bhtn || 0);
+      yearlyData[year].totalLuong += luong.tong_luong || 0;
       yearlyData[year].monthCount += 1;
     });
 
@@ -657,6 +659,7 @@ const EmployeeTaxInsuranceSection = ({ data, chartData, selectedYear, formatCurr
                       <th>BHYT</th>
                       <th>BHTN</th>
                       <th>Tổng cộng</th>
+                      <th>Tổng lương</th>
                       <th>Số tháng</th>
                       <th>TB/tháng</th>
                     </tr>
@@ -671,6 +674,7 @@ const EmployeeTaxInsuranceSection = ({ data, chartData, selectedYear, formatCurr
                           <td className="text-success">{formatCurrency(item.totalBHYT)}</td>
                           <td className="text-warning">{formatCurrency(item.totalBHTN)}</td>
                           <td className="fw-bold text-dark">{formatCurrency(item.totalAll)}</td>
+                          <td className="fw-bold text-dark">{formatCurrency(item.totalLuong)}</td>
                           <td className="text-center">
                             <Badge bg="secondary">{item.monthCount}</Badge>
                           </td>
@@ -694,6 +698,7 @@ const EmployeeTaxInsuranceSection = ({ data, chartData, selectedYear, formatCurr
                         <th className="text-success">{formatCurrency(data.reduce((sum, item) => sum + item.totalBHYT, 0))}</th>
                         <th className="text-warning">{formatCurrency(data.reduce((sum, item) => sum + item.totalBHTN, 0))}</th>
                         <th className="fw-bold text-dark">{formatCurrency(data.reduce((sum, item) => sum + item.totalAll, 0))}</th>
+                        <th className="fw-bold text-dark">{formatCurrency(data.reduce((sum, item) => sum + item.totalLuong, 0))}</th>
                         <th className="text-center">
                           <Badge bg="info">{data.reduce((sum, item) => sum + item.monthCount, 0)}</Badge>
                         </th>

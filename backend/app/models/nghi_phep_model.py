@@ -17,6 +17,8 @@ class NghiPhep(db.Model):
     so_con = db.Column(db.Integer, nullable=True)
     phuong_phap_sinh = db.Column(db.String(50), nullable=True)
     can_cu_phap_ly_file = db.Column(db.String(255), nullable=True)  # tên file đã upload
+    file_bo_sung = db.Column(db.String(255), nullable=True)  # tên file bổ sung nếu có
+    
     
     nhan_vien = db.relationship('NhanVien', back_populates='nghi_phep', lazy=True)
     loai_nghi_phep = db.relationship('LoaiNghiPhep', back_populates='nghi_phep', lazy=True)
@@ -44,7 +46,8 @@ class NghiPhep(db.Model):
             'ngay_du_kien_sinh': self.ngay_du_kien_sinh.isoformat() if self.ngay_du_kien_sinh else None,
             'so_con': self.so_con,
             'phuong_phap_sinh': self.phuong_phap_sinh,
-            'can_cu_phap_ly_file': self.can_cu_phap_ly_file
+            'can_cu_phap_ly_file': self.can_cu_phap_ly_file,
+            'file_bo_sung': self.file_bo_sung
         }
     
     def update_nghi_phep(self, tu_ngay=None, den_ngay=None, ly_do=None, trang_thai=None):
