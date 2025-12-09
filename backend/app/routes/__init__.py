@@ -21,7 +21,9 @@ from .facecheckin import facecheckin_bp
 from .chung_chi_routes import chung_chi_bp
 from .hopdong_routes import hopdong_bp
 from .nguoi_phu_thuoc_router import nguoi_phu_thuoc_bp
+from .bh_dn_routers import bao_hiem_dn_bp
 def register_routes(app):
+    app.register_blueprint(bao_hiem_dn_bp, url_prefix='/api')
     app.register_blueprint(ngay_nghi_le_bp, url_prefix='/api')
     app.register_blueprint(khau_tru_bp, url_prefix='/api')
     app.register_blueprint(thuong_bp, url_prefix='/api')

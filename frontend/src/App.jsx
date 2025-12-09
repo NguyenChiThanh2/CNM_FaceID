@@ -32,6 +32,7 @@ import KhauTru from "./pages/modules/QuanLyKhauTru";
 import NgayNghiLe from "./pages/modules/QuanLyNgayNghiLe";
 import MacGuard from "./pages/MacGuard";
 import NguoiPhuThuocPage from "./pages/modules/QuanLyNguoiPhuThuoc";
+import QuanLyThueVaBaoHiem from "./pages/modules/QuanLyThueVaBaoHiem";
 import "./styles/danhgia.css";
 import { LayoutGrid } from "lucide-react";
 
@@ -173,6 +174,14 @@ const AppLayout = () => {
               element={
                 <PrivateRoute>
                   <QuanlyNghiPhep />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/ql-thue-bh"
+              element={
+                <PrivateRoute>
+                  <QuanLyThueVaBaoHiem />
                 </PrivateRoute>
               }
             />

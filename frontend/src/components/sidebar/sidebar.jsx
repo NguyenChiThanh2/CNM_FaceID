@@ -46,6 +46,7 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
     { title: "Thưởng", icon: "🎁", path: "/thuong" },
     { title: "Khấu trừ", icon: "❌", path: "/khau-tru" },
     { title: "Người phụ thuộc", icon: "👨‍👩‍👧‍👦", path: "/nguoi-phu-thuoc", color: "#f9c74f" },
+    { title: "QL các khoản bắt buộc", icon: "💸", path: "/ql-thue-bh" },
     { title: "Phúc lợi", icon: "⚜️", path: "/phuc-loi" },
     { title: "QL nghỉ có lương", icon: "🎆", path: "/ngay-nghi-le" },
     { title: "Đánh giá", icon: "📈", path: "/danh-gia" },

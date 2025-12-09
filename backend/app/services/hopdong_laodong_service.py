@@ -49,7 +49,7 @@ def kiem_tra_hop_dong_con_han(nhanvien_id, thang, nam):
 
     # 4️⃣ Kiểm tra còn hạn hay không
     # Nếu chưa hết hạn hoặc chưa có ngày kết thúc => còn hạn
-    if not ngay_kt or ngay_kt >= ngay_kiem_tra:
+    if not ngay_kt or ngay_kt > ngay_kiem_tra:
         return True
     else:
         return False

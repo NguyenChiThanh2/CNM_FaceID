@@ -20,6 +20,7 @@ from app.models.thuong_model import Thuong
 from app.models.thuong_nhanvien_model import ThuongNhanVien
 from app.models.khau_tru_model import KhauTru
 from app.models.khautru_nhanvien_model import KhauTruNhanVien
+from app.models.bh_dn import BaoHiemDoanhNghiep
 from app import db
 
 # class TinhLuongService:
@@ -653,6 +654,11 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 bao_hiem_y_te = tong_luong * 0.015
                 bao_hiem_that_nghiep = tong_luong * 0.01
                 tong_bao_hiem = bao_hiem_xa_hoi + bao_hiem_y_te + bao_hiem_that_nghiep
+                
+                bao_hiem_xa_hoi_dn = tong_luong * 0.175
+                bao_hiem_y_te_dn = tong_luong * 0.03
+                bao_hiem_that_nghiep_dn = tong_luong * 0.01
+                tong_bao_hiem_dn = bao_hiem_xa_hoi_dn + bao_hiem_y_te_dn + bao_hiem_that_nghiep_dn
 
                 # Lương sau khi trừ bảo hiểm + tăng ca tính thuế + phụ cấp không đóng bảo hiểm + lương lễ tính thuế
                 if luong_le > 0 and tong_luong_le > 0:
@@ -681,7 +687,14 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                 luong_thuc_linh = tong_luong - tong_bao_hiem - thue_tncn - khau_tru + tien_tang_ca_mien_thue + tien_luong_le_mien_thue + tien_luong_cuoi_tuan_mien_thue
                 try:
                     bangluong = BangLuong.query.filter_by(nhan_vien_id=nhanvien_id, thang=thang, nam=nam).first()
+                    
                     if bangluong:
+                        bhdn = BaoHiemDoanhNghiep.query.filter_by(nhan_vien_id=nhanvien_id, thang=thang, nam=nam).first()
+                        if bhdn:
+                            bhdn.bhxh_dn = bao_hiem_xa_hoi_dn
+                            bhdn.bhtn_dn = bao_hiem_that_nghiep_dn
+                            bhdn.bhyt_dn = bao_hiem_y_te_dn
+                            bhdn.tong_bh_dn = tong_bao_hiem_dn
                         # Cập nhật lại thông tin lương
                         bangluong.ngay_cong_chuan = int(so_cong_chuan_thang)
                         bangluong.so_ngay_cong = tong_ngay_cong_thuc
@@ -702,7 +715,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                         bangluong.tong_ngay_cuoi_tuan = so_ngay_lam_cuoi_tuan
                         bangluong.tong_tien_cuoi_tuan = tong_luong_cuoi_tuan
                         bangluong.ghi_chu = None
-
+                    
                         # Xóa chi tiết lương cũ trước khi thêm mới
                         ChiTietLuong.query.filter_by(bang_luong_id=bangluong.id).delete()
                         db.session.commit()
@@ -731,7 +744,19 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                             tong_ngay_cuoi_tuan= so_ngay_lam_cuoi_tuan,
                             tong_tien_cuoi_tuan= tong_luong_cuoi_tuan,
                         )
+                        
+                        bhdn = BaoHiemDoanhNghiep(
+                            nhan_vien_id=nhanvien_id,
+                            thang=thang,
+                            nam=nam,
+                            bhxh_dn = bao_hiem_xa_hoi_dn,
+                            bhtn_dn = bao_hiem_that_nghiep_dn,
+                            bhyt_dn = bao_hiem_y_te_dn,
+                            # tong_bh_dn = tong_bao_hiem_dn,
+                        )
+                        
                         db.session.add(bangluong)
+                        db.session.add(bhdn)
                         db.session.commit()
                         
                     # 2️⃣ Tạo list chi tiết lương (chỉ thêm nếu có dữ liệu)

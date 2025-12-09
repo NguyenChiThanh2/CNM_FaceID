@@ -101,13 +101,13 @@
 
 # sinh sữ liệu 1 nhân viên
 # ====================================================================
-from datetime import datetime, date, timedelta
-import calendar
-import random
+# from datetime import datetime, date, timedelta
+# import calendar
+# import random
 
-# thang = 6
-# nam = 2025
-# nhan_vien_id = 1
+# thang = 7
+# nam = 2024
+# nhan_vien_id = 3
 
 # ngay_dau_thang = date(nam, thang, 1)
 # so_ngay_trong_thang = calendar.monthrange(nam, thang)[1]
@@ -116,6 +116,9 @@ import random
 # for i in range(so_ngay_trong_thang):
 #     ngay = ngay_dau_thang + timedelta(days=i)
 #     if ngay.weekday() < 5:  # chỉ lấy thứ 2 - thứ 6
+#         # if ngay.day < 9:
+#         # if ngay.day in [1]:
+#             # continue
 #         gio_vao_gio = 7 if random.random() < 0.5 else 8
 #         gio_vao_phut = random.randint(30, 59) if gio_vao_gio == 7 else random.randint(0, 3)
 #         thoi_gian_vao = datetime(nam, thang, ngay.day, gio_vao_gio, gio_vao_phut)
@@ -157,12 +160,16 @@ def generate_cham_cong_data(start_nhan_vien_id, end_nhan_vien_id, thang, nam):
     # Duyệt qua từng nhân viên trong khoảng ID
     for nhan_vien_id in range(start_nhan_vien_id, end_nhan_vien_id + 1):
         nhan_vien_values = []
-        
+        if nhan_vien_id in [4, 14, 26, 30, 17, 12]:
+            continue
         for i in range(so_ngay_trong_thang):
             ngay = ngay_dau_thang + timedelta(days=i)
             
             # Chỉ tạo dữ liệu cho ngày làm việc (thứ 2 - thứ 6)
             if ngay.weekday() < 5:
+                # if ngay.day in [1, 25, 26, 27, 28, 29, 30, 31]:
+                if ngay.day < 3:
+                    continue
                 # Tạo thời gian vào ngẫu nhiên
                 gio_vao_gio = 7 if random.random() < 0.5 else 8
                 gio_vao_phut = random.randint(30, 59) if gio_vao_gio == 7 else random.randint(0, 2)
@@ -191,7 +198,7 @@ def generate_cham_cong_data(start_nhan_vien_id, end_nhan_vien_id, thang, nam):
 if __name__ == "__main__":
     # Ví dụ 1: Tạo dữ liệu cho nhân viên từ 2 đến 30
     print("=== Dữ liệu cho nhân viên 2-30 ===")
-    sql_1 = generate_cham_cong_data(1, 30, 10, 2025)
+    sql_1 = generate_cham_cong_data(2, 30, 11, 2025)
     print(sql_1)
     
     print("\n" + "="*50 + "\n")

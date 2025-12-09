@@ -64,6 +64,10 @@ class NhanVien(db.Model):
         back_populates="nhan_vien",
         overlaps="khautru_list,nhan_viens"
     )
+    bao_hiem_doanh_nghiep = db.relationship('BaoHiemDoanhNghiep', 
+                                           back_populates='nhan_vien', 
+                                           lazy=True,
+                                           cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<NhanVien {self.ho_ten}>"

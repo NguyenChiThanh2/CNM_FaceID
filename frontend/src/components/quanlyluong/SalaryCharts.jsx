@@ -213,12 +213,12 @@ const SalaryCharts = ({
             ))}
             
             {/* Thêm tổng thực nhận */}
-            <div className="d-flex justify-content-between mt-2 pt-2" style={{ borderTop: '2px solid #007bff' }}>
+            {/* <div className="d-flex justify-content-between mt-2 pt-2" style={{ borderTop: '2px solid #007bff' }}>
               <span className="fw-bold text-primary" style={{ fontSize: '13px' }}>Thực nhận:</span>
               <span className="fw-bold text-primary" style={{ fontSize: '13px' }}>
                 {formatCurrency(data?.thucNhan || 0)}
               </span>
-            </div>
+            </div> */}
           </div>
         </div>
       );
@@ -283,7 +283,8 @@ const SalaryCharts = ({
                 </Card.Body>
               </Card>
             ) : (
-              <RestrictedChart title="📊 Tổng Quỹ Lương Theo Năm" />
+              // <RestrictedChart title="📊 Tổng Quỹ Lương Theo Năm" />
+              <p></p>
             )}
           </Col>
         )}
@@ -325,7 +326,8 @@ const SalaryCharts = ({
               </Card.Body>
             </Card>
           ) : (
-            <RestrictedChart title="🏆 So Sánh Lương Nhân Viên" />
+            // <RestrictedChart title="🏆 So Sánh Lương Nhân Viên" />
+            <p></p>
           )}
         </Col>
 
@@ -351,12 +353,14 @@ const SalaryCharts = ({
               </Card.Body>
             </Card>
           ) : (
-            <RestrictedChart title="🏢 Tổng Lương Theo Phòng Ban" />
+            // <RestrictedChart title="🏢 Tổng Lương Theo Phòng Ban" />
+            <p></p>
           )}
         </Col>
 
         {/* Biểu đồ 4: Phân bổ các khoản cấu thành lương - TẤT CẢ ĐƯỢC XEM */}
-        <Col xl={6} lg={12}>
+        <Col xl={12} lg={12}>
+         {!isHR ? (
           <Card className="shadow-sm border-0 rounded-card h-100">
             <Card.Header className="bg-info text-white">
               <h6 className="mb-0">
@@ -416,6 +420,9 @@ const SalaryCharts = ({
               )}
             </Card.Body>
           </Card>
+          ) : (
+            <p></p>
+          )}
         </Col>
       </Row>
 
