@@ -381,20 +381,22 @@ def passive_liveness_score(frames_bgr):
 
     # Nếu planar và mặt ~ nền lặp nhiều lần  -> nghi cầm điện thoại
     if planar and (screen_like_hits >= PARA_SCREEN_MIN_HITS):
-        return False, 0.30, "Planarity + parallax mặt~nền (nghi màn hình)"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
+        # return False, 0.30, "Planarity + parallax mặt~nền (nghi màn hình)"
 
     # Nếu planar và khung rất tĩnh, lại không có parallax 'live_like' -> nghi ảnh/màn hình
     if planar and (avg_ssim >= SSIM_SOFT) and (live_like_hits == 0):
-        return False, 0.30, "Planarity + tĩnh, thiếu parallax tự nhiên"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
 
     if screen_like_hits >= PARA_SCREEN_MIN_HITS:
-        return False, 0.30, "Parallax mặt ~ nền (giống cầm điện thoại)"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
     if (avg_ssim >= SSIM_HARD) and (mean_mag <= FLOW_VERY_LOW):
-        return False, 0.30, "Khung hình quá tĩnh (SSIM cao & flow rất thấp)"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
 
     # 8) yêu cầu có ít nhất 1 dấu hiệu 'live_like' & chuyển động đủ
     if live_like_hits < 1:
-        return False, 0.30, "Thiếu parallax tự nhiên của người thật"
+        # return False, 0.30, "Thiếu parallax tự nhiên của người thật"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
     if mean_mag < FLOW_MIN:
         return False, 0.30, "Chuyển động vi mô quá thấp"
 
@@ -480,7 +482,7 @@ def create_cham_cong_from_face_service_passive(payload):
         # fallback 1 ảnh
         img_one = read_image_from_base64(payload.get("image_base64"))
         if img_one is None:
-            return {"ok": False, "message": "Thiếu ảnh/frames"}, 400
+            return {"ok": False, "message": "Thiếu ảnh"}, 400
         if _lap_var(img_one) < 20:
             return {"ok": False, "message": "Ảnh quá mờ"}, 400
         best_img = img_one
