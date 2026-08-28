@@ -14,11 +14,7 @@ if not os.path.exists(UPLOAD_FOLDER_PHEPNAM):
     os.makedirs(UPLOAD_FOLDER_PHEPNAM)
 if not os.path.exists(UPLOAD_FOLDER_PHEPKL):
     os.makedirs(UPLOAD_FOLDER_PHEPKL)
-# danh sách MAC cho phép
-# danh sách MAC cho phép
-ALLOWED_MACS = [
-    m.strip() for m in os.getenv("ALLOWED_MACS", "").split(",") if m.strip()
-]
+
 class Config:
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'db_qlns.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False

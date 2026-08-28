@@ -12,17 +12,16 @@ const getUserInfo = () => {
       const nv = parsed.nhan_vien || {};
       return {
         username: nv.ho_ten || parsed.username || "Người dùng",
-        role: parsed.role?.ma_vai_tro || "user",
         phong_ban_id: nv.phong_ban_id,
         ten_phong_ban: nv.ten_phong_ban || "",
         avatar: nv.avatar || null,
         ten_chuc_vu: nv.ten_chuc_vu || "",
       };
     } catch {
-      return { username: "Người dùng", role: "user", phong_ban_id: null };
+      return { username: "Người dùng", phong_ban_id: null };
     }
   }
-  return { username: "Người dùng", role: "user", phong_ban_id: null };
+  return { username: "Người dùng", phong_ban_id: null };
 };
 
 const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = false, isOpen = true, expandSidebar = () => {} }) => {
@@ -54,7 +53,6 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
   ];
 
   const visibleModules = modules.filter((module) => {
-    if (module.roles && !module.roles.includes(userInfo.role)) return false;
     if (userInfo.phong_ban_id !== HR_DEPARTMENT_ID && restrictedPaths.includes(module.path))
       return false;
     return true;

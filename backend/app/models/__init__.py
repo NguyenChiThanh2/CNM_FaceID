@@ -21,11 +21,12 @@ from .thuong_nhanvien_model import ThuongNhanVien
 from .khau_tru_model import KhauTru
 from .khautru_nhanvien_model import KhauTruNhanVien
 from .bh_dn import BaoHiemDoanhNghiep
+from .thiet_bi_model import ThietBiChamCong
 
 __all__ = [
     'NhanVien', 'ChamCong', 'PhucLoi', 'NghiPhep', 'Luong',  'DanhGia',
     'NhanVienPhucLoi', 'PhongBan', 'ChucVu', 'LoaiNghiPhep',
     'HopDongLaoDong', 'QuyCheCongTy', 'GiayPhep', 'BangLuong', 'NguoiPhuThuoc', 'ChiTietLuong',
     'NgayNghiLe', 'Thuong', 'ThuongNhanVien', 'KhauTru', 'KhauTruNhanVien', 'BaoHiemDoanhNghiep',
-    
+    'ThietBiChamCong',
 ]

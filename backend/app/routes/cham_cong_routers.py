@@ -13,6 +13,7 @@ from app.services.cham_cong_service import (
     create_cham_cong_from_face_service_passive,
     create_cham_cong_from_face_service,  # giữ để tương thích nếu cần
 )
+from app.routes.facecheckin import find_active_device, get_device_token_from_request
 
 cham_cong_bp = Blueprint('cham_cong_bp', __name__, url_prefix='/api')
 
@@ -36,6 +37,10 @@ def delete_cham_cong_router(id):
 # Check-in (passive liveness nếu có frames; fallback 1 ảnh)
 @cham_cong_bp.route('/face-checkin', methods=['POST'])
 def face_checkin_router():
+    device = find_active_device(get_device_token_from_request())
+    if not device:
+        return jsonify({"ok": False, "message": "Thiết bị chưa được cấp quyền chấm công"}), 403
+
     data = request.get_json(silent=True) or {}
     # Ưu tiên route mới: dùng preview_token + frames (hoặc image_base64)
     if data.get("preview_token"):

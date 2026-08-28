@@ -30,8 +30,8 @@ import QuanLyGiayPhep from "./pages/modules/QuanLyGiayPhep";
 import Thuong from "./pages/modules/QuanLyThuong";
 import KhauTru from "./pages/modules/QuanLyKhauTru";
 import NgayNghiLe from "./pages/modules/QuanLyNgayNghiLe";
-import MacGuard from "./pages/MacGuard";
 import NguoiPhuThuocPage from "./pages/modules/QuanLyNguoiPhuThuoc";
+import DeviceGuard from "./pages/DeviceGuard";
 import QuanLyThueVaBaoHiem from "./pages/modules/QuanLyThueVaBaoHiem";
 import "./styles/danhgia.css";
 import { LayoutGrid } from "lucide-react";
@@ -148,9 +148,9 @@ const AppLayout = () => {
             <Route
               path="/cham-cong-face"
               element={
-                <MacGuard>
+                <DeviceGuard>
                   <FaceCheckIn />
-                </MacGuard>
+                </DeviceGuard>
               }
             />
             <Route

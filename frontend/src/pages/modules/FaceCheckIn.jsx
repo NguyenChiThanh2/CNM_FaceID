@@ -23,6 +23,7 @@ import {
   FaSyncAlt
 } from "react-icons/fa";
 import { createFaceDetector } from "../../lib/faceDetectorFallback";
+import { getDeviceToken } from "../DeviceGuard";
 
 const API_BASE = "http://127.0.0.1:5000";
 
@@ -250,7 +251,10 @@ export default function FaceCheckin() {
       setLoading(true);
       const res = await fetch(`${API_BASE}/api/face-checkin`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Token": getDeviceToken(),
+        },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
