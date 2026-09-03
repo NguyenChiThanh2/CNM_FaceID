@@ -40,6 +40,7 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
     { title: "Quản lý nhân sự", icon: "👤", path: "/nhan-su" },
     { title: "Quản lý chấm công", icon: "📷", path: "/quan-ly-cham-cong" },
     { title: "Nghỉ phép", icon: "📆", path: "/nghi-phep" },
+    { title: "Danh mục loại nghỉ phép", icon: "🗂️", path: "/loai-nghi-phep" },
     { title: "Giấy phép", icon: "📜", path: "/quan-ly-giay-phep" },
     { title: "Quản lý lương", icon: "💰", path: "/tinh-luong" },
     { title: "Thưởng", icon: "🎁", path: "/thuong" },

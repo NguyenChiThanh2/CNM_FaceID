@@ -10,6 +10,17 @@ from datetime import datetime, date, timedelta
 from config import UPLOAD_FOLDER, UPLOAD_FOLDER_PHEPNAM, UPLOAD_FOLDER_PHEPKL
 import shutil
 
+def get_upload_folder_and_prefix(loai_nghi_phep_id):
+    """Trả về (thư mục lưu file, tiền tố tên file) cho 1 loại nghỉ phép.
+    Chỉ 2 loại có sẵn từ trước ("Phép năm"=1, "Phép có lương"=2) dùng thư mục
+    riêng; MỌI loại khác (kể cả loại mới tự thêm sau này) dùng chung 1 thư mục
+    mặc định — để loại mới không bị lỗi "không hợp lệ" như dict cứng cũ."""
+    if str(loai_nghi_phep_id) == "1":
+        return UPLOAD_FOLDER_PHEPNAM, "nghiphepnam"
+    if str(loai_nghi_phep_id) == "2":
+        return UPLOAD_FOLDER_PHEPKL, "nghiphepcoluong"
+    return UPLOAD_FOLDER, "nghiphep"
+
 # Utility function to convert date string to datetime object
 def convert_to_datetime(date_string):
     try:
@@ -26,7 +37,7 @@ def get_all_nghi_phep_service():
     return NghiPhep.query.order_by(NghiPhep.id.desc()).all()
 
 def get_nghi_phep_by_id_service(id):
-    return NghiPhep.query.get(id)
+    return NghiPhep.query.filter_by(id=id).first()
 
 def get_nghi_phep_by_status_service(trang_thai):
     return NghiPhep.query.filter_by(trang_thai=trang_thai).all()
@@ -41,9 +52,10 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
                                                                                                     so_con=None,
                                                                                                     phuong_phap_sinh=None):
     # Kiểm tra loại nghỉ phép
-    if not LoaiNghiPhep.query.get(loai_nghi_phep_id):
+    loai = LoaiNghiPhep.query.get(loai_nghi_phep_id)
+    if not loai:
         raise ValueError("Loại nghỉ phép không tồn tại")
-    
+
     tu_ngay = convert_to_datetime(tu_ngay)
     den_ngay = convert_to_datetime(den_ngay)
     validate_dates(tu_ngay, den_ngay)
@@ -51,8 +63,10 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
     # Tính số ngày nghỉ mới
     so_ngay_nghi = (den_ngay - tu_ngay).days + 1
     nam = tu_ngay.year
-    # ========== QUY ĐỊNH NGHỈ THAI SẢN ==========
-    if loai_nghi_phep_id == "3":  # ví dụ id=3 là nghỉ thai sản
+    # ========== QUY ĐỊNH CHO LOẠI YÊU CẦU THÔNG TIN SINH (vd nghỉ thai sản) ==========
+    # Đọc cờ từ danh mục LoaiNghiPhep thay vì hardcode ID — loại nào bật cờ này
+    # (kể cả loại admin tự thêm sau này) đều áp dụng đúng quy định dưới đây.
+    if loai.yeu_cau_thong_tin_sinh:
         if not ngay_du_kien_sinh:
             raise ValueError("Phải nhập ngày dự kiến sinh hoặc nhận nuôi")
         
@@ -107,15 +121,10 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
     if file:
         filename = secure_filename(file.filename)
         ext = os.path.splitext(filename)[1]
-        if loai_nghi_phep_id == "1":
-            ten_file_moi = f"nghiphepnam_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
-            file.save(os.path.join(UPLOAD_FOLDER_PHEPNAM, ten_file_moi))
-        elif loai_nghi_phep_id == "2":
-            ten_file_moi = f"nghiphepcoluong_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
-            file.save(os.path.join(UPLOAD_FOLDER_PHEPKL, ten_file_moi))
-        else:
-            ten_file_moi = f"nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
-            file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
+        folder, prefix = get_upload_folder_and_prefix(loai_nghi_phep_id)
+        ten_file_moi = f"{prefix}_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+        os.makedirs(folder, exist_ok=True)
+        file.save(os.path.join(folder, ten_file_moi))
     # Tạo đơn nghỉ phép mới
     new_nghi_phep = NghiPhep(
         nhan_vien_id=nhan_vien_id,
@@ -156,19 +165,22 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
                                                                                                 so_con=None,
                                                                                                 phuong_phap_sinh=None,
                                                                                                 file_status=None):
-    nghi_phep = NghiPhep.query.get(id)
+    nghi_phep = NghiPhep.query.filter_by(id=id).first()
     if not nghi_phep:
         raise ValueError("Không tìm thấy đơn nghỉ phép")
     lnp_bandau = nghi_phep.loai_nghi_phep_id
+    loai = LoaiNghiPhep.query.get(loai_nghi_phep_id)
+    if not loai:
+        raise ValueError("Loại nghỉ phép không tồn tại")
     tu_ngay = parse_date(tu_ngay)
     den_ngay = parse_date(den_ngay)
     validate_dates(tu_ngay, den_ngay)
     # Tính số ngày nghỉ mới
     so_ngay_nghi = (den_ngay - tu_ngay).days + 1
     nam = tu_ngay.year
-    
-    # ========== QUY ĐỊNH NGHỈ THAI SẢN ==========
-    if loai_nghi_phep_id == "3":  # ví dụ id=3 là nghỉ thai sản
+
+    # ========== QUY ĐỊNH CHO LOẠI YÊU CẦU THÔNG TIN SINH (đọc cờ, không hardcode ID) ==========
+    if loai.yeu_cau_thong_tin_sinh:
         if not ngay_du_kien_sinh:
             raise ValueError("Phải nhập ngày dự kiến sinh hoặc nhận nuôi")
         
@@ -195,22 +207,32 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
     if not hopdong:
         raise ValueError("Không tìm thấy hợp đồng lao động cho nhân viên này")
 
-    # Tính tổng số ngày nghỉ phép trong năm đã có
-    tong_nghi_trong_nam = db.session.query(db.func.sum(NghiPhep.so_ngay_nghi)) \
+    # Tính tổng số ngày nghỉ phép trong năm đã có — loại trừ các loại "yêu cầu
+    # thông tin sinh" (không hardcode ID, join sang danh mục để đọc cờ)
+    ids_loai_tru = [
+        l.id for l in LoaiNghiPhep.query.filter_by(yeu_cau_thong_tin_sinh=True).all()
+    ]
+    tong_nghi_query = db.session.query(db.func.sum(NghiPhep.so_ngay_nghi)) \
         .filter(
             NghiPhep.nhan_vien_id == nhan_vien_id,
             NghiPhep.trang_thai == "Đã duyệt",
-            NghiPhep.loai_nghi_phep_id != 3,
             db.extract('year', NghiPhep.tu_ngay) == nam
-        ).scalar() or 0
+        )
+    if ids_loai_tru:
+        tong_nghi_query = tong_nghi_query.filter(~NghiPhep.loai_nghi_phep_id.in_(ids_loai_tru))
+    tong_nghi_trong_nam = tong_nghi_query.scalar() or 0
 
     # Tổng số ngày sau khi cộng thêm đơn mới
     tong_nghi_du_kien = tong_nghi_trong_nam + so_ngay_nghi
 
+    # NOTE: quy định "vượt quá quỹ phép năm" hiện chỉ áp dụng cho đúng loại
+    # id=1 ("Phép năm") — đây là quy tắc nghiệp vụ riêng biệt (gắn với
+    # hopdong.phep_nam), CHƯA tổng quát hóa theo cờ vì cần quyết định nghiệp vụ
+    # thêm (loại mới nào thì tính vào quỹ phép năm?) trước khi sửa tiếp.
     if loai_nghi_phep_id == '1' and tong_nghi_du_kien > hopdong.phep_nam:
         vuot_qua = tong_nghi_du_kien - hopdong.phep_nam
         raise ValueError(f"Số ngày nghỉ phép vượt quá {vuot_qua} ngày so với phép năm")
-    
+
     # Update các trường cơ bản
     nghi_phep.nhan_vien_id = nhan_vien_id
     nghi_phep.loai_nghi_phep_id = loai_nghi_phep_id
@@ -219,8 +241,8 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
     nghi_phep.ly_do = ly_do
     nghi_phep.trang_thai = trang_thai
     nghi_phep.so_ngay_nghi = so_ngay_nghi
-    
-    if loai_nghi_phep_id == "3":
+
+    if loai.yeu_cau_thong_tin_sinh:
         if isinstance(ngay_du_kien_sinh, str):
             ngay_du_kien_sinh = parse_date(ngay_du_kien_sinh).date()
         elif isinstance(ngay_du_kien_sinh, datetime):
@@ -229,17 +251,18 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
             pass  # đã đúng kiểu, giữ nguyên
     else:
         ngay_du_kien_sinh = None
-        
+
     nghi_phep.ngay_du_kien_sinh = ngay_du_kien_sinh
     nghi_phep.so_con = so_con
     nghi_phep.phuong_phap_sinh = phuong_phap_sinh
-    
-    if loai_nghi_phep_id == "3" and trang_thai == "Đã duyệt":
-        # Nếu là nghỉ thai sản và đã duyệt, đảm bảo ngày dự kiến sinh không bị xóa
+
+    if loai.yeu_cau_thong_tin_sinh and trang_thai == "Đã duyệt":
+        # Nếu là loại yêu cầu thông tin sinh và đã duyệt, đảm bảo dữ liệu không bị xóa
         if file:
             filename = secure_filename(file.filename)
             ext = os.path.splitext(filename)[1]
-            ten_file_moi = f"xinlamlaisom_nghiphepthaisan_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+            ten_file_moi = f"xinlamlaisom_nghiphep_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
             file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
             nghi_phep.file_bo_sung = ten_file_moi
     else:
@@ -247,37 +270,21 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
             filename = nghi_phep.can_cu_phap_ly_file
             if not filename:
                 return
-            LOAI_NGHI_PHEP_FOLDER = {
-                "1": UPLOAD_FOLDER_PHEPNAM,
-                "2": UPLOAD_FOLDER_PHEPKL,
-                "3": UPLOAD_FOLDER,  # Thai sản
-            }
 
-            # Đảm bảo thư mục tồn tại
-            for folder in LOAI_NGHI_PHEP_FOLDER.values():
-                os.makedirs(folder, exist_ok=True)
-                
-            old_folder = LOAI_NGHI_PHEP_FOLDER.get(str(lnp_bandau))
-            new_folder = LOAI_NGHI_PHEP_FOLDER.get(str(loai_nghi_phep_id))
-
-            if not old_folder or not new_folder:
-                print("❌ Loại nghỉ phép không hợp lệ")
-                return
+            old_folder, _ = get_upload_folder_and_prefix(lnp_bandau)
+            new_folder, prefix = get_upload_folder_and_prefix(loai_nghi_phep_id)
+            os.makedirs(old_folder, exist_ok=True)
+            os.makedirs(new_folder, exist_ok=True)
 
             old_path = os.path.join(old_folder, filename)
             new_path = os.path.join(new_folder, filename)
 
             # Nếu thay đổi loại nghỉ phép -> move file
             if old_folder != new_folder and os.path.exists(old_path):
-                os.makedirs(new_folder, exist_ok=True)
                 shutil.move(old_path, new_path)
 
             # Đổi tên file để rõ ràng hơn
             ext = os.path.splitext(filename)[1]
-            prefix = "nghiphepnam" if loai_nghi_phep_id == "1" else \
-                    "nghiphepcoluong" if loai_nghi_phep_id == "2" else \
-                    "nghiphepthaisan"
-
             new_filename = f"{prefix}_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
 
             final_path = os.path.join(new_folder, new_filename)
@@ -322,7 +329,7 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
 def approve_nghi_phep_service(id):
     try:
         # Lấy đơn nghỉ phép theo id
-        nghi_phep = NghiPhep.query.get(id)
+        nghi_phep = NghiPhep.query.filter_by(id=id).first()
         if not nghi_phep:
             raise ValueError("Nghỉ phép không tồn tại")
 
@@ -332,14 +339,13 @@ def approve_nghi_phep_service(id):
 
         # Duyệt đơn nghỉ phép và cập nhật trạng thái
         nghi_phep.trang_thai = "Đã duyệt"
-        
-        # Cập nhật số ngày nghỉ phép còn lại của nhân viên
-        nhan_vien = nghi_phep.nhan_vien  # Giả sử có quan hệ với bảng `NhanVien`
-        if nhan_vien:
-            nhan_vien.so_ngay_phep_con_lai -= nghi_phep.so_ngay_nghi  # Trừ số ngày nghỉ đã duyệt
-            db.session.commit()
 
-        # Lưu lại trạng thái và trả về đơn nghỉ phép đã duyệt
+        # Chỉ trừ ngày phép còn lại nếu loại nghỉ phép này có co_luong=True
+        # (đọc từ danh mục LoaiNghiPhep, không hardcode tên loại)
+        nhan_vien = nghi_phep.nhan_vien
+        if nhan_vien and nghi_phep.loai_nghi_phep and nghi_phep.loai_nghi_phep.co_luong:
+            nhan_vien.so_ngay_phep_con_lai -= nghi_phep.so_ngay_nghi
+
         db.session.commit()
         return nghi_phep
     except Exception as e:
@@ -350,7 +356,7 @@ def approve_nghi_phep_service(id):
 
 def reject_nghi_phep_service(id):
     try:
-        nghi_phep = NghiPhep.query.get(id)
+        nghi_phep = NghiPhep.query.filter_by(id=id).first()
         if not nghi_phep:
             raise ValueError("Nghỉ phép không tồn tại")
 
@@ -366,7 +372,7 @@ def reject_nghi_phep_service(id):
 
 def delete_nghi_phep_service(id):
     try:
-        nghi_phep = NghiPhep.query.get(id)
+        nghi_phep = NghiPhep.query.filter_by(id=id).first()
         if not nghi_phep:
             raise ValueError("Nghỉ phép không tồn tại")
         if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER, nghi_phep.can_cu_phap_ly_file)):
@@ -376,7 +382,7 @@ def delete_nghi_phep_service(id):
         if nghi_phep.can_cu_phap_ly_file and os.path.exists(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file)):
             os.remove(os.path.join(UPLOAD_FOLDER_PHEPKL, nghi_phep.can_cu_phap_ly_file))
         # Xóa đơn nghỉ phép
-        db.session.delete(nghi_phep)
+        nghi_phep.soft_delete()
         db.session.commit()
         return True
     except Exception as e:
@@ -386,7 +392,7 @@ def delete_nghi_phep_service(id):
 
 def cancle_nghi_phep_service(id):
     try:
-        nghi_phep = NghiPhep.query.get(id)
+        nghi_phep = NghiPhep.query.filter_by(id=id).first()
         if not nghi_phep:
             raise ValueError("Nghỉ phép không tồn tại")
 

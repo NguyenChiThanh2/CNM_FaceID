@@ -4,6 +4,8 @@ from datetime import datetime, date
 from sqlalchemy import UniqueConstraint, CheckConstraint, Enum as SAEnum, event
 from sqlalchemy.ext.hybrid import hybrid_property
 from urllib.parse import urlparse
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
 # ===== Helpers =====
 def _is_http_url(s: str) -> bool:
@@ -35,19 +37,19 @@ DEFAULT_WEIGHTS = {
     "chu_dong":   0.10,  # 10%
 }
 
-class DanhGia(db.Model):
+class DanhGia(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = "danh_gia"
 
     id = db.Column(db.Integer, primary_key=True)
 
     # Liên kết nhân viên được đánh giá và người chấm
-    nhan_vien_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=False)
-    nguoi_danh_gia_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=False)
+    nhan_vien_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=False, index=True)
+    nguoi_danh_gia_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=False, index=True)
 
     # Kỳ đánh giá
     ky_ngay = db.Column(db.Date, nullable=False, default=lambda: date(date.today().year, date.today().month, 1))
     ky_loai = db.Column(
-        SAEnum("MONTH", "QUARTER", "YEAR", name="enum_ky_loai"),
+        SAEnum("MONTH", "QUARTER", "YEAR", name="enum_ky_loai", create_constraint=True),
         nullable=False,
         default="MONTH",
     )
@@ -78,7 +80,7 @@ class DanhGia(db.Model):
 
     # Phương thức & trạng thái (giữ nguyên theo file bạn đang dùng)
     phuong_thuc = db.Column(
-        SAEnum("SELF", "MANAGER", "PEER", "_360", name="enum_phuong_thuc"),
+        SAEnum("SELF", "MANAGER", "PEER", "_360", name="enum_phuong_thuc", create_constraint=True),
         nullable=False,
         default="MANAGER",
     )

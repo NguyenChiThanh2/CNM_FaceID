@@ -166,7 +166,7 @@ def remove_nhan_vien_from_khau_tru_service(khau_tru_id, nhan_vien_id):
     ).first()
 
     if entry:
-        db.session.delete(entry)
+        entry.soft_delete()
         db.session.commit()
         return "Xóa nhân viên khỏi khấu trừ thành công", None, 200
     else:

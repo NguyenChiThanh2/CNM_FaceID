@@ -1,18 +1,20 @@
 from app import db
 from app.models.phuc_loi_model import PhucLoi
 from app.models.nhan_vien_model import NhanVien
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
-class NhanVienPhucLoi(db.Model):
+class NhanVienPhucLoi(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = 'nhan_vien_phuc_loi'
 
     id = db.Column(db.Integer, primary_key=True)
-    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'))
-    phuc_loi_id = db.Column(db.Integer, db.ForeignKey('phuc_loi.id'))
+    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), index=True)
+    phuc_loi_id = db.Column(db.Integer, db.ForeignKey('phuc_loi.id'), index=True)
     ngay_ap_dung = db.Column(db.Date)
     ghi_chu = db.Column(db.String(200))
 
     # Quan hệ ngược
-    nhan_vien = db.relationship("NhanVien", back_populates="phuc_lois")
+    nhan_vien = db.relationship("NhanVien", foreign_keys=[nhan_vien_id], back_populates="phuc_lois")
     phuc_loi = db.relationship("PhucLoi", back_populates="nhan_vien_phuc_lois")
 
     def __repr__(self):

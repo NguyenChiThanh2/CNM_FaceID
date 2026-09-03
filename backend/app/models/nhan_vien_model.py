@@ -1,8 +1,38 @@
 from app import db
 import face_recognition
+import numpy as np
 from sqlalchemy import Float
+from sqlalchemy.types import TypeDecorator, LargeBinary
 from app.models.bang_cap_chung_chi_model import BangCapChungChi
-class NhanVien(db.Model):
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
+
+
+class FaceEncodingType(TypeDecorator):
+    """Lưu face_encoding dạng raw bytes (float64) thay vì pickle.
+
+    PickleType gọi pickle.loads() khi đọc dữ liệu — pickle cho phép thực thi
+    mã tùy ý nếu bytes trong cột từng bị thay đổi bởi ai đó có quyền ghi DB
+    (insecure deserialization, CWE-502). Một mảng 128 số thực không cần cấu
+    trúc Python phức tạp, nên lưu bytes thô là đủ và an toàn hơn.
+    """
+    impl = LargeBinary
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return np.asarray(value, dtype=np.float64).tobytes()
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        # trả về list (không phải ndarray) để giữ nguyên hành vi cũ ở nơi gọi
+        # (vd. `if not self.face_encoding` sẽ lỗi ValueError nếu là ndarray)
+        return np.frombuffer(value, dtype=np.float64).tolist()
+
+
+class NhanVien(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = 'nhan_vien'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -12,25 +42,32 @@ class NhanVien(db.Model):
     so_dien_thoai = db.Column(db.String(20), unique=True)
     email = db.Column(db.String(100), unique=True)
     dia_chi = db.Column(db.String(255))
-    phong_ban_id = db.Column(db.Integer, db.ForeignKey('phong_ban.id'))
-    chuc_vu_id = db.Column(db.Integer, db.ForeignKey('chuc_vu.id'))
+    phong_ban_id = db.Column(db.Integer, db.ForeignKey('phong_ban.id'), index=True)
+    chuc_vu_id = db.Column(db.Integer, db.ForeignKey('chuc_vu.id'), index=True)
     avatar = db.Column(db.String(255), nullable=True)
-    trang_thai = db.Column(db.String(50))
+    trang_thai = db.Column(
+        db.Enum('Đang làm việc', 'Đã nghỉ việc', 'Tạm nghỉ', 'Thử việc', name='trang_thai_nhan_vien_enum', create_constraint=True)
+    )
     so_ngay_phep_con_lai = db.Column(db.Integer, default=12)
-    face_encoding = db.Column(db.PickleType, nullable=True)
+    face_encoding = db.Column(FaceEncodingType, nullable=True)
     password = db.Column(db.String(255)) 
     # Relationships
     phong_ban = db.relationship('PhongBan', back_populates='phong_ban_nv', lazy=True)
     chuc_vu_nv = db.relationship('ChucVu', back_populates='chuc_vu_nv', lazy=True)
-    cham_cong_nv = db.relationship('ChamCong', back_populates='cham_cong_nv', lazy=True)
-    nghi_phep = db.relationship('NghiPhep', back_populates='nhan_vien', lazy=True)
+    cham_cong_nv = db.relationship('ChamCong', foreign_keys='ChamCong.nhan_vien_id', back_populates='cham_cong_nv', lazy=True)
+    nghi_phep = db.relationship(
+        'NghiPhep',
+        foreign_keys='NghiPhep.nhan_vien_id',
+        back_populates='nhan_vien',
+        lazy=True
+    )
     luong_nv = db.relationship('Luong', back_populates='luong_nv', lazy=True)
-    phuc_lois = db.relationship('NhanVienPhucLoi', back_populates='nhan_vien', lazy=True)
-    hopdong_nv = db.relationship("HopDongLaoDong", back_populates="hopdong_nv", lazy=True)
-    bang_luong_nhan_vien = db.relationship('BangLuong', back_populates='bang_luong_nhan_vien', lazy=True)
-    NguoiPhuThuoc_nv = db.relationship("NguoiPhuThuoc", back_populates="NguoiPhuThuoc_nv", lazy=True)
-    thuong_nhanvien = db.relationship('ThuongNhanVien', back_populates='nhanvien', lazy=True)    
-    chung_chi_list = db.relationship("BangCapChungChi", back_populates="nhan_vien",cascade="all, delete-orphan",lazy=True)
+    phuc_lois = db.relationship('NhanVienPhucLoi', foreign_keys='NhanVienPhucLoi.nhan_vien_id', back_populates='nhan_vien', lazy=True)
+    hopdong_nv = db.relationship("HopDongLaoDong", foreign_keys='HopDongLaoDong.nhan_vien_id', back_populates="hopdong_nv", lazy=True)
+    bang_luong_nhan_vien = db.relationship('BangLuong', foreign_keys='BangLuong.nhan_vien_id', back_populates='bang_luong_nhan_vien', lazy=True)
+    NguoiPhuThuoc_nv = db.relationship("NguoiPhuThuoc", foreign_keys='NguoiPhuThuoc.nhan_vien_id', back_populates="NguoiPhuThuoc_nv", lazy=True)
+    thuong_nhanvien = db.relationship('ThuongNhanVien', foreign_keys='ThuongNhanVien.nhanvien_id', back_populates='nhanvien', lazy=True)
+    chung_chi_list = db.relationship("BangCapChungChi", foreign_keys='BangCapChungChi.nhan_vien_id', back_populates="nhan_vien", lazy=True)
     # Các đánh giá nhận và tạo (2 quan hệ khác nhau đến cùng một bảng)
     danh_gias_nhan = db.relationship(
         'DanhGia',
@@ -56,18 +93,21 @@ class NhanVien(db.Model):
     khautru_list = db.relationship(
         "KhauTru",
         secondary="khautru_nhanvien",
+        primaryjoin="NhanVien.id == KhauTruNhanVien.nhan_vien_id",
+        secondaryjoin="KhauTru.id == KhauTruNhanVien.khau_tru_id",
         back_populates="nhan_viens",
         overlaps="khautru_nhanvien_list,nhan_vien"
     )
     khautru_nhanvien_list = db.relationship(
         "KhauTruNhanVien",
+        foreign_keys='KhauTruNhanVien.nhan_vien_id',
         back_populates="nhan_vien",
         overlaps="khautru_list,nhan_viens"
     )
-    bao_hiem_doanh_nghiep = db.relationship('BaoHiemDoanhNghiep', 
-                                           back_populates='nhan_vien', 
-                                           lazy=True,
-                                           cascade='all, delete-orphan')
+    bao_hiem_doanh_nghiep = db.relationship('BaoHiemDoanhNghiep',
+                                           foreign_keys='BaoHiemDoanhNghiep.nhan_vien_id',
+                                           back_populates='nhan_vien',
+                                           lazy=True)
 
     def __repr__(self):
         return f"<NhanVien {self.ho_ten}>"

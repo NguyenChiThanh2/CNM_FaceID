@@ -63,7 +63,7 @@ def get_chinhsach(nhanvien_id: int, ngay: date):
     if hopdong:
         return hopdong
     else:
-        ho_ten = NhanVien.query.get(nhanvien_id).ho_ten
+        ho_ten = NhanVien.query.filter_by(id=nhanvien_id).first().ho_ten
         return f"Hợp đồng lao động hết hiệu lực ID= {nhanvien_id}, Tên= {ho_ten}"
     
 
@@ -1002,7 +1002,7 @@ def get_tinhsocong_1nhanvien_theothang_service(nhan_vien_id, thang, nam):
         return True
     
 def get_tinhsocong_theogiayphep_service(id):
-    cham_cong = ChamCong.query.get(id)
+    cham_cong = ChamCong.query.filter_by(id=id).first()
     giay_phep = GiayPhep.query.filter(GiayPhep.cham_cong_id == id, GiayPhep.trang_thai == "Đã duyệt").first()
 
     if not cham_cong or not giay_phep:

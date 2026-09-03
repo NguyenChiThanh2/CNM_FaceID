@@ -7,7 +7,7 @@ class KhauTru(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ten_khau_tru = db.Column(db.String(255), nullable=False)
     loai_khau_tru = db.Column(
-        db.Enum('UNG_LUONG', 'VI_PHAM', 'TRU_KHAC', name='loai_khau_tru_enum'),
+        db.Enum('UNG_LUONG', 'VI_PHAM', 'TRU_KHAC', name='loai_khau_tru_enum', create_constraint=True),
         nullable=False
     )
     so_tien = db.Column(db.Numeric(18, 2), nullable=False)
@@ -26,6 +26,8 @@ class KhauTru(db.Model):
     nhan_viens = db.relationship(
         "NhanVien",
         secondary="khautru_nhanvien",
+        primaryjoin="KhauTru.id == KhauTruNhanVien.khau_tru_id",
+        secondaryjoin="NhanVien.id == KhauTruNhanVien.nhan_vien_id",
         back_populates="khautru_list",
         overlaps="khautru_nhanvien_list,nhan_vien"
     )

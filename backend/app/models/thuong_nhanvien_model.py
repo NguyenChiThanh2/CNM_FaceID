@@ -1,16 +1,18 @@
 
 from app import db
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
-class ThuongNhanVien(db.Model):
+class ThuongNhanVien(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = 'nhanvien_thuong'
     id = db.Column(db.Integer, primary_key=True)
-    nhanvien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False)
-    thuong_id = db.Column(db.Integer, db.ForeignKey('thuong.id', ondelete="CASCADE"), nullable=False)
+    nhanvien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False, index=True)
+    thuong_id = db.Column(db.Integer, db.ForeignKey('thuong.id', ondelete="CASCADE"), nullable=False, index=True)
     trang_thai = db.Column(db.String(50), default="Chưa chi trả")
     so_tien_thuc_te = db.Column(db.Numeric(15, 2), nullable=True)
 
     thuong = db.relationship('Thuong', back_populates='thuong_nhanvien', lazy=True)
-    nhanvien = db.relationship('NhanVien', back_populates='thuong_nhanvien', lazy=True)
+    nhanvien = db.relationship('NhanVien', foreign_keys=[nhanvien_id], back_populates='thuong_nhanvien', lazy=True)
 
     def __repr__(self):
         return f"<ThuongNhanVien loai={self.thuong.loai_thuong}, so_tien={self.thuong.so_tien}, ten_thuong={self.thuong.ten_thuong}, so_tien_thuc_te={self.so_tien_thuc_te} >"

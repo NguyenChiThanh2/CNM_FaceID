@@ -1,7 +1,9 @@
 from app import db
 from sqlalchemy import extract, func
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
-class BaoHiemDoanhNghiep(db.Model):
+class BaoHiemDoanhNghiep(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = 'bh_dn'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -15,7 +17,7 @@ class BaoHiemDoanhNghiep(db.Model):
     ghi_chu = db.Column(db.String(255))
     
     # Foreign key relationships
-    nhan_vien = db.relationship('NhanVien', back_populates='bao_hiem_doanh_nghiep', lazy=True)
+    nhan_vien = db.relationship('NhanVien', foreign_keys=[nhan_vien_id], back_populates='bao_hiem_doanh_nghiep', lazy=True)
     
     # Indexes for better performance
     __table_args__ = (
@@ -41,9 +43,8 @@ class BaoHiemDoanhNghiep(db.Model):
         if self.nhan_vien:
             nhan_vien_info = {
                 "ho_ten": self.nhan_vien.ho_ten,
-                "ma_nhan_vien": self.nhan_vien.ma_nhan_vien,
                 "phong_ban": self.nhan_vien.phong_ban.ten_phong_ban if self.nhan_vien.phong_ban else None,
-                "chuc_vu": self.nhan_vien.chuc_vu.ten_chuc_vu if self.nhan_vien.chuc_vu else None
+                "chuc_vu": self.nhan_vien.chuc_vu_nv.ten_chuc_vu if self.nhan_vien.chuc_vu_nv else None
             }
         
         return {

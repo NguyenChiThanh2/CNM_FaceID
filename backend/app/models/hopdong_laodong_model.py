@@ -1,12 +1,14 @@
 from datetime import datetime
 from app import db
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
-class HopDongLaoDong(db.Model):
+class HopDongLaoDong(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = "hopdong_laodong"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    nhan_vien_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=False)
-    quyche_id = db.Column(db.Integer, db.ForeignKey('quyche_congty.id'), nullable=True)
+    nhan_vien_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=False, index=True)
+    quyche_id = db.Column(db.Integer, db.ForeignKey('quyche_congty.id'), nullable=True, index=True)
 
     ngay_bat_dau = db.Column(db.Date, nullable=False)
     ngay_ket_thuc = db.Column(db.Date, nullable=True)
@@ -36,7 +38,7 @@ class HopDongLaoDong(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    hopdong_nv = db.relationship("NhanVien", back_populates="hopdong_nv", lazy=True)
+    hopdong_nv = db.relationship("NhanVien", foreign_keys=[nhan_vien_id], back_populates="hopdong_nv", lazy=True)
     hopdong_quyche = db.relationship("QuyCheCongTy", back_populates="hopdong_quyche", lazy=True)
 
     def __repr__(self):

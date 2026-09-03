@@ -45,7 +45,7 @@ Mỗi bước có 5 phần: **Mục tiêu** (làm gì) · **Tại sao** (khái n
 
 ---
 
-## BƯỚC 3 (D1) — Hợp nhất `NghiPhep` và `GiayPhep`
+## BƯỚC 3 (D1) — Hợp nhất `NghiPhep` và `GiayPhep` — ⚠️ TẠM DỪNG (xem cập nhật 2026-08-29 cuối mục này)
 
 **Mục tiêu:** Chỉ còn 1 domain duy nhất cho "vắng mặt có duyệt", không còn 2 bảng đại diện cùng 1 khái niệm nghiệp vụ.
 
@@ -60,6 +60,21 @@ Mỗi bước có 5 phần: **Mục tiêu** (làm gì) · **Tại sao** (khái n
 **Việc bạn tự làm:** Tự liệt kê danh sách loại vắng mặt thực tế (bước 1-2 ở trên) — đây là phần BA, chỉ bạn trả lời được, không phải tôi.
 
 **Kiểm tra xong chưa:** Chỉ còn 1 bảng nghiệp vụ, 1 API duy nhất, dữ liệu cũ đã migrate đủ (đếm số dòng trước/sau khớp nhau).
+
+### ⚠️ CẬP NHẬT 2026-08-29 — Dừng ở giai đoạn giữa chừng, có chủ đích
+
+Đã làm (an toàn, không đụng dữ liệu/logic cũ):
+- Thêm cột `don_vi_tinh`, `yeu_cau_cham_cong` vào `LoaiNghiPhep`
+- Thêm cột `cham_cong_id`, `so_gio`, `nguoi_duyet_id`, `ngay_duyet`, `ly_do_tu_choi`, `created_at`, `updated_at` vào `NghiPhep`
+- Sửa bug quan hệ `NhanVien.nghi_phep` (2 FK gây mơ hồ, đã fix `foreign_keys=`)
+
+**CHƯA làm và tạm dừng có chủ đích:**
+- Chưa di chuyển 2 dòng dữ liệu thật từ `giay_phep` sang `nghi_phep`
+- Chưa xóa bảng `giay_phep`, chưa sửa route/controller/FE của nó
+
+**Lý do dừng:** Phát hiện `backend/app/services/tinh_luong_service.py` (dòng 492-493, 1006-1012) và `cham_cong_service.py` **đọc trực tiếp bảng `giay_phep`** với quy tắc nghiệp vụ cụ thể (`so_gio == 8` → 1 công, `so_gio == 4` → nửa công; lọc `loai_giay_phep == "Tăng ca"` để tính thêm giờ) để **tính lương thật**. Đây có thể là thiết kế có chủ đích riêng cho bài toán payroll, không hẳn là trùng lặp domain như đánh giá ban đầu ở `04-database-review.md`. Trước khi tiếp tục hợp nhất, cần người hiểu rõ ý đồ ban đầu của phần code này xác nhận lại — không tự suy đoán và sửa tiếp để tránh làm sai số liệu lương thật.
+
+**Việc cần làm trước khi mở lại Bước 3:** xác nhận với người viết `tinh_luong_service.py` (hoặc tự bạn nhớ lại) xem quy tắc `so_gio==8/4` và lọc `"Tăng ca"` có ý nghĩa gì, có nên giữ `GiayPhep` như 1 domain "điều chỉnh chấm công ảnh hưởng lương" tách biệt hẳn khỏi `NghiPhep` hay không.
 
 ---
 

@@ -43,7 +43,7 @@ def get_all_nhan_vien_service():
     return NhanVien.query.all()
 
 def get_nhan_vien_by_id_service(id):
-    thongtin = NhanVien.query.get(id)
+    thongtin = NhanVien.query.filter_by(id=id).first()
     phep_nam = get_phep_nam_hop_dong_hien_tai(id)
     tong_ngay_nghi = get_tong_ngay_nghi_trong_nam(id)
     so_ngay_nghi_con_lai = phep_nam - tong_ngay_nghi
@@ -153,7 +153,7 @@ def delete_nhan_vien_service(id):
         return {'error': 'Không tìm thấy nhân viên'}
 
     try:
-        db.session.delete(nhan_vien)
+        nhan_vien.soft_delete()  # xóa mềm — giữ lại lịch sử lương/chứng chỉ/bảo hiểm
         db.session.commit()
         return {'message': 'Xóa nhân viên thành công'}
     except SQLAlchemyError as e:

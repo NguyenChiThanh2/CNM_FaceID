@@ -79,13 +79,20 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
       [name]: value,
     }));
   };
+  // Tìm loại nghỉ phép đang chọn để đọc cờ yeu_cau_thong_tin_sinh — thay vì
+  // hardcode ID, để loại mới tự thêm sau này (được bật cờ này) cũng hoạt động đúng
+  const selectedLoai = loaiNghiPhepList.find(
+    (l) => l.id === parseInt(formData.loai_nghi_phep_id)
+  );
+  const yeuCauThongTinSinh = selectedLoai?.yeu_cau_thong_tin_sinh || false;
+
   const handleDateChange = (date, field) => {
     if (!date) return;
 
     const formattedDate = date.toISOString().split("T")[0];
 
-    // Nếu là nghỉ thai sản và đổi TU_NGAY → tự set DEN_NGAY = +6 tháng
-    if (field === "tu_ngay" && parseInt(formData.loai_nghi_phep_id) === 3) {
+    // Nếu loại yêu cầu thông tin sinh và đổi TU_NGAY → tự set DEN_NGAY = +6 tháng
+    if (field === "tu_ngay" && yeuCauThongTinSinh) {
       const endDate = new Date(date);
       endDate.setMonth(endDate.getMonth() + 6);
 
@@ -219,8 +226,8 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
           </select>
         </div>
 
-        {/* Trường bổ sung cho nghỉ thai sản */}
-        {parseInt(formData.loai_nghi_phep_id) === 3 && (
+        {/* Trường bổ sung cho loại yêu cầu thông tin sinh (vd nghỉ thai sản) */}
+        {yeuCauThongTinSinh && (
           <>
             <div className="mb-3">
               <label className="form-label me-3">

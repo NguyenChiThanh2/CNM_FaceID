@@ -222,7 +222,7 @@ def create_hop_dong():
 
 @hopdong_bp.route("/hop-dong/<int:id>", methods=["PUT"])
 def update_hop_dong(id):
-    hopdong = HopDongLaoDong.query.get(id)
+    hopdong = HopDongLaoDong.query.filter_by(id=id).first()
     if not hopdong:
         return jsonify({"message": "Không tìm thấy hợp đồng"}), 404
 

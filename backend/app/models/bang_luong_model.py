@@ -1,11 +1,13 @@
 from app import db
 from sqlalchemy import extract, func
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
-class BangLuong(db.Model):
+class BangLuong(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = 'bang_luong'
 
     id = db.Column(db.Integer, primary_key=True)
-    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False)
+    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False, index=True)
     thang = db.Column(db.Integer, nullable=False)
     nam = db.Column(db.Integer, nullable=False)
     ngay_cong_chuan = db.Column(db.Integer, default=0)
@@ -31,8 +33,12 @@ class BangLuong(db.Model):
     thuc_nhan = db.Column(db.Float, default=0.0)
     ghi_chu = db.Column(db.String(255))
 
-    bang_luong_nhan_vien = db.relationship('NhanVien', back_populates='bang_luong_nhan_vien', lazy=True)
+    bang_luong_nhan_vien = db.relationship('NhanVien', foreign_keys=[nhan_vien_id], back_populates='bang_luong_nhan_vien', lazy=True)
     chi_tiet_luong_bang_luong = db.relationship('ChiTietLuong', back_populates='chi_tiet_luong_bang_luong', lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('nhan_vien_id', 'thang', 'nam', name='uq_bangluong_nv_ky'),
+    )
 
     def to_dict(self):
         return {

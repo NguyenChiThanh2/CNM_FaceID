@@ -1,18 +1,21 @@
 # models/khautru_nhanvien.py
 from app import db
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
-class KhauTruNhanVien(db.Model):
+class KhauTruNhanVien(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = 'khautru_nhanvien'
 
     id = db.Column(db.Integer, primary_key=True)
-    khau_tru_id = db.Column(db.Integer, db.ForeignKey('khau_tru.id', ondelete='CASCADE'), nullable=False)
-    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id', ondelete='CASCADE'), nullable=False)
+    khau_tru_id = db.Column(db.Integer, db.ForeignKey('khau_tru.id', ondelete='CASCADE'), nullable=False, index=True)
+    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id', ondelete='CASCADE'), nullable=False, index=True)
     so_tien_thuc_te = db.Column(db.Numeric(15, 2), nullable=True)
 
     # khau_tru = db.relationship('KhauTru', backref=db.backref('khautru_nhanvien_list', cascade="all, delete-orphan"))
     # nhan_vien = db.relationship('NhanVien', backref=db.backref('khautru_nhanvien_list', cascade="all, delete-orphan"))
     nhan_vien = db.relationship(
         "NhanVien",
+        foreign_keys=[nhan_vien_id],
         back_populates="khautru_nhanvien_list",
         overlaps="khautru_list,nhan_viens"
     )

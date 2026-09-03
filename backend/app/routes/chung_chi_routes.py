@@ -16,7 +16,7 @@ def allowed_cert(filename):
 
 @chung_chi_bp.route("/nhan_vien/<int:nv_id>/chung_chi", methods=["POST"])
 def create_chung_chi(nv_id):
-    nv = NhanVien.query.get_or_404(nv_id)
+    nv = NhanVien.query.filter_by(id=nv_id).first_or_404()
 
     # --- nhận file đính kèm (field tên "tep") ---
     f = request.files.get("tep")
@@ -89,7 +89,7 @@ def list_chung_chi(nv_id):
 
 @chung_chi_bp.route("/chung_chi/<int:cc_id>", methods=["DELETE"])
 def delete_chung_chi(cc_id):
-    cc = BangCapChungChi.query.get_or_404(cc_id)
+    cc = BangCapChungChi.query.filter_by(id=cc_id).first_or_404()
 
     # Xóa file vật lý nếu có
     if cc.tep_dinh_kem:
@@ -106,6 +106,6 @@ def delete_chung_chi(cc_id):
                 current_app.logger.exception(f"Không xóa được file {abs_path}: {e}")
                 # (tuỳ bạn: có thể return 500 nếu muốn bắt buộc xóa file)
 
-    db.session.delete(cc)
+    cc.soft_delete()
     db.session.commit()
     return jsonify({"message": "Đã xóa chứng chỉ và (nếu có) file đính kèm."}), 200

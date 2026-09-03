@@ -14,10 +14,10 @@ def get_bang_luong_1nv_service(nhan_vien_id):
 
 # Xóa bảng lương theo ID
 def delete_bangluong_service(id):
-    bangLuong = BangLuong.query.get(id)
+    bangLuong = BangLuong.query.filter_by(id=id).first()
     if bangLuong:
         try:
-            db.session.delete(bangLuong)
+            bangLuong.soft_delete()
             db.session.commit()
             return True
         except Exception as e:

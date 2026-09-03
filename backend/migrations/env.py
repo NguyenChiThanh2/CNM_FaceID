@@ -97,6 +97,21 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        # SQLite: batch_alter_table dựng lại bảng (CREATE tạm -> COPY -> DROP cũ
+        # -> RENAME). Nếu PRAGMA foreign_keys=ON đang bật (bật thật ở runtime,
+        # xem app/__init__.py), bước DROP bảng cha sẽ bị chặn bởi FK từ bảng con
+        # trỏ tới. Tắt tạm trong lúc chạy migration, ứng dụng lúc chạy thật vẫn
+        # bật bình thường (bật lại ở connect() event, không liên quan tới đây).
+        if connection.dialect.name == "sqlite":
+            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            # Câu PRAGMA trên tự mở 1 transaction ẩn trên connection (SQLAlchemy
+            # 2.x "autobegin"). Phải commit/kết thúc nó ngay tại đây, nếu không
+            # sẽ đụng độ với cơ chế transaction riêng của Alembic cho SQLite,
+            # khiến toàn bộ migration "chạy xong không lỗi" nhưng KHÔNG commit
+            # thật (đã gặp thực tế: exit code 0, không traceback, nhưng DB
+            # không đổi gì cả).
+            connection.commit()
+
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),

@@ -18,6 +18,6 @@ class NgayNghiLe(db.Model):
             'id': self.id,
             'ten_ngay': self.ten_ngay,
             'tu_ngay': self.tu_ngay.isoformat() if self.tu_ngay else None,
-            'den_ngay': self.den_ngay.isoformat() if self.tu_ngay else None,
+            'den_ngay': self.den_ngay.isoformat() if self.den_ngay else None,
             'mo_ta': self.mo_ta 
         }

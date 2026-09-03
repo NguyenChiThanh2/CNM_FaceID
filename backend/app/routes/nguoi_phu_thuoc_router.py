@@ -57,7 +57,7 @@ def validate_payload(payload, updating=False):
 
 def build_item_dict(item: NguoiPhuThuoc):
     """Chuẩn hóa output 1 record người phụ thuộc kèm tên nhân viên."""
-    nv = NhanVien.query.get(item.nhan_vien_id)
+    nv = NhanVien.query.filter_by(id=item.nhan_vien_id).first()
     ten_nhan_vien = nv.ho_ten if nv else None
 
     base = item.to_dict() if hasattr(item, "to_dict") else {}
@@ -89,7 +89,7 @@ def check_duplicate_dependent(nhan_vien_id, ho_ten, quan_he, start_date, end_dat
 
     dup = q.first()
     if dup:
-        nv = NhanVien.query.get(nhan_vien_id)
+        nv = NhanVien.query.filter_by(id=nhan_vien_id).first()
         return {
             "duplicate": True,
             "ten_nhan_vien": nv.ho_ten if nv else None
@@ -145,7 +145,7 @@ def list_nguoi_phu_thuoc():
 
 @nguoi_phu_thuoc_bp.get("/<int:dep_id>")
 def get_nguoi_phu_thuoc(dep_id):
-    item = NguoiPhuThuoc.query.get(dep_id)
+    item = NguoiPhuThuoc.query.filter_by(id=dep_id).first()
     if not item:
         return jsonify({"message": "Không tìm thấy người phụ thuộc"}), 404
     return jsonify(build_item_dict(item)), 200
@@ -159,7 +159,7 @@ def create_nguoi_phu_thuoc():
         if errors:
             return jsonify({"message": "; ".join(errors)}), 400
 
-        nv = NhanVien.query.get(nhan_vien_id)
+        nv = NhanVien.query.filter_by(id=nhan_vien_id).first()
         if not nv:
             return jsonify({"message": "nhan_vien_id không tồn tại"}), 404
 
@@ -202,7 +202,7 @@ def create_nguoi_phu_thuoc():
 @nguoi_phu_thuoc_bp.patch("/<int:dep_id>")
 def update_nguoi_phu_thuoc(dep_id):
     try:
-        item = NguoiPhuThuoc.query.get(dep_id)
+        item = NguoiPhuThuoc.query.filter_by(id=dep_id).first()
         if not item:
             return jsonify({"message": "Không tìm thấy người phụ thuộc"}), 404
 
@@ -218,7 +218,7 @@ def update_nguoi_phu_thuoc(dep_id):
         final_ngay_bat_dau = ngay_bat_dau if ngay_bat_dau is not None else item.ngay_bat_dau
         final_ngay_ket_thuc = ngay_ket_thuc if ngay_ket_thuc is not None else item.ngay_ket_thuc
 
-        nv = NhanVien.query.get(final_nhan_vien_id)
+        nv = NhanVien.query.filter_by(id=final_nhan_vien_id).first()
         if not nv:
             return jsonify({"message": "nhan_vien_id không tồn tại"}), 404
 
@@ -275,10 +275,10 @@ def update_nguoi_phu_thuoc(dep_id):
 @nguoi_phu_thuoc_bp.delete("/<int:dep_id>")
 def delete_nguoi_phu_thuoc(dep_id):
     try:
-        item = NguoiPhuThuoc.query.get(dep_id)
+        item = NguoiPhuThuoc.query.filter_by(id=dep_id).first()
         if not item:
             return jsonify({"message": "Không tìm thấy người phụ thuộc"}), 404
-        db.session.delete(item)
+        item.soft_delete()
         db.session.commit()
         return jsonify({"message": "Xóa thành công"}), 200
     except Exception as e:

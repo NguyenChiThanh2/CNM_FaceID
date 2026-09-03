@@ -6,7 +6,7 @@ class Luong(db.Model):
     __tablename__ = 'luong'
 
     id = db.Column(db.Integer, primary_key=True)
-    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False)
+    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False, index=True)
     thang = db.Column(db.Integer, nullable=False)
     nam = db.Column(db.Integer, nullable=False)
     so_ngay_cong = db.Column(db.Integer, default=0)

@@ -1,6 +1,8 @@
 from app import db
 from datetime import datetime
 import enum
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
 # Định nghĩa Enum cho nhóm (giúp code gọn, tránh sai chính tả)
 class NhomChiTietLuong(enum.Enum):
@@ -8,12 +10,12 @@ class NhomChiTietLuong(enum.Enum):
     PHU_CAP = "PHU_CAP"
     THUONG = "THUONG"
 
-class ChiTietLuong(db.Model):
+class ChiTietLuong(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = 'chi_tiet_luong'
 
     id = db.Column(db.Integer, primary_key=True)
-    bang_luong_id = db.Column(db.Integer, db.ForeignKey("bang_luong.id"), nullable=False)
-    nhom = db.Column(db.Enum(NhomChiTietLuong), nullable=False)
+    bang_luong_id = db.Column(db.Integer, db.ForeignKey("bang_luong.id", ondelete="CASCADE"), nullable=False, index=True)
+    nhom = db.Column(db.Enum(NhomChiTietLuong, create_constraint=True), nullable=False)
     loai = db.Column(db.String(100), nullable=False)  # VD: DI_TRE, XANG_XE, LE_TET
     so_tien = db.Column(db.Float, nullable=False)
     ghi_chu = db.Column(db.Text, nullable=True)

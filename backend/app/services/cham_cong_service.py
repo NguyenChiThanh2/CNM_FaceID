@@ -50,7 +50,7 @@ def get_all_cham_cong_service():
     return ChamCong.query.order_by(ChamCong.id.desc()).all()
 
 def get_cham_cong_by_id_service(id):
-    chamcong = ChamCong.query.get(id)
+    chamcong = ChamCong.query.filter_by(id=id).first()
     return chamcong
 
 
@@ -59,7 +59,7 @@ def get_cham_cong_by_nhan_vien_id_service(nhan_vien_id):
 
 def update_cham_cong_service(id, thoi_gian_vao=None, thoi_gian_ra=None, ngay=None,
                              hinh_anh_vao=None, hinh_anh_ra=None, hinh_anh=None):
-    cc = ChamCong.query.get(id)
+    cc = ChamCong.query.filter_by(id=id).first()
     if not cc:
         return None
 
@@ -104,7 +104,7 @@ def _unlink_quiet(path: str):
     return False
 
 def delete_cham_cong_service(id):
-    cham_cong = ChamCong.query.get(id)
+    cham_cong = ChamCong.query.filter_by(id=id).first()
     if not cham_cong:
         return False
 
@@ -120,7 +120,7 @@ def delete_cham_cong_service(id):
     # chuẩn bị path trước khi xoá DB
     paths = [_safe_checkin_path(f) for f in files]
 
-    db.session.delete(cham_cong)
+    cham_cong.soft_delete()
     db.session.commit()
 
     # xoá file sau khi commit để tránh “mất file mà DB vẫn còn”
@@ -462,7 +462,7 @@ def create_cham_cong_from_face_service_passive(payload):
     except Exception:
         return {"ok": False, "message": "Token hết hạn/không hợp lệ"}, 400
 
-    nv = NhanVien.query.get(nv_id)
+    nv = NhanVien.query.filter_by(id=nv_id).first()
     if not nv:
         return {"ok": False, "message": "Nhân viên không tồn tại"}, 404
 
@@ -680,7 +680,7 @@ def get_tinhsocong_1nhanvien_theothang_service(nhan_vien_id, thang, nam):
         return True
     
 def get_tinhsocong_theogiayphep_service(id):
-    cham_cong = ChamCong.query.get(id)
+    cham_cong = ChamCong.query.filter_by(id=id).first()
     giay_phep = GiayPhep.query.filter(GiayPhep.cham_cong_id == id, GiayPhep.trang_thai == "Đã duyệt").first()
 
     if not cham_cong or not giay_phep:

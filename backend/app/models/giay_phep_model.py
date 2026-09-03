@@ -2,21 +2,26 @@ from datetime import datetime
 from sqlalchemy.orm import relationship
 from app import db
 from sqlalchemy.sql import func
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
-class GiayPhep(db.Model):
+class GiayPhep(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = "giay_phep"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    nhan_vien_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=False)
-    cham_cong_id = db.Column(db.Integer, db.ForeignKey("cham_cong.id"), nullable=False)
+    nhan_vien_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=False, index=True)
+    cham_cong_id = db.Column(db.Integer, db.ForeignKey("cham_cong.id"), nullable=False, index=True)
     ngay_bat_dau = db.Column(db.Date, nullable=False)
     ngay_ket_thuc = db.Column(db.Date, nullable=False)
     loai_giay_phep = db.Column(db.String(100), nullable=False)  # VD: "Nghỉ ốm", "Nghỉ việc riêng", "Nghỉ thai sản", "Tăng ca", "Quên chấm công"
     ly_do = db.Column(db.Text, nullable=True)
     so_gio = db.Column(db.Integer, nullable=False)  # Số giờ tăng ca
 
-    trang_thai = db.Column(db.String(50), nullable=False, default="Đang chờ")  # VD: "Đang chờ", "Đã duyệt", "Từ chối"
-    nguoi_duyet_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=True)
+    trang_thai = db.Column(
+        db.Enum('Đang chờ', 'Đã duyệt', 'Từ chối', name='trang_thai_giay_phep_enum', create_constraint=True),
+        nullable=False, default="Đang chờ"
+    )
+    nguoi_duyet_id = db.Column(db.Integer, db.ForeignKey("nhan_vien.id"), nullable=True, index=True)
     ngay_duyet = db.Column(db.DateTime, nullable=True)
     ly_do_tu_choi = db.Column(db.Text, nullable=True)
 

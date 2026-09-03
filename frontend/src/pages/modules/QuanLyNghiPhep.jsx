@@ -333,7 +333,7 @@ const QuanLyNghiPhep = () => {
               <tbody>
                 {currentItems.length > 0 ? (
                   currentItems.map((nghiPhep) =>
-                    nghiPhep.loai_nghi_phep_id != 3 ? (
+                    !nghiPhep.yeu_cau_thong_tin_sinh ? (
                       <tr key={nghiPhep.id} style={{ transition: "all 0.3s ease" }}>
                         <td style={{ padding: "12px", fontWeight: "500" }}>
                           {nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}
@@ -473,7 +473,7 @@ const QuanLyNghiPhep = () => {
               <tbody>
                 {currentItems.length > 0 ? (
                   currentItems.map((nghiPhep) =>
-                    nghiPhep.loai_nghi_phep_id == 3 ? (
+                    nghiPhep.yeu_cau_thong_tin_sinh ? (
                       <tr key={nghiPhep.id} style={{ transition: "all 0.3s ease" }}>
                         <td style={{ padding: "12px", fontWeight: "500" }}>
                           {nhanVienList.find((nv) => nv.id === nghiPhep.nhan_vien_id)?.ho_ten || "Không rõ"}

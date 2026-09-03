@@ -18,7 +18,8 @@ def get_device_token_from_request():
 def find_active_device(token):
     if not token:
         return None
-    return ThietBiChamCong.query.filter_by(token=token, active=True).first()
+    token_hash = ThietBiChamCong.hash_token(token)
+    return ThietBiChamCong.query.filter_by(token_hash=token_hash, active=True).first()
 
 
 @facecheckin_bp.get("/allow-facecheckin")
@@ -51,15 +52,19 @@ def register_device():
     if not ten_thiet_bi:
         return jsonify({"message": "Thiếu ten_thiet_bi"}), 400
 
+    raw_token = ThietBiChamCong.generate_token()
     device = ThietBiChamCong(
         ten_thiet_bi=ten_thiet_bi,
-        token=ThietBiChamCong.generate_token(),
+        token_hash=ThietBiChamCong.hash_token(raw_token),
         active=True,
     )
     db.session.add(device)
     db.session.commit()
-    # Trả token đúng 1 lần duy nhất lúc tạo — kỹ thuật viên copy vào trình duyệt kiosk
-    return jsonify(device.to_dict(include_token=True)), 201
+    # Trả token bản rõ đúng 1 lần duy nhất lúc tạo (DB chỉ lưu hash, không thể
+    # lấy lại bản rõ sau này) — kỹ thuật viên copy vào trình duyệt kiosk ngay.
+    response = device.to_dict()
+    response["token"] = raw_token
+    return jsonify(response), 201
 
 
 def _require_setup_key():

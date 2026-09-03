@@ -37,7 +37,7 @@ def create_giay_phep_service(cham_cong_id, nhan_vien_id, ngay_bat_dau, ngay_ket_
     
 def update_giay_phep_service(id, cham_cong_id=None, nhan_vien_id=None, ngay_bat_dau=None, ngay_ket_thuc=None, loai_giay_phep=None, ly_do=None, so_gio=None, trang_thai=None):
     try:
-        giay_phep = GiayPhep.query.get(id)
+        giay_phep = GiayPhep.query.filter_by(id=id).first()
         if not giay_phep:
             raise ValueError("Giấy phép không tồn tại")
         
@@ -86,7 +86,7 @@ def update_giay_phep_service(id, cham_cong_id=None, nhan_vien_id=None, ngay_bat_
 def approve_giay_phep_service(id):
     try:
         # Lấy đơn Giấy phép theo id
-        giay_phep = GiayPhep.query.get(id)
+        giay_phep = GiayPhep.query.filter_by(id=id).first()
         if not giay_phep:
             raise ValueError("Giấy phép không tồn tại")
 
@@ -114,7 +114,7 @@ def approve_giay_phep_service(id):
 
 def reject_giay_phep_service(id):
     try:
-        giay_phep = GiayPhep.query.get(id)
+        giay_phep = GiayPhep.query.filter_by(id=id).first()
         if not giay_phep:
             raise ValueError("Giấy phép không tồn tại")
 
@@ -129,26 +129,26 @@ def reject_giay_phep_service(id):
         raise e
 
 def delete_giay_phep_service(id):
-    giay_phep = GiayPhep.query.get(id)
+    giay_phep = GiayPhep.query.filter_by(id=id).first()
     if not giay_phep:
         raise ValueError("Giấy phép không tồn tại")
     
     # Xóa đơn Giấy phép
-    db.session.delete(giay_phep)
+    giay_phep.soft_delete()
     db.session.commit()
     return giay_phep
 
 
 def cancle_giay_phep_service(id):
     try:
-        giay_phep = GiayPhep.query.get(id)
+        giay_phep = GiayPhep.query.filter_by(id=id).first()
         if not giay_phep:
             raise ValueError("Giấy phép không tồn tại")
 
         if giay_phep.trang_thai not in ["Chưa duyệt", "Từ chối"]:
             raise ValueError("Không thể hủy giấy phép đã được duyệt hoặc đã xử lý")
 
-        db.session.delete(giay_phep)
+        giay_phep.soft_delete()
         db.session.commit()
         return True
     except Exception as e:

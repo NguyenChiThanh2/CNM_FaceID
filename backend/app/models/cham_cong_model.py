@@ -1,12 +1,14 @@
 from datetime import datetime
 from app import db
 from flask import url_for
+from app.models.soft_delete import SoftDeleteMixin
+from app.models.audit import AuditMixin
 
-class ChamCong(db.Model):
+class ChamCong(db.Model, SoftDeleteMixin, AuditMixin):
     __tablename__ = 'cham_cong'
 
     id = db.Column(db.Integer, primary_key=True)
-    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False)
+    nhan_vien_id = db.Column(db.Integer, db.ForeignKey('nhan_vien.id'), nullable=False, index=True)
     thoi_gian_vao = db.Column(db.DateTime, default=datetime.utcnow)  # Thời gian chấm công vào
     thoi_gian_ra = db.Column(db.DateTime)  # Thời gian chấm công ra
     ngay = db.Column(db.Date)  # Ngày chấm công
@@ -14,7 +16,7 @@ class ChamCong(db.Model):
     hinh_anh_ra = db.Column(db.String(255), nullable=True)  # Hình ảnh chấm công ra
     so_cong = db.Column(db.Float, default=0.0)  # Số công tính theo ngày (0.5, 1.0)
 
-    cham_cong_nv = db.relationship('NhanVien', back_populates='cham_cong_nv', lazy=True)
+    cham_cong_nv = db.relationship('NhanVien', foreign_keys=[nhan_vien_id], back_populates='cham_cong_nv', lazy=True)
     giayphep_cc = db.relationship("GiayPhep", back_populates="giayphep_cc", lazy=True)
 
     def __init__(self, **kwargs):

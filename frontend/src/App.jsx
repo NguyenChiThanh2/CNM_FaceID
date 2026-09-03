@@ -9,6 +9,7 @@ import {
 import TrangChu from "./pages/TrangChu";
 import QuanLyNhanSu from "./pages/modules/QuanLyNhanSu";
 import QuanlyNghiPhep from "./pages/modules/QuanLyNghiPhep";
+import QuanLyLoaiNghiPhep from "./pages/modules/QuanLyLoaiNghiPhep";
 import QuanLyPhucLoi from "./pages/modules/QuanLyPhucLoi";
 import QuanLyPhongBan from "./pages/modules/QuanLyPhongBan";
 import NhanSuDetail from "./pages/modules/NhanSuDetail";
@@ -174,6 +175,14 @@ const AppLayout = () => {
               element={
                 <PrivateRoute>
                   <QuanlyNghiPhep />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/loai-nghi-phep"
+              element={
+                <PrivateRoute>
+                  <QuanLyLoaiNghiPhep />
                 </PrivateRoute>
               }
             />

@@ -81,7 +81,7 @@ def get_all_danh_gia_service() -> List[DanhGia]:
 
 
 def get_danh_gia_by_id_service(id: int) -> Optional[DanhGia]:
-    return DanhGia.query.get(id)
+    return DanhGia.query.filter_by(id=id).first()
 
 
 def get_danh_gia_by_nhan_vien_id_service(nhan_vien_id: int) -> List[DanhGia]:
@@ -215,7 +215,7 @@ def create_danh_gia_service(payload: Dict[str, Any]) -> Tuple[Optional[DanhGia],
 
 
 def update_danh_gia_service(id: int, payload: Dict[str, Any]) -> Tuple[Optional[DanhGia], Optional[str]]:
-    dg = DanhGia.query.get(id)
+    dg = DanhGia.query.filter_by(id=id).first()
     if not dg:
         return None, "Không tìm thấy bản đánh giá."
 
@@ -272,11 +272,11 @@ def update_danh_gia_service(id: int, payload: Dict[str, Any]) -> Tuple[Optional[
 
 
 def delete_danh_gia_service(id: int) -> Tuple[bool, Optional[str]]:
-    dg = DanhGia.query.get(id)
+    dg = DanhGia.query.filter_by(id=id).first()
     if not dg:
         return False, "Không tìm thấy bản đánh giá."
     try:
-        db.session.delete(dg)
+        dg.soft_delete()
         db.session.commit()
         return True, None
     except Exception as e:
@@ -287,7 +287,7 @@ def delete_danh_gia_service(id: int) -> Tuple[bool, Optional[str]]:
 # ============== Trạng thái ==============
 def change_status_service(id: int) -> Tuple[Optional[DanhGia], Optional[str]]:
    
-    dg = DanhGia.query.get(id)
+    dg = DanhGia.query.filter_by(id=id).first()
     if not dg:
         return None, "Không tìm thấy bản đánh giá."
     try:

@@ -7,7 +7,7 @@ def get_all_nhan_vien_phuc_loi_service():
 
 # Lấy bản ghi theo ID
 def get_nhan_vien_phuc_loi_by_id_service(id):
-    return NhanVienPhucLoi.query.get(id)
+    return NhanVienPhucLoi.query.filter_by(id=id).first()
 
 # Lấy các phúc lợi theo ID nhân viên
 def get_phuc_loi_by_nhan_vien_id_service(nhan_vien_id):
@@ -31,7 +31,7 @@ def create_nhan_vien_phuc_loi_service(nhan_vien_id, phuc_loi_id, ngay_ap_dung, g
 
 # Cập nhật bản ghi phúc lợi nhân viên
 def update_nhan_vien_phuc_loi_service(id, ngay_ap_dung=None, ghi_chu=None):
-    item = NhanVienPhucLoi.query.get(id)
+    item = NhanVienPhucLoi.query.filter_by(id=id).first()
     if not item:
         return None
     if ngay_ap_dung is not None:
@@ -43,9 +43,9 @@ def update_nhan_vien_phuc_loi_service(id, ngay_ap_dung=None, ghi_chu=None):
 
 # Xóa bản ghi
 def delete_nhan_vien_phuc_loi_service(id):
-    item = NhanVienPhucLoi.query.get(id)
+    item = NhanVienPhucLoi.query.filter_by(id=id).first()
     if not item:
         return False
-    db.session.delete(item)
+    item.soft_delete()
     db.session.commit()
     return True
