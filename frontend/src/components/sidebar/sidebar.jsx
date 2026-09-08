@@ -205,10 +205,10 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
 
         {/* Navigation Menu */}
         <ul className="nav flex-column" style={{ paddingLeft: 0, gap: "8px" }}>
-          {visibleModules.map((module, index) => {
+          {visibleModules.map((module) => {
             const isActive = location.pathname === module.path;
             return (
-              <li className="nav-item" key={index}>
+              <li className="nav-item" key={module.path}>
                 <Button
                   variant="link"
                   className={`w-100 text-start p-3 fw-semibold border-0 ${

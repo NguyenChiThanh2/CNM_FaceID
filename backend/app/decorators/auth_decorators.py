@@ -25,6 +25,22 @@ def get_current_nhan_vien():
     return NhanVien.query.get(int(nv_id))
 
 
+# ID phòng ban Nhân sự — trùng với HR_DEPARTMENT_ID đã dùng ở FE (vd
+# frontend/src/pages/modules/QuanLyGiayPhep.jsx) để ẩn/hiện nút duyệt. Đặt ở
+# đây (thay vì thêm permission code riêng như "giay_phep.duyet") vì đây chỉ
+# là 1 field có sẵn trên NhanVien, và BE trước đây hoàn toàn KHÔNG kiểm tra
+# lại luật "chỉ HR mới được duyệt" này — chỉ có FE ẩn nút, ai gọi thẳng API
+# vẫn duyệt được đơn của bất kỳ ai nếu vai trò của họ có quyền "sua" trên
+# module đó (vd nhân viên thường cần quyền này để tự sửa đơn CỦA MÌNH).
+PHONG_BAN_NHAN_SU_ID = 2
+
+
+def is_hr(nhan_vien):
+    """True nếu `nhan_vien` thuộc phòng Nhân sự — được coi là người có quyền
+    duyệt/từ chối đơn của người khác (giấy phép, nghỉ phép...)."""
+    return bool(nhan_vien) and nhan_vien.phong_ban_id == PHONG_BAN_NHAN_SU_ID
+
+
 def permission_required(ma_quyen):
     """Chặn route nếu nhân viên hiện tại không có quyền `ma_quyen` (vd "luong.xem").
 

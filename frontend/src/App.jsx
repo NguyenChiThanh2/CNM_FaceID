@@ -16,7 +16,6 @@ import NhanSuDetail from "./pages/modules/NhanSuDetail";
 import ChamCong from "./pages/modules/ChamCong";
 import QuanLyLuong from "./pages/modules/QuanLyLuong";
 import QuanLyChamCong from "./pages/modules/QuanLyChamCong";
-import ChamCongForm from "./components/chamcong/ChamCongForm";
 import FaceCheckIn from "./pages/modules/FaceCheckIn";
 import DanhSachNhanVien from "./components/phongban/DanhSachNhanVien";
 import QuanLyDanhGia from "./pages/modules/QuanLyDanhGia";
@@ -255,14 +254,6 @@ const AppLayout = () => {
               element={
                 <PrivateRoute>
                   <DanhSachNhanVien />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/cham-cong-form"
-              element={
-                <PrivateRoute>
-                  <ChamCongForm />
                 </PrivateRoute>
               }
             />

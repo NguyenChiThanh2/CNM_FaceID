@@ -41,3 +41,26 @@ export const attachAuthToken = (axiosInstance) => {
     return config;
   });
 };
+
+// Khi BE trả 401 (JWT hết hạn/không hợp lệ trong cookie), tự xoá hồ sơ user
+// cục bộ + điều hướng về trang đăng nhập — thay vì để UI đứng im với dữ liệu
+// rỗng và lỗi hiển thị tuỳ tiện ở từng nơi gọi. Không áp dụng cho chính
+// request /login (401 ở đó là "sai mật khẩu", không phải "hết phiên").
+// Đăng ký TRƯỚC interceptor chuẩn hoá lỗi (normalizeError trong
+// axiosInstance.js) để vẫn nhận được error gốc có error.response.status.
+export const attachSessionExpiredRedirect = (axiosInstance) => {
+  axiosInstance.interceptors.response.use(
+    (res) => res,
+    (error) => {
+      const status = error?.response?.status;
+      const isLoginRequest = (error?.config?.url || "").includes("/login");
+      if (status === 401 && !isLoginRequest) {
+        localStorage.removeItem("user");
+        if (window.location.pathname !== "/dang-nhap") {
+          window.location.href = "/dang-nhap";
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
+};

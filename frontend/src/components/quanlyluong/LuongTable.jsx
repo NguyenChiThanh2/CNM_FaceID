@@ -144,8 +144,8 @@ const LuongTable = ({
           tooltipContent={
             thuongKhacList.length > 0 ? (
               <ul className="mb-0 ps-3">
-                {thuongKhacList.map((tk, index) => (
-                  <li key={index}>
+                {thuongKhacList.map((tk) => (
+                  <li key={tk.id}>
                     <div><strong>{tk.ghi_chu || "Thưởng khác"}</strong></div>
                     <div>Số tiền: {formatCurrency(tk.so_tien)}</div>
                   </li>
@@ -174,8 +174,8 @@ const LuongTable = ({
           tooltipContent={
             truKhacList.length > 0 ? (
               <ul className="mb-0 ps-3">
-                {truKhacList.map((kt, index) => (
-                  <li key={index}>
+                {truKhacList.map((kt) => (
+                  <li key={kt.id}>
                     <div><strong>{kt.ghi_chu || "Khấu trừ khác"}</strong></div>
                     <div>Số tiền: {formatCurrency(kt.so_tien)}</div>
                   </li>

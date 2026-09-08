@@ -1,5 +1,6 @@
 from flask import jsonify, request
 from app.services.giay_phep_service import *
+from app.decorators.auth_decorators import get_current_nhan_vien, is_hr
 
 
 # Lấy tất cả lương
@@ -36,6 +37,16 @@ def create_giay_phep_controller():
     
 
 def update_giay_phep_controller(id):
+    # Trước đây chỉ có FE ẩn nút "Sửa" — BE cho phép bất kỳ ai có quyền
+    # "giay_phep.sua" (cần cho chính nhân viên tự sửa đơn của họ) sửa được
+    # giấy phép của BẤT KỲ nhân viên nào. Giờ chặn lại: chỉ HR hoặc đúng chủ
+    # đơn mới được sửa.
+    giay_phep = get_giay_phep_by_id_service(id)
+    if not giay_phep:
+        return jsonify({'error': 'Giấy phép không tồn tại'}), 404
+    nv = get_current_nhan_vien()
+    if not (is_hr(nv) or (nv and giay_phep.nhan_vien_id == nv.id)):
+        return jsonify({'error': 'Bạn không có quyền sửa giấy phép này'}), 403
     try:
         data = request.json
         updated_giay_phep = update_giay_phep_service(
@@ -55,6 +66,11 @@ def update_giay_phep_controller(id):
 
 
 def approve_giay_phep_controller(id):
+    # Chỉ HR mới được duyệt — trước đây không kiểm tra, ai có quyền
+    # "giay_phep.sua" (kể cả nhân viên thường, để họ tự sửa đơn của mình)
+    # cũng duyệt được đơn của bất kỳ ai qua thẳng API.
+    if not is_hr(get_current_nhan_vien()):
+        return jsonify({"message": "Chỉ nhân sự (HR) mới được duyệt giấy phép"}), 403
     try:
         giay_phep = approve_giay_phep_service(id)
         return jsonify({"message": "Đơn nghỉ phép đã được duyệt và số ngày phép còn lại của nhân viên đã được cập nhật!"}), 200
@@ -68,6 +84,9 @@ def approve_giay_phep_controller(id):
 
 
 def reject_giay_phep_controller(id):
+    # Chỉ HR mới được từ chối — cùng lý do như approve_giay_phep_controller.
+    if not is_hr(get_current_nhan_vien()):
+        return jsonify({"message": "Chỉ nhân sự (HR) mới được từ chối giấy phép"}), 403
     try:
         rejected_giay_phep = reject_giay_phep_service(id)
         return jsonify(rejected_giay_phep.to_dict()), 200
@@ -76,6 +95,13 @@ def reject_giay_phep_controller(id):
 
 
 def cancle_giay_phep_controller(id):
+    # Chỉ HR hoặc đúng chủ đơn mới được hủy — trước đây không kiểm tra.
+    giay_phep = get_giay_phep_by_id_service(id)
+    if not giay_phep:
+        return jsonify({'message': 'Giấy phép không tồn tại'}), 404
+    nv = get_current_nhan_vien()
+    if not (is_hr(nv) or (nv and giay_phep.nhan_vien_id == nv.id)):
+        return jsonify({'message': 'Bạn không có quyền hủy giấy phép này'}), 403
     try:
         cancled_giay_phep = cancle_giay_phep_service(id)
         if cancled_giay_phep:

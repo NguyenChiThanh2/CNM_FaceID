@@ -201,8 +201,8 @@ const SalaryCharts = ({
           
           <div className="breakdown-details">
             {/* Hiển thị tất cả các khoản từ payload */}
-            {payload.map((entry, index) => (
-              <div key={index} className="d-flex justify-content-between mb-1">
+            {payload.map((entry) => (
+              <div key={entry.dataKey || entry.name} className="d-flex justify-content-between mb-1">
                 <span style={{ color: entry.color, fontSize: '12px' }}>
                   {entry.name}:
                 </span>

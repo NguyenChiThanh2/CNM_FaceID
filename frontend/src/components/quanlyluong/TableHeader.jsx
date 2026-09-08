@@ -47,9 +47,9 @@ const TableHeader = ({ isHR }) => {
         </th>
         <th className="sticky-name-column">Nhân viên</th>
         <th className="sticky-month-column">Tháng</th>
-        {columns.map((column, index) => (
+        {columns.map((column) => (
           <th
-            key={index}
+            key={column.name}
             className="table-column-header"
             style={{ minWidth: column.width, width: column.width }}
             title={column.name}

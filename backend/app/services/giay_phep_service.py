@@ -9,6 +9,9 @@ from datetime import datetime
 def get_all_giay_phep_service():
     return GiayPhep.query.all()
 
+def get_giay_phep_by_id_service(id):
+    return GiayPhep.query.filter_by(id=id).first()
+
 def get_giay_phep_quen_chamcong_service(cham_cong_id):
     return GiayPhep.query.filter(GiayPhep.cham_cong_id == cham_cong_id, GiayPhep.loai_giay_phep == "Quên chấm công").first()
 

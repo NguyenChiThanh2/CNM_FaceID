@@ -1,6 +1,6 @@
 // src/services/axiosInstance.js
 import axios from "axios";
-import { attachAuthToken } from "../utils/auth";
+import { attachAuthToken, attachSessionExpiredRedirect } from "../utils/auth";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
@@ -9,6 +9,9 @@ const axiosInstance = axios.create({
 });
 
 attachAuthToken(axiosInstance);
+// Đăng ký TRƯỚC interceptor chuẩn hoá lỗi bên dưới để nhận được error gốc
+// (còn error.response.status) — normalizeError phía sau xoá mất field này.
+attachSessionExpiredRedirect(axiosInstance);
 
 // (Tùy chọn) Gắn token động
 export const setAuthToken = (token) => {

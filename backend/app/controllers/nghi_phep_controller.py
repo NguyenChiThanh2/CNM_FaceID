@@ -11,6 +11,7 @@ from app.services.nghi_phep_service import (
     get_nghi_phep_by_nhan_vien_id_service,
 )
 from werkzeug.utils import secure_filename
+from app.decorators.auth_decorators import get_current_nhan_vien, is_hr
 
 nghi_phep_bp = Blueprint('nghi_phep', __name__)
 
@@ -68,6 +69,15 @@ def create_nghi_phep():
 # API: Update Nghi Phep
 
 def update_nghi_phep(id):
+    # Chỉ HR hoặc đúng chủ đơn mới được sửa — trước đây BE không kiểm tra,
+    # ai có quyền "nghi_phep.sua" (cần cho nhân viên tự sửa đơn của họ) sửa
+    # được đơn của bất kỳ ai.
+    nghi_phep = get_nghi_phep_by_id_service(id)
+    if not nghi_phep:
+        return jsonify({'error': 'Nghỉ phép không tồn tại'}), 404
+    nv = get_current_nhan_vien()
+    if not (is_hr(nv) or (nv and nghi_phep.nhan_vien_id == nv.id)):
+        return jsonify({'error': 'Bạn không có quyền sửa đơn nghỉ phép này'}), 403
     try:
         data = request.form  # lấy dữ liệu text từ form
         file = request.files.get("file")  # lấy file (nếu có)
@@ -95,6 +105,10 @@ def update_nghi_phep(id):
 
 
 def approve_nghi_phep(id):
+    # Chỉ HR mới được duyệt — trước đây không kiểm tra, ai có quyền
+    # "nghi_phep.sua" cũng duyệt được đơn của bất kỳ ai qua thẳng API.
+    if not is_hr(get_current_nhan_vien()):
+        return jsonify({"message": "Chỉ nhân sự (HR) mới được duyệt đơn nghỉ phép"}), 403
     try:
         # Gọi service approve_nghi_phep_service để duyệt đơn nghỉ phép
         nghi_phep = approve_nghi_phep_service(id)
@@ -112,6 +126,9 @@ def approve_nghi_phep(id):
 # API: Reject Nghi Phep
 
 def reject_nghi_phep(id):
+    # Chỉ HR mới được từ chối — cùng lý do như approve_nghi_phep.
+    if not is_hr(get_current_nhan_vien()):
+        return jsonify({"message": "Chỉ nhân sự (HR) mới được từ chối đơn nghỉ phép"}), 403
     try:
         rejected_nghi_phep = reject_nghi_phep_service(id)
         return jsonify(rejected_nghi_phep.to_dict()), 200
@@ -120,6 +137,13 @@ def reject_nghi_phep(id):
 
 
 def cancle_nghi_phep(id):
+    # Chỉ HR hoặc đúng chủ đơn mới được hủy — trước đây không kiểm tra.
+    nghi_phep = get_nghi_phep_by_id_service(id)
+    if not nghi_phep:
+        return jsonify({'message': 'Nghỉ phép không tồn tại'}), 404
+    nv = get_current_nhan_vien()
+    if not (is_hr(nv) or (nv and nghi_phep.nhan_vien_id == nv.id)):
+        return jsonify({'message': 'Bạn không có quyền hủy đơn nghỉ phép này'}), 403
     try:
         # Gọi service duyệt nghỉ phépcancle
         cancled_nghi_phep = cancle_nghi_phep_service(id)
