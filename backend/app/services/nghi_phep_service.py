@@ -7,8 +7,21 @@ from sqlalchemy import extract, and_, or_, func
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime, date, timedelta
-from config import UPLOAD_FOLDER, UPLOAD_FOLDER_PHEPNAM, UPLOAD_FOLDER_PHEPKL
+from upload_paths import UPLOAD_FOLDER, UPLOAD_FOLDER_PHEPNAM, UPLOAD_FOLDER_PHEPKL
 import shutil
+
+FILE_EXTENSIONS_HOP_LE = {".pdf", ".jpg", ".jpeg", ".png"}
+
+
+def _kiem_tra_duoi_file_hop_le(filename):
+    """Chặn upload file thực thi được (.html, .svg, .js...) — nếu ai đó tải
+    lên 1 file .html chứa <script>, sau này route phục vụ file lại trả đúng
+    Content-Type text/html khiến trình duyệt CHẠY script đó (stored XSS)."""
+    ext = os.path.splitext(filename)[1]
+    if ext.lower() not in FILE_EXTENSIONS_HOP_LE:
+        raise ValueError(f"Chỉ chấp nhận file PDF, JPG, PNG (nhận được: {ext or 'không có đuôi'})")
+    return ext
+
 
 def get_upload_folder_and_prefix(loai_nghi_phep_id):
     """Trả về (thư mục lưu file, tiền tố tên file) cho 1 loại nghỉ phép.
@@ -32,6 +45,44 @@ def convert_to_datetime(date_string):
 def validate_dates(tu_ngay, den_ngay):
     if tu_ngay > den_ngay:
         raise ValueError("Ngày bắt đầu phải trước ngày kết thúc")
+
+ID_LOAI_PHEP_NAM = 1  # "Phép năm" — quỹ nghỉ có hạn mức (hopdong.phep_nam),
+# tách biệt với "Phép có lương" (id=2) và các loại khác. ID này đã được dùng
+# hardcode sẵn ở nhiều chỗ trong file (vd `if loai_nghi_phep_id == '1'`) nên
+# giữ cùng quy ước thay vì tự chế thêm 1 cách nhận diện khác.
+
+
+def _tong_ngay_phep_nam_da_duyet(nhan_vien_id, nam=None, tru_don_id=None, khop_ca_tu_va_den=False):
+    """Nguồn tính DUY NHẤT cho 'đã dùng bao nhiêu ngày Phép năm trong 1 năm'.
+
+    Trước đây có 3 chỗ tự tính lại giá trị này theo 3 cách khác nhau
+    (create_nghi_phep_service, update_nghi_phep_service, get_tong_ngay_nghi_trong_nam),
+    và 2 trong 3 chỗ (create/update) VÔ TÌNH cộng luôn cả ngày nghỉ loại
+    "Phép có lương" (id=2) vào quỹ Phép năm khi kiểm tra vượt hạn mức — 2 quỹ
+    nghỉ khác nhau bị gộp nhầm làm một. Chỉ lọc đúng loai_nghi_phep_id=1 để
+    không lặp lại lỗi này, và để loại nghỉ mới thêm sau này (id khác) không
+    vô tình bị tính vào đây.
+
+    - nam: nếu có, chỉ tính đơn có tu_ngay (hoặc cả den_ngay nếu khop_ca_tu_va_den=True) rơi vào năm này.
+    - tru_don_id: loại trừ 1 đơn theo id (dùng khi update để không tự cộng đơn đang sửa vào tổng).
+    """
+    q = NghiPhep.query.filter(
+        NghiPhep.nhan_vien_id == nhan_vien_id,
+        NghiPhep.trang_thai == "Đã duyệt",
+        NghiPhep.loai_nghi_phep_id == ID_LOAI_PHEP_NAM,
+    )
+    if nam is not None:
+        if khop_ca_tu_va_den:
+            q = q.filter(or_(
+                extract('year', NghiPhep.tu_ngay) == nam,
+                extract('year', NghiPhep.den_ngay) == nam,
+            ))
+        else:
+            q = q.filter(extract('year', NghiPhep.tu_ngay) == nam)
+    if tru_don_id:
+        q = q.filter(NghiPhep.id != tru_don_id)
+    return q.with_entities(func.sum(NghiPhep.so_ngay_nghi)).scalar() or 0
+
 
 def get_all_nghi_phep_service():
     return NghiPhep.query.order_by(NghiPhep.id.desc()).all()
@@ -99,14 +150,9 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
     if not hopdong:
         raise ValueError("Không tìm thấy hợp đồng lao động cho nhân viên này")
 
-    # Tính tổng số ngày nghỉ phép trong năm đã có
-    tong_nghi_trong_nam = db.session.query(db.func.sum(NghiPhep.so_ngay_nghi)) \
-        .filter(
-            NghiPhep.nhan_vien_id == nhan_vien_id,
-            NghiPhep.trang_thai == "Đã duyệt",
-            NghiPhep.loai_nghi_phep_id != 3,
-            db.extract('year', NghiPhep.tu_ngay) == nam
-        ).scalar() or 0
+    # Tính tổng số ngày Phép năm đã dùng trong năm (chỉ loại id=1 — xem
+    # _tong_ngay_phep_nam_da_duyet để biết vì sao không đếm cả loại khác)
+    tong_nghi_trong_nam = _tong_ngay_phep_nam_da_duyet(nhan_vien_id, nam=nam)
 
     # Tổng số ngày sau khi cộng thêm đơn mới
     tong_nghi_du_kien = tong_nghi_trong_nam + so_ngay_nghi
@@ -120,7 +166,7 @@ def create_nghi_phep_service(nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_ngay,
     ten_file_moi = None 
     if file:
         filename = secure_filename(file.filename)
-        ext = os.path.splitext(filename)[1]
+        ext = _kiem_tra_duoi_file_hop_le(filename)
         folder, prefix = get_upload_folder_and_prefix(loai_nghi_phep_id)
         ten_file_moi = f"{prefix}_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
         os.makedirs(folder, exist_ok=True)
@@ -207,20 +253,10 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
     if not hopdong:
         raise ValueError("Không tìm thấy hợp đồng lao động cho nhân viên này")
 
-    # Tính tổng số ngày nghỉ phép trong năm đã có — loại trừ các loại "yêu cầu
-    # thông tin sinh" (không hardcode ID, join sang danh mục để đọc cờ)
-    ids_loai_tru = [
-        l.id for l in LoaiNghiPhep.query.filter_by(yeu_cau_thong_tin_sinh=True).all()
-    ]
-    tong_nghi_query = db.session.query(db.func.sum(NghiPhep.so_ngay_nghi)) \
-        .filter(
-            NghiPhep.nhan_vien_id == nhan_vien_id,
-            NghiPhep.trang_thai == "Đã duyệt",
-            db.extract('year', NghiPhep.tu_ngay) == nam
-        )
-    if ids_loai_tru:
-        tong_nghi_query = tong_nghi_query.filter(~NghiPhep.loai_nghi_phep_id.in_(ids_loai_tru))
-    tong_nghi_trong_nam = tong_nghi_query.scalar() or 0
+    # Tính tổng số ngày Phép năm đã dùng trong năm — cùng 1 nguồn với
+    # create_nghi_phep_service (xem _tong_ngay_phep_nam_da_duyet), loại trừ
+    # chính đơn đang sửa để không tự cộng 2 lần khi sửa 1 đơn Phép năm đã duyệt
+    tong_nghi_trong_nam = _tong_ngay_phep_nam_da_duyet(nhan_vien_id, nam=nam, tru_don_id=id)
 
     # Tổng số ngày sau khi cộng thêm đơn mới
     tong_nghi_du_kien = tong_nghi_trong_nam + so_ngay_nghi
@@ -260,7 +296,7 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
         # Nếu là loại yêu cầu thông tin sinh và đã duyệt, đảm bảo dữ liệu không bị xóa
         if file:
             filename = secure_filename(file.filename)
-            ext = os.path.splitext(filename)[1]
+            ext = _kiem_tra_duoi_file_hop_le(filename)
             ten_file_moi = f"xinlamlaisom_nghiphep_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
             os.makedirs(UPLOAD_FOLDER, exist_ok=True)
             file.save(os.path.join(UPLOAD_FOLDER, ten_file_moi))
@@ -283,14 +319,20 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
             if old_folder != new_folder and os.path.exists(old_path):
                 shutil.move(old_path, new_path)
 
-            # Đổi tên file để rõ ràng hơn
-            ext = os.path.splitext(filename)[1]
-            new_filename = f"{prefix}_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
-
-            final_path = os.path.join(new_folder, new_filename)
-            os.rename(new_path, final_path)
-
-            nghi_phep.can_cu_phap_ly_file = new_filename
+            # Đổi tên file để rõ ràng hơn — CHỈ khi file thực sự có mặt ở
+            # new_path. Trước đây gọi os.rename thẳng không kiểm tra: nếu file
+            # gốc đã bị mất/xóa ngoài ý muốn (os.path.exists(old_path) ở trên
+            # là False nên không move được), new_path không tồn tại, os.rename
+            # ném FileNotFoundError khiến CẢ REQUEST sửa đơn nghỉ phép bị lỗi
+            # 500 dù người dùng chỉ đổi loại nghỉ phép, không hề đụng tới file.
+            if os.path.exists(new_path):
+                ext = os.path.splitext(filename)[1]
+                new_filename = f"{prefix}_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
+                final_path = os.path.join(new_folder, new_filename)
+                os.rename(new_path, final_path)
+                nghi_phep.can_cu_phap_ly_file = new_filename
+            # else: file vật lý không có mặt (đã mất từ trước) -> giữ nguyên
+            # tên cũ trong DB, không rename/crash vì 1 file vốn không tồn tại
         # Xử lý file
         if file:  # Nếu có file mới
             # Xoá file cũ
@@ -303,8 +345,8 @@ def update_nghi_phep_service(id, nhan_vien_id, loai_nghi_phep_id, tu_ngay, den_n
 
             # Lưu file mới
             filename = secure_filename(file.filename)
-            ext = os.path.splitext(filename)[1]
-            
+            ext = _kiem_tra_duoi_file_hop_le(filename)
+
             if loai_nghi_phep_id == "1":
                 ten_file_moi = f"nghiphepnam_nv{nhan_vien_id}_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
                 file.save(os.path.join(UPLOAD_FOLDER_PHEPNAM, ten_file_moi))
@@ -408,21 +450,11 @@ def cancle_nghi_phep_service(id):
 
 
 def get_tong_ngay_nghi_trong_nam(id):
+    """Tổng số ngày Phép năm đã dùng trong năm hiện tại — dùng để tính
+    so_ngay_phep_con_lai. Cùng 1 nguồn với create/update_nghi_phep_service
+    (_tong_ngay_phep_nam_da_duyet); trước đây hàm này tự lọc riêng bằng
+    != 3, != 2 (loại trừ theo danh sách biết trước) thay vì == 1 (chỉ định
+    đúng loại cần đếm) — nếu sau này có thêm loại nghỉ phép mới (id 4, 5...),
+    cách lọc trừ cũ sẽ vô tình đếm nhầm loại mới đó vào quỹ phép năm."""
     nam_hien_tai = datetime.now().year
-
-    # Lọc ra các đơn nghỉ phép hợp lệ
-    nghiphep = NghiPhep.query.filter(
-        NghiPhep.nhan_vien_id == id,
-        NghiPhep.trang_thai == "Đã duyệt",
-        NghiPhep.loai_nghi_phep_id != 3,
-        NghiPhep.loai_nghi_phep_id != 2,
-        or_(
-            extract('year', NghiPhep.tu_ngay) == nam_hien_tai,
-            extract('year', NghiPhep.den_ngay) == nam_hien_tai
-        )
-    )
-
-    # Tính tổng số ngày nghỉ
-    tong_ngay_nghi = nghiphep.with_entities(func.sum(NghiPhep.so_ngay_nghi)).scalar() or 0
-
-    return tong_ngay_nghi
+    return _tong_ngay_phep_nam_da_duyet(id, nam=nam_hien_tai, khop_ca_tu_va_den=True)

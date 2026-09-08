@@ -283,16 +283,3 @@ def delete_danh_gia_service(id: int) -> Tuple[bool, Optional[str]]:
         db.session.rollback()
         return False, str(e)
 
-
-# ============== Trạng thái ==============
-def change_status_service(id: int) -> Tuple[Optional[DanhGia], Optional[str]]:
-   
-    dg = DanhGia.query.filter_by(id=id).first()
-    if not dg:
-        return None, "Không tìm thấy bản đánh giá."
-    try:
-        db.session.commit()
-        return dg, None
-    except Exception as e:
-        db.session.rollback()
-        return None, str(e)

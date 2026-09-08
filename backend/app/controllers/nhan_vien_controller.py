@@ -6,7 +6,10 @@ from app.services import nhan_vien_service
 from datetime import datetime
 import os
 import logging
+import secrets
+import string
 from app.utils.file_utils import generate_unique_filename
+from app.utils.email_sender import send_email, EmailSendError
 import face_recognition
 import numpy as np
 import cv2
@@ -17,6 +20,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
+
+
+def _sinh_mat_khau_ngau_nhien(do_dai=12):
+    """Sinh mật khẩu ngẫu nhiên dùng module `secrets` — KHÔNG dùng `random`
+    (random dùng thuật toán giả-ngẫu-nhiên có thể đoán trước được nếu biết
+    seed/state, không an toàn để sinh mật khẩu/token)."""
+    bang_ky_tu = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(bang_ky_tu) for _ in range(do_dai))
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -33,7 +44,12 @@ def get_nhan_vien_by_id_controller(id):
     nhan_vien = nhan_vien_service.get_nhan_vien_by_id_service(id)
     if not nhan_vien:
         return jsonify({'message': 'Không tìm thấy nhân viên'}), 404
-    return jsonify(nhan_vien.to_dict()), 200
+    # so_ngay_phep_con_lai được tính MỚI ngay lúc xem (không ghi vào DB) —
+    # trước đây phần tính này nằm trong get_nhan_vien_by_id_service và ghi đè
+    # thẳng vào DB, khiến "xem hồ sơ" có side-effect giống "sửa hồ sơ".
+    data = nhan_vien.to_dict()
+    data['so_ngay_phep_con_lai'] = nhan_vien_service.tinh_so_ngay_phep_con_lai_service(id)
+    return jsonify(data), 200
 
 # ========================== GET BY TRẠNG THÁI ==========================
 def get_nhan_vien_by_trang_thai_controller(trang_thai):
@@ -144,8 +160,33 @@ def update_nhan_vien_controller(nhan_vien_id):
 
         # xử lý password
         if data.get('reset_password') == '1':
-            data['password'] = generate_password_hash('123456')
             data.pop('reset_password', None)
+            if not nhan_vien_cu.email:
+                return jsonify({'message': 'Nhân viên chưa có email, không thể gửi mật khẩu mới'}), 400
+
+            mat_khau_moi = _sinh_mat_khau_ngau_nhien()
+            try:
+                # Gửi mail TRƯỚC khi đụng tới DB — nếu gửi thất bại thì dừng
+                # ngay ở đây, KHÔNG áp bất kỳ thay đổi nào (kể cả các trường
+                # khác trong cùng request này), tránh trường hợp mật khẩu đã
+                # đổi trong DB nhưng không ai biết mật khẩu mới là gì.
+                send_email(
+                    to_address=nhan_vien_cu.email,
+                    subject="Mật khẩu đăng nhập mới",
+                    body=(
+                        f"Xin chào {nhan_vien_cu.ho_ten},\n\n"
+                        f"Mật khẩu đăng nhập của bạn vừa được quản trị viên đặt lại.\n"
+                        f"Mật khẩu mới: {mat_khau_moi}\n\n"
+                        f"Vui lòng đăng nhập và đổi mật khẩu ngay sau khi nhận được email này."
+                    ),
+                )
+            except EmailSendError as e:
+                logger.error(f"Gửi email mật khẩu mới thất bại cho nhân viên {nhan_vien_id}: {e}")
+                return jsonify({
+                    'message': f'Không gửi được email mật khẩu mới, mật khẩu KHÔNG bị thay đổi: {e}'
+                }), 502
+
+            data['password'] = generate_password_hash(mat_khau_moi)
         elif 'password' in data and not data['password']:
             data.pop('password')
         elif data.get('password'):

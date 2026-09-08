@@ -64,8 +64,11 @@ def update_phuc_loi(phuc_loi_id):
 
 # Xóa phúc lợi
 def delete_phuc_loi(phuc_loi_id):
-    deleted = delete_phuc_loi_service(phuc_loi_id)
+    deleted, so_nhan_vien = delete_phuc_loi_service(phuc_loi_id)
     if deleted:
         return jsonify({'message': 'Xóa phúc lợi thành công'}), 200
-    else:
-        return jsonify({'message': 'Không tìm thấy phúc lợi để xóa'}), 404
+    if so_nhan_vien:
+        return jsonify({
+            'message': f'Không thể xóa vì còn {so_nhan_vien} nhân viên đang gắn với phúc lợi này'
+        }), 400
+    return jsonify({'message': 'Không tìm thấy phúc lợi để xóa'}), 404

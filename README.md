@@ -95,7 +95,24 @@ flask db upgrade
 
 Lệnh này tạo toàn bộ bảng/enum/constraint từ migration hiện có — không cần chạy `db.create_all()` hay import dữ liệu mẫu nào khác.
 
-### 1.8. Cài frontend
+### 1.8. Khởi tạo phân quyền (RBAC) — bắt buộc, làm ngay sau bước 1.7
+
+Sau khi `flask db upgrade`, mọi nhân viên hiện có (kể cả chưa có ai) đều **chưa có vai trò nào** (`vai_tro_id = NULL`). Vì mọi API nghiệp vụ đều yêu cầu đúng quyền tương ứng, nếu bỏ qua bước này mà chạy backend luôn, **không ai đăng nhập vào làm được gì cả** — kể cả người tạo ra hệ thống, vì chính API gán vai trò cũng đòi hỏi quyền `vai_tro.sua` mà chưa ai có.
+
+Từ thư mục `backend`:
+
+```bash
+python scripts/seed_rbac.py
+```
+
+Script này (chạy lại nhiều lần vẫn an toàn với phần quyền/vai trò):
+1. Seed đầy đủ danh mục quyền (mỗi module nghiệp vụ × 4 hành động xem/thêm/sửa/xóa).
+2. Tạo vai trò **Admin** có toàn bộ quyền.
+3. Tạo (hoặc cập nhật vai trò cho) 1 tài khoản Admin đầu tiên — email/mật khẩu đang được đặt cứng trong hằng số `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` ở đầu file `scripts/seed_rbac.py`, đổi lại giá trị đó trước khi chạy nếu cần. **Lưu ý**: chạy lại script sẽ reset mật khẩu tài khoản này về đúng giá trị hằng số đó — không dùng làm mật khẩu vận hành lâu dài, chỉ để đăng nhập lần đầu rồi tự đổi/tạo tài khoản khác.
+
+Đăng nhập bằng tài khoản Admin vừa tạo, vào gán vai trò cho các nhân viên còn lại (`PUT /api/nhan-vien/<id>/vai-tro`) **trước khi** để người dùng thật truy cập hệ thống.
+
+### 1.9. Cài frontend
 
 ```bash
 cd ../frontend
@@ -145,6 +162,8 @@ flask db upgrade                        # áp dụng vào database
 
 File migration được đặt tên tự động dạng `YYYYMMDD_HHMM_<revision>_<mô-tả>.py` để dễ theo dõi theo thời gian.
 
+Nếu thay đổi thêm 1 module nghiệp vụ mới (blueprint route mới) cần được phân quyền, nhớ thêm tên module đó vào danh sách `MODULES` trong `scripts/seed_rbac.py` rồi chạy lại `python scripts/seed_rbac.py` — script tự động seed thêm quyền còn thiếu vào catalog và gán luôn cho vai trò Admin, không đụng tới các vai trò khác đã có.
+
 ## 5. Cấu trúc thư mục
 
 ```
@@ -153,6 +172,7 @@ CNM_FaceID/
 ├── backend/
 │   ├── app/                # models, routes, services, controllers (Flask)
 │   ├── migrations/         # Alembic migrations
+│   ├── scripts/            # script vận hành (seed_rbac.py, ...)
 │   ├── requirements.txt
 │   └── run.py              # entry point backend
 └── frontend/

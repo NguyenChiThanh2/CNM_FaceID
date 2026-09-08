@@ -5,8 +5,10 @@ from app.services.nghi_phep_service import (
     approve_nghi_phep_service,
     reject_nghi_phep_service,
     delete_nghi_phep_service,
+    cancle_nghi_phep_service,
     get_all_nghi_phep_service,
-    get_nghi_phep_by_id_service
+    get_nghi_phep_by_id_service,
+    get_nghi_phep_by_nhan_vien_id_service,
 )
 from werkzeug.utils import secure_filename
 
@@ -29,6 +31,15 @@ def get_nghi_phep_by_id(id):
         if not nghi_phep:
             return jsonify({'error': 'Nghỉ phép không tồn tại'}), 404
         return jsonify(nghi_phep.to_dict()), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+# API: Get Nghi Phep theo nhân viên — route đã gọi tên này từ trước nhưng
+# controller chưa từng định nghĩa hàm, khiến GET luôn 500 (NameError)
+def get_nghi_phep_by_nhan_vien_id(nhan_vien_id):
+    try:
+        nghi_pheps = get_nghi_phep_by_nhan_vien_id_service(nhan_vien_id)
+        return jsonify([nghi_phep.to_dict() for nghi_phep in nghi_pheps]), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 

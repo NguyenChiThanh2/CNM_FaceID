@@ -1,7 +1,23 @@
 from flask import Blueprint, request
 from app.controllers.khau_tru_controller import *
 
+from app.decorators.auth_decorators import require_module_permission, permission_required
+
 khau_tru_bp = Blueprint('khau_tru_bp', __name__)
+
+
+# remove-nhan-vien-from-khau-tru dùng POST nhưng là hành động XÓA, không phải
+# "tạo mới" theo suy luận method mặc định -> loại trừ, gắn thẳng đúng quyền.
+_LOAI_TRU_SUY_QUYEN_THEO_METHOD = {
+    'khau_tru_bp.remove_nhan_vien_from_khau_tru',
+}
+
+
+@khau_tru_bp.before_request
+def _require_permission():
+    if request.endpoint in _LOAI_TRU_SUY_QUYEN_THEO_METHOD:
+        return
+    return require_module_permission("khau_tru")()
 
 # Lấy tất cả khấu trừ
 @khau_tru_bp.route('/get-all-khau-tru', methods=['GET'])
@@ -48,6 +64,7 @@ def get_nhan_vien_by_khau_tru(khau_tru_id):
     return get_nhan_vien_by_khau_tru_controller(khau_tru_id)
 
 @khau_tru_bp.route("/remove-nhan-vien-from-khau-tru", methods=["POST"])
+@permission_required("khau_tru.xoa")
 def remove_nhan_vien_from_khau_tru():
     return remove_nhan_vien_from_khau_tru_controller()
 

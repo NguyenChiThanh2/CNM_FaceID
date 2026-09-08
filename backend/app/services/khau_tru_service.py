@@ -5,7 +5,19 @@ from datetime import datetime
 from decimal import Decimal
 import os
 from werkzeug.utils import secure_filename
-from config import UPLOAD_FOLDER_KHAUTRU
+from upload_paths import UPLOAD_FOLDER_KHAUTRU
+
+FILE_EXTENSIONS_HOP_LE = {".pdf", ".jpg", ".jpeg", ".png"}
+
+
+def _kiem_tra_duoi_file_hop_le(filename):
+    """Chặn upload file thực thi được (.html, .svg, .js...) — nếu ai đó tải
+    lên 1 file .html chứa <script>, sau này route phục vụ file lại trả đúng
+    Content-Type text/html khiến trình duyệt CHẠY script đó (stored XSS)."""
+    ext = os.path.splitext(filename)[1]
+    if ext.lower() not in FILE_EXTENSIONS_HOP_LE:
+        raise ValueError(f"Chỉ chấp nhận file PDF, JPG, PNG (nhận được: {ext or 'không có đuôi'})")
+    return ext
 
 
 # Lấy tất cả khấu trừ
@@ -35,7 +47,7 @@ def create_khau_tru_service(ten_khau_tru,loai_khau_tru,so_tien,ghi_chu,ngay_quye
     ten_file_moi = None 
     if file:
         filename = secure_filename(file.filename)
-        ext = os.path.splitext(filename)[1]
+        ext = _kiem_tra_duoi_file_hop_le(filename)
         ten_file_moi = f"khautru_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
         file.save(os.path.join(UPLOAD_FOLDER_KHAUTRU, ten_file_moi))
     # Ép kiểu an toàn
@@ -79,7 +91,7 @@ def update_khau_tru_service(id,ten_khau_tru,loai_khau_tru,so_tien,ghi_chu,ngay_q
 
         # Lưu file mới
         filename = secure_filename(file.filename)
-        ext = os.path.splitext(filename)[1]
+        ext = _kiem_tra_duoi_file_hop_le(filename)
         ten_file_moi = f"khautru_{datetime.now().strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}{ext}"
         file.save(os.path.join(UPLOAD_FOLDER_KHAUTRU, ten_file_moi))
         khau_tru.file_dinh_kem=ten_file_moi
@@ -93,16 +105,27 @@ def update_khau_tru_service(id,ten_khau_tru,loai_khau_tru,so_tien,ghi_chu,ngay_q
         db.session.rollback()
         return {"message": f"Lỗi server: {str(e)}"}, 500
 
-# Xóa khấu trừ
+# Xóa khấu trừ — xóa MỀM, và chặn hẳn nếu còn nhân viên đang gắn với khoản
+# khấu trừ này. Trước đây xóa cứng (db.session.delete) trong khi
+# KhauTruNhanVien.khau_tru_id có ondelete='CASCADE' ở tầng DB — xóa 1 KhauTru
+# sẽ tự động xóa CỨNG theo toàn bộ lịch sử KhauTruNhanVien liên quan, mất
+# luôn không khôi phục được, dù KhauTruNhanVien vốn thiết kế để xóa mềm.
+# Không còn tự xóa file đính kèm ở đây nữa — xóa mềm nghĩa là bản ghi (và file
+# minh chứng của nó) vẫn có thể khôi phục, xóa file vật lý ngay lúc này sẽ
+# phá mất khả năng khôi phục đó.
 def delete_khau_tru_service(khau_tru_id):
+    khau_tru = KhauTru.query.get(khau_tru_id)
+    if not khau_tru:
+        raise ValueError("Khấu trừ không tồn tại")
+
+    so_nhan_vien = KhauTruNhanVien.query.filter_by(khau_tru_id=khau_tru_id).count()
+    if so_nhan_vien:
+        raise ValueError(
+            f"Không thể xóa vì còn {so_nhan_vien} nhân viên đang gắn với khoản khấu trừ này"
+        )
+
     try:
-        khau_tru = KhauTru.query.get(khau_tru_id)
-        if not khau_tru:
-            raise ValueError("Khấu trừ không tồn tại")
-        if khau_tru.file_dinh_kem and os.path.exists(os.path.join(UPLOAD_FOLDER_KHAUTRU, khau_tru.file_dinh_kem)):
-            os.remove(os.path.join(UPLOAD_FOLDER_KHAUTRU, khau_tru.file_dinh_kem))
-            
-        db.session.delete(khau_tru)
+        khau_tru.soft_delete()
         db.session.commit()
         return True
     except Exception as e:

@@ -29,7 +29,7 @@ def get_cham_cong_by_id(id):
 
 # Cập nhật chấm công
 def update_cham_cong(id):
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}  # body sai định dạng -> {} thay vì crash 500
     cham_cong = update_cham_cong_service(
         id,
         thoi_gian_vao=data.get('thoi_gian_vao'),

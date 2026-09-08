@@ -53,7 +53,10 @@ def update_thuong(thuong_id):
 
 # Xóa thưởng
 def delete_thuong(thuong_id):
-    deleted = delete_thuong_service(thuong_id)
+    try:
+        deleted = delete_thuong_service(thuong_id)
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 400
     if deleted:
         return jsonify({'message': 'Xóa thưởng thành công'}), 200
     else:

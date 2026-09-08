@@ -77,7 +77,10 @@ def update_khau_tru(khau_tru_id):
 
 # Xóa khấu trừ
 def delete_khau_tru(khau_tru_id):
-    deleted = delete_khau_tru_service(khau_tru_id)
+    try:
+        deleted = delete_khau_tru_service(khau_tru_id)
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 400
     if deleted:
         return jsonify({'message': 'Xóa khấu trừ thành công'}), 200
     else:

@@ -7,7 +7,24 @@ from app import db
 from app.models.hopdong_laodong_model import HopDongLaoDong
 
 # Đảm bảo blueprint gắn với /api để khớp FE gọi /api/hop-dong
+from app.decorators.auth_decorators import require_module_permission, permission_required
+
 hopdong_bp = Blueprint("hopdong_bp", __name__, url_prefix="/api")
+
+
+# by-nhan-vien/batch dùng POST (để gửi danh sách id trong body) nhưng chỉ ĐỌC
+# dữ liệu, không ghi gì -> loại trừ khỏi suy luận method mặc định, gắn quyền
+# "xem" đúng bản chất.
+_LOAI_TRU_SUY_QUYEN_THEO_METHOD = {
+    'hopdong_bp.get_contracts_batch',
+}
+
+
+@hopdong_bp.before_request
+def _require_permission():
+    if request.endpoint in _LOAI_TRU_SUY_QUYEN_THEO_METHOD:
+        return
+    return require_module_permission("hopdong")()
 
 # ---------------- Helpers an toàn kiểu dữ liệu ----------------
 def noneish(v):
@@ -286,6 +303,7 @@ def update_hop_dong(id):
         return jsonify({"message": "Cập nhật hợp đồng thất bại", "error": str(e)}), 500
 
 @hopdong_bp.route("/hop-dong/by-nhan-vien/batch", methods=["POST"])
+@permission_required("hopdong.xem")
 def get_contracts_batch():
     data = request.get_json(silent=True) or {}
     ids = data.get("ids", [])

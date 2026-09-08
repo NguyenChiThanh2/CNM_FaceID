@@ -23,7 +23,7 @@ def create_giay_phep_service(cham_cong_id, nhan_vien_id, ngay_bat_dau, ngay_ket_
         loai_giay_phep=loai_giay_phep,
         ly_do=ly_do,
         so_gio=so_gio,
-        trang_thai="Chưa duyệt"
+        trang_thai="Đang chờ"
     )
     
     try:
@@ -41,11 +41,17 @@ def update_giay_phep_service(id, cham_cong_id=None, nhan_vien_id=None, ngay_bat_
         if not giay_phep:
             raise ValueError("Giấy phép không tồn tại")
         
-        if get_cham_cong_by_id_service(cham_cong_id):
-            GiayPhep.cham_cong_id = cham_cong_id
-        
-        if not get_nhan_vien_by_id_service(nhan_vien_id):
-            GiayPhep.nhan_vien_id = nhan_vien_id
+        # Gán vào INSTANCE (giay_phep.x), không phải CLASS (GiayPhep.x) — gán
+        # vào class sẽ ghi đè luôn Column dùng chung của mọi instance, hỏng
+        # mapper cho toàn bộ nhân viên khác tới khi restart server. Đồng thời
+        # sửa lại điều kiện bị phủ định ngược (dòng cũ gán nhan_vien_id khi
+        # KHÔNG tìm thấy nhân viên — ngược với ý đồ) và thêm truthy-check để
+        # không vô tình xóa giá trị cũ khi client không gửi tham số này.
+        if cham_cong_id and get_cham_cong_by_id_service(cham_cong_id):
+            giay_phep.cham_cong_id = cham_cong_id
+
+        if nhan_vien_id and get_nhan_vien_by_id_service(nhan_vien_id):
+            giay_phep.nhan_vien_id = nhan_vien_id
         
         if ngay_bat_dau:
             tu_ngay_date = datetime.strptime(ngay_bat_dau, "%Y-%m-%d").date()
@@ -62,7 +68,7 @@ def update_giay_phep_service(id, cham_cong_id=None, nhan_vien_id=None, ngay_bat_
             giay_phep.ly_do = ly_do
         
         if loai_giay_phep in ["Quên chấm công", "Tăng ca"]:
-            GiayPhep.loai_giay_phep = loai_giay_phep 
+            giay_phep.loai_giay_phep = loai_giay_phep
         
         if loai_giay_phep == "Tăng ca" and so_gio is not None and so_gio >= 0:
             giay_phep.so_gio = so_gio
@@ -72,8 +78,8 @@ def update_giay_phep_service(id, cham_cong_id=None, nhan_vien_id=None, ngay_bat_
             raise ValueError("Số giờ phải là số dương và khác None")
         
         if trang_thai:
-            if giay_phep.trang_thai != "Chưa duyệt":
-                raise ValueError("Không thể cập nhật trạng thái khi đơn không ở trạng thái 'Chưa duyệt'")
+            if giay_phep.trang_thai != "Đang chờ":
+                raise ValueError("Không thể cập nhật trạng thái khi đơn không ở trạng thái 'Đang chờ'")
             giay_phep.trang_thai = trang_thai
         
         db.session.commit()
@@ -91,8 +97,8 @@ def approve_giay_phep_service(id):
             raise ValueError("Giấy phép không tồn tại")
 
         # Kiểm tra trạng thái của đơn Giấy phép
-        if giay_phep.trang_thai != "Chưa duyệt":
-            raise ValueError("Không thể duyệt đơn khi trạng thái không phải là 'Chưa duyệt'")
+        if giay_phep.trang_thai != "Đang chờ":
+            raise ValueError("Không thể duyệt đơn khi trạng thái không phải là 'Đang chờ'")
 
         # Duyệt đơn Giấy phép và cập nhật trạng thái
         giay_phep.trang_thai = "Đã duyệt"
@@ -118,8 +124,8 @@ def reject_giay_phep_service(id):
         if not giay_phep:
             raise ValueError("Giấy phép không tồn tại")
 
-        if giay_phep.trang_thai != "Chưa duyệt":
-            raise ValueError("Không thể từ chối khi trạng thái không phải là 'Chưa duyệt'")
+        if giay_phep.trang_thai != "Đang chờ":
+            raise ValueError("Không thể từ chối khi trạng thái không phải là 'Đang chờ'")
 
         giay_phep.trang_thai = "Từ chối"
         db.session.commit()
@@ -145,7 +151,7 @@ def cancle_giay_phep_service(id):
         if not giay_phep:
             raise ValueError("Giấy phép không tồn tại")
 
-        if giay_phep.trang_thai not in ["Chưa duyệt", "Từ chối"]:
+        if giay_phep.trang_thai not in ["Đang chờ", "Từ chối"]:
             raise ValueError("Không thể hủy giấy phép đã được duyệt hoặc đã xử lý")
 
         giay_phep.soft_delete()

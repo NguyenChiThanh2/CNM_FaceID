@@ -1,7 +1,8 @@
 from datetime import date, datetime
 from app import db
+from app.models.soft_delete import SoftDeleteMixin
 
-class KhauTru(db.Model):
+class KhauTru(db.Model, SoftDeleteMixin):
     __tablename__ = 'khau_tru'
 
     id = db.Column(db.Integer, primary_key=True)

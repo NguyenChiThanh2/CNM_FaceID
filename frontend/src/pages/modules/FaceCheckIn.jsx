@@ -230,7 +230,10 @@ export default function FaceCheckin() {
     try {
       const res = await fetch(`${API_BASE}/api/face/recognize`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Token": getDeviceToken(),
+        },
         body: JSON.stringify({ image_base64: dataURL }),
       });
       const data = await res.json();

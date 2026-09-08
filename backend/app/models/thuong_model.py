@@ -1,7 +1,8 @@
 from datetime import date, datetime
 from app import db
+from app.models.soft_delete import SoftDeleteMixin
 
-class Thuong(db.Model):
+class Thuong(db.Model, SoftDeleteMixin):
     __tablename__ = "thuong"
 
     id = db.Column(db.Integer, primary_key=True)

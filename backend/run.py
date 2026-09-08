@@ -1,60 +1,15 @@
 from app import create_app
 from app.routes import register_routes  # bạn cần có 1 file routes/__init__.py chứa register_routes
-from flask import send_file, abort
+from flask import send_file
 import os
-from flask_cors import CORS
-from config import UPLOAD_FOLDER, UPLOAD_FOLDER_KHAUTRU, UPLOAD_FOLDER_PHEPKL, UPLOAD_FOLDER_PHEPNAM
 
 app = create_app()
-register_routes(app)  # đăng ký blueprint
+register_routes(app)  # đăng ký blueprint (bao gồm file_bp — xem app/routes/file_routes.py)
 
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+# CORS đã được cấu hình trong create_app() (app/__init__.py) — trước đây bị
+# khai lần 2 ở đây, cùng áp lên app instance, nên bỏ hẳn để chỉ còn 1 nguồn
+# cấu hình duy nhất.
 
-@app.route('/api/images/<filename>')
-def get_image(filename):
-    image_path = os.path.join(app.root_path, '..', 'static', 'images', 'avatars', filename)
-    if os.path.exists(image_path):
-        mime_type = 'image/jpeg'
-        if filename.lower().endswith('.png'):
-            mime_type = 'image/png'
-        elif filename.lower().endswith('.gif'):
-            mime_type = 'image/gif'
-        return send_file(image_path, mimetype=mime_type)
-    else:
-        abort(404)
-@app.route('/api/checkin_images/<filename>')
-def get_checkin_image(filename):
-    image_path = os.path.join(app.root_path, '..', 'static', 'checkin_images', filename)
-    if os.path.exists(image_path):
-        mime_type = 'image/jpeg'
-        if filename.lower().endswith('.png'):
-            mime_type = 'image/png'
-        elif filename.lower().endswith('.gif'):
-            mime_type = 'image/gif'
-        return send_file(image_path, mimetype=mime_type)
-    else:
-        abort(404)
-
-@app.route('/api/can_cu_phap_ly_thai_san/<filename>')
-def get_can_cu_phap_ly_thai_san(filename):
-    image_path = os.path.join(UPLOAD_FOLDER, filename)
-    return send_file(image_path)
-
-@app.route('/api/can_cu_phap_ly_phep_nam/<filename>')
-def get_can_cu_phap_ly_phep_nam(filename):
-    image_path = os.path.join(UPLOAD_FOLDER_PHEPNAM, filename)
-    return send_file(image_path)
-
-@app.route('/api/can_cu_phap_ly_phep_kl/<filename>')
-def get_can_cu_phap_ly_phep_kl(filename):
-    image_path = os.path.join(UPLOAD_FOLDER_PHEPKL, filename)
-    return send_file(image_path)
-
-@app.route('/api/file_dinh_kem_khau_tru/<filename>')
-def get_file_dinh_kem_khau_tru(filename):
-    image_path = os.path.join(UPLOAD_FOLDER_KHAUTRU, filename)
-    return send_file(image_path)
-    
 
 @app.errorhandler(404)
 def page_not_found(e):

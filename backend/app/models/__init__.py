@@ -7,7 +7,9 @@ from .danh_gia_model import DanhGia
 from .nhan_vien_phuc_loi_model import NhanVienPhucLoi
 from .phong_ban_model import PhongBan
 from .chuc_vu_model import ChucVu
-# from .role_model import Role
+from .vai_tro_model import VaiTro
+from .quyen_model import Quyen
+from .vai_tro_quyen_model import vai_tro_quyen
 from .loai_nghi_phep_model import LoaiNghiPhep
 from .hopdong_laodong_model import HopDongLaoDong
 from .quyche_congty_model import QuyCheCongTy
@@ -25,7 +27,7 @@ from .thiet_bi_model import ThietBiChamCong
 
 __all__ = [
     'NhanVien', 'ChamCong', 'PhucLoi', 'NghiPhep', 'Luong',  'DanhGia',
-    'NhanVienPhucLoi', 'PhongBan', 'ChucVu', 'LoaiNghiPhep',
+    'NhanVienPhucLoi', 'PhongBan', 'ChucVu', 'VaiTro', 'Quyen', 'LoaiNghiPhep',
     'HopDongLaoDong', 'QuyCheCongTy', 'GiayPhep', 'BangLuong', 'NguoiPhuThuoc', 'ChiTietLuong',
     'NgayNghiLe', 'Thuong', 'ThuongNhanVien', 'KhauTru', 'KhauTruNhanVien', 'BaoHiemDoanhNghiep',
     'ThietBiChamCong',

@@ -1,11 +1,24 @@
 from flask import Blueprint, request, jsonify
-import os, jwt, hashlib, numpy as np
+import os, jwt, hashlib
 from datetime import datetime, timedelta
 import face_recognition
-from app.models.nhan_vien_model import NhanVien
 from app.utils.file_utils import read_image_from_base64
+from app.services.cham_cong_service import tim_nhan_vien_khop_nhat
+from app.routes.facecheckin_routes import find_active_device, get_device_token_from_request
 
 face_bp = Blueprint("face_bp", __name__)
+
+
+# /api/face/recognize là bước nhận diện "đây là ai" chạy TRƯỚC khi có JWT nhân
+# viên (kiosk chấm công gọi trước /face-checkin, xem FaceCheckIn.jsx) — không
+# thể gắn @jwt_required() ở đây vì lúc này chưa ai đăng nhập cả. Trước đây bị
+# bỏ sót hoàn toàn khỏi đợt quét JWT, khiến bất kỳ ai cũng POST ảnh lên để dò
+# xem 1 khuôn mặt có phải nhân viên công ty không. Áp cùng cơ chế token thiết
+# bị mà /face-checkin đang dùng, để chỉ kiosk đã được cấp quyền mới gọi được.
+@face_bp.before_request
+def _require_device():
+    if not find_active_device(get_device_token_from_request()):
+        return jsonify(ok=False, message="Thiết bị chưa được cấp quyền chấm công"), 403
 
 # ===== Config =====
 SECRET        = os.getenv("FACE_JWT_SECRET", "dev-secret")
@@ -29,28 +42,6 @@ def _ensure_rgb(img):
 def _bbox_size(loc):
     top, right, bottom, left = loc
     return (bottom - top) * (right - left)
-
-
-def best_match(input_encoding, all_nv, thresh=THRESH):
-    matched, min_d = None, float("inf")
-    for nv in all_nv:
-        enc_list = []
-        if hasattr(nv, "face_encodings") and nv.face_encodings:
-            enc_list.extend(nv.face_encodings)
-        elif getattr(nv, "face_encoding", None) is not None:
-            enc_list.append(nv.face_encoding)
-
-        for enc in enc_list:
-            if enc is None:
-                continue
-            known = np.array(enc)
-            d = np.linalg.norm(known - input_encoding)
-            if d < min_d:
-                min_d, matched = d, nv
-
-    if min_d <= thresh:
-        return matched, min_d
-    return None, min_d
 
 
 @face_bp.route("/api/face/recognize", methods=["POST"])
@@ -105,8 +96,9 @@ def recognize():
 
     probe = encs[0]
 
-    # 5) match
-    nv, dist = best_match(probe, NhanVien.query.all(), THRESH)
+    # 5) match — query đã lọc sẵn "chỉ nhân viên có face_encoding" bên trong
+    # tim_nhan_vien_khop_nhat, không cần tự NhanVien.query.all() ở đây nữa.
+    nv, dist = tim_nhan_vien_khop_nhat(probe, THRESH)
     if not nv:
         return jsonify(
             ok=False,

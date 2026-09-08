@@ -2,6 +2,8 @@ from datetime import datetime
 from sqlalchemy import event, Column, DateTime, Integer, ForeignKey
 from sqlalchemy.orm import Session, with_loader_criteria
 
+from app.utils.auth import get_current_user_id
+
 
 class SoftDeleteMixin:
     """Trộn vào 1 model để có xóa mềm: bản ghi không bao giờ bị xóa cứng khỏi
@@ -17,8 +19,11 @@ class SoftDeleteMixin:
     deleted_by = Column(Integer, ForeignKey('nhan_vien.id'), nullable=True)
 
     def soft_delete(self, by_user_id=None):
+        """by_user_id: chỉ định tay khi cần (vd script hệ thống); mặc định tự
+        lấy người đang đăng nhập — trước đây toàn bộ 15+ nơi gọi .soft_delete()
+        trong codebase đều không truyền, khiến deleted_by luôn NULL."""
         self.deleted_at = datetime.utcnow()
-        self.deleted_by = by_user_id
+        self.deleted_by = by_user_id if by_user_id is not None else get_current_user_id()
 
     def restore(self):
         self.deleted_at = None

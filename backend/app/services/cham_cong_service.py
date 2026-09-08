@@ -137,15 +137,38 @@ def _bbox_area(loc):  # (top, right, bottom, left)
 def _pick_biggest(locs):
     return max(locs, key=_bbox_area)
 # ====== Tiện ích nhận dạng ======
+def tim_nhan_vien_khop_nhat(input_encoding, thresh, all_nv=None):
+    """Tìm nhân viên có face_encoding gần input_encoding nhất trong ngưỡng thresh.
+
+    Nguồn chuẩn DUY NHẤT cho toàn hệ thống — trước đây bị định nghĩa lặp lại
+    độc lập ở cham_cong_service.py (_best_match) và face_routes.py (best_match),
+    cả 2 đều lặp Python thủ công tính np.linalg.norm() từng nhân viên một thay
+    vì dùng face_recognition.face_distance() (vector hóa bằng numpy, tính toàn
+    bộ danh sách cùng lúc — nhanh hơn đáng kể khi có nhiều nhân viên).
+
+    all_nv=None -> tự query DB, chỉ lấy nhân viên ĐÃ CÓ face_encoding ngay ở
+    câu query (trước đây tải hết toàn bộ nhân viên rồi mới lọc bằng Python).
+    """
+    if all_nv is None:
+        all_nv = NhanVien.query.filter(NhanVien.face_encoding.isnot(None)).all()
+    else:
+        all_nv = [nv for nv in all_nv if nv.face_encoding is not None]
+
+    if not all_nv:
+        return None, float("inf")
+
+    known_encodings = [np.array(nv.face_encoding) for nv in all_nv]
+    distances = face_recognition.face_distance(known_encodings, input_encoding)
+    best_i = int(np.argmin(distances))
+    best_d = float(distances[best_i])
+
+    if best_d <= thresh:
+        return all_nv[best_i], best_d
+    return None, best_d
+
+
 def _best_match(input_encoding):
-    matched_nv, min_d = None, float("inf")
-    for nv in NhanVien.query.all():
-        if nv.face_encoding:
-            known = np.array(nv.face_encoding)
-            d = np.linalg.norm(known - input_encoding)
-            if d < min_d and d <= THRESH:
-                min_d, matched_nv = d, nv
-    return matched_nv, min_d
+    return tim_nhan_vien_khop_nhat(input_encoding, THRESH)
 
 def _encode_one_face(img):
     locs = face_recognition.face_locations(img)
@@ -304,14 +327,19 @@ def passive_liveness_score(frames_bgr):
                    khung siêu tĩnh (SSIM_HARD & FLOW_VERY_LOW),
                    không có dấu hiệu parallax 'live_like',
                    chuyển động quá thấp, mặt quá nhỏ/quá to.
+
+    Trả về (ok, score, reason, best_idx) — best_idx là chỉ số khung hình nét
+    nhất trong frames_bgr (đã tính sẵn ở bước 1 để bên gọi tái sử dụng khi lưu
+    ảnh minh chứng chấm công, khỏi phải tính lại Laplacian variance lần nữa).
+    best_idx = None nếu liveness fail trước khi kịp tính độ nét.
     """
     if not frames_bgr or len(frames_bgr) < MIN_FRAMES:
-        return False, 0.0, f"Thiếu khung hình (cần >= {MIN_FRAMES})"
+        return False, 0.0, f"Thiếu khung hình (cần >= {MIN_FRAMES})", None
 
     # 0) tìm mặt ở frame 0 + ràng buộc diện tích
     locs0 = face_recognition.face_locations(frames_bgr[0])
     if not locs0:
-        return False, 0.1, "Không phát hiện khuôn mặt ổn định"
+        return False, 0.1, "Không phát hiện khuôn mặt ổn định", None
     loc0 = _pick_biggest(locs0)
 
     loc0 = _pick_biggest(locs0)  # dùng mặt lớn nhất
@@ -322,8 +350,9 @@ def passive_liveness_score(frames_bgr):
     # 1) nét
     sharp_vals = [float(cv2.Laplacian(f, cv2.CV_64F).var()) for f in frames_bgr]
     med_sharp = float(np.median(sharp_vals))
+    best_idx = int(np.argmax(sharp_vals))
     if med_sharp < LAPLACIAN_MIN:
-        return False, 0.1, "Ảnh quá mờ"
+        return False, 0.1, "Ảnh quá mờ", best_idx
 
     # 2) SSIM liên tiếp
     def _ssim_pair(a, b):
@@ -373,7 +402,7 @@ def passive_liveness_score(frames_bgr):
     if _detect_screen_bezel(frames_bgr[0], loc0):
         if DEBUG_LIVENESS:
             print(f"[Liveness STRICT] Bezel=1  sharp={med_sharp:.2f}  ssim={avg_ssim:.5f}  flow={mean_mag:.4f}")
-        return False, 0.25, "Phát hiện khung màn hình quanh mặt"
+        return False, 0.25, "Phát hiện khung màn hình quanh mặt", best_idx
 
     # 7) fail cứng theo từng tín hiệu (chống màn hình)
     # --- MỚI (chỉ fail khi planar + thêm dấu hiệu giả mạo) ---
@@ -381,24 +410,24 @@ def passive_liveness_score(frames_bgr):
 
     # Nếu planar và mặt ~ nền lặp nhiều lần  -> nghi cầm điện thoại
     if planar and (screen_like_hits >= PARA_SCREEN_MIN_HITS):
-        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại", best_idx
         # return False, 0.30, "Planarity + parallax mặt~nền (nghi màn hình)"
 
     # Nếu planar và khung rất tĩnh, lại không có parallax 'live_like' -> nghi ảnh/màn hình
     if planar and (avg_ssim >= SSIM_SOFT) and (live_like_hits == 0):
-        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại", best_idx
 
     if screen_like_hits >= PARA_SCREEN_MIN_HITS:
-        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại", best_idx
     if (avg_ssim >= SSIM_HARD) and (mean_mag <= FLOW_VERY_LOW):
-        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại", best_idx
 
     # 8) yêu cầu có ít nhất 1 dấu hiệu 'live_like' & chuyển động đủ
     if live_like_hits < 1:
         # return False, 0.30, "Thiếu parallax tự nhiên của người thật"
-        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại"
+        return False, 0.30, "Chấm công thất bại. Vui lòng thử lại", best_idx
     if mean_mag < FLOW_MIN:
-        return False, 0.30, "Chuyển động vi mô quá thấp"
+        return False, 0.30, "Chuyển động vi mô quá thấp", best_idx
 
     # 9) score mềm (để log/giám sát), strict pass khi qua tất cả cổng
     sharp_score = float(np.clip((med_sharp - LAPLACIAN_MIN) / 40.0, 0, 0.25))
@@ -413,7 +442,7 @@ def passive_liveness_score(frames_bgr):
               f"screen_hits={screen_like_hits} live_hits={live_like_hits} "
               f"face_area={face_area_ratio:.2f}")
 
-    return True, score, None
+    return True, score, None, best_idx
 
 
 
@@ -474,10 +503,13 @@ def create_cham_cong_from_face_service_passive(payload):
             frames_bgr.append(img)
 
     if frames_bgr:
-        ok, score, reason = passive_liveness_score(frames_bgr)
+        ok, score, reason, best_idx = passive_liveness_score(frames_bgr)
         if not ok:
             return {"ok": False, "message": f"Liveness không đạt: {reason} (score={score:.2f})"}, 400
-        best_img = max(frames_bgr, key=lambda im: _lap_var(im))
+        # best_idx đã được passive_liveness_score tính sẵn (bước đo độ nét) —
+        # dùng lại thay vì gọi _lap_var() tính Laplacian variance lần nữa cho
+        # từng frame.
+        best_img = frames_bgr[best_idx]
     else:
         # fallback 1 ảnh
         img_one = read_image_from_base64(payload.get("image_base64"))
@@ -634,58 +666,107 @@ def get_chamcong_1nhanvien_theothang_service(nhan_vien_id, thang, nam):
     extract('year', ChamCong.ngay) == nam).all()
     
     
-def tinh_so_cong_cho_1_ngay(check_in: Optional[datetime], check_out: Optional[datetime]) -> Decimal:
+# ===== Quy đổi giờ chấm công / giờ giấy phép sang số công =====
+# Nguồn chuẩn DUY NHẤT cho toàn bộ hệ thống — trước đây 3 hàm dưới đây bị định
+# nghĩa trùng lặp (khác luật) ở cả cham_cong_service.py và tinh_luong_service.py:
+# màn hình "cập nhật số công" của HR dùng bản 2 mốc đơn giản, còn tính lương
+# thật lại tự dùng bản 3 mốc (thêm 0.25 công cho ca lẻ) + fallback theo giấy
+# phép khi thiếu chấm công. Không tìm thấy lý do nghiệp vụ nào cho việc tách 2
+# bản — đã xác nhận gộp về 1 bản duy nhất, áp dụng như nhau cho cả 2 nơi.
+_CA_SANG_START, _CA_SANG_END = time(8, 0), time(12, 0)
+_CA_CHIEU_START, _CA_CHIEU_END = time(13, 0), time(17, 0)
+
+
+def _overlap_hours(s: time, e: time, ws: time, we: time) -> Decimal:
+    start = max(datetime.combine(date.min, s), datetime.combine(date.min, ws))
+    end = min(datetime.combine(date.min, e), datetime.combine(date.min, we))
+    delta = (end - start).total_seconds() / 3600
+    return Decimal(str(max(delta, 0)))
+
+
+def _quy_doi_gio_giayphep_sang_cong(so_gio) -> Decimal:
+    """8 giờ -> 1 công, 4 giờ -> 0.5 công. Giấy phép không khớp 2 mốc này (vd
+    giấy phép Tăng ca với số giờ khác) không quy đổi được thành công của ngày
+    -> trả 0.00 thay vì để hàm rơi qua rớt về None (bug cũ: None lọt vào
+    ChamCong.so_cong sẽ làm crash TypeError khi cộng dồn lúc tính lương)."""
+    if so_gio == 8:
+        return Decimal("1.0")
+    if so_gio == 4:
+        return Decimal("0.5")
+    return Decimal("0.00")
+
+
+def tinh_so_cong_cho_1_ngay(cham_cong_id, check_in: Optional[datetime], check_out: Optional[datetime]) -> Decimal:
     if not check_in or not check_out:
-        return Decimal("0")
-# theo thời gian việt nam
+        # Không có chấm công thực tế -> lấy công theo giấy phép đã duyệt (bất
+        # kỳ loại giấy phép nào, không giới hạn "Quên chấm công") nếu có.
+        return tinh_cong_theo_giayphep(cham_cong_id)
+
     in_t = check_in.time()
     out_t = check_out.time()
+    total_hours = (
+        _overlap_hours(in_t, out_t, _CA_SANG_START, _CA_SANG_END)
+        + _overlap_hours(in_t, out_t, _CA_CHIEU_START, _CA_CHIEU_END)
+    )
 
-    # tính giờ làm việc trong ngày
-    total_hours = Decimal("0")
-    # ca sáng 08:00-12:00
-    a_start, a_end = time(8, 0), time(12, 0)
-    # ca chiều 13:00-17:00
-    b_start, b_end = time(13, 0), time(17, 0)
+    # ---- PHÂN LOẠI CA ----
+    if out_t <= _CA_SANG_END:
+        # Chỉ làm ca sáng
+        if total_hours >= Decimal("3.5"):
+            return Decimal("0.5")  # Đủ 4 tiếng coi như 0.5 công
+        elif total_hours >= Decimal("2.5"):
+            return Decimal("0.25")  # Làm ~3 tiếng vẫn được 0.25 công
+        return Decimal("0.00")
+
+    elif in_t >= _CA_CHIEU_START:
+        # Chỉ làm ca chiều
+        if total_hours >= Decimal("3.5"):
+            return Decimal("0.5")
+        elif total_hours >= Decimal("2.5"):
+            return Decimal("0.25")
+        return Decimal("0.00")
+
+    else:
+        # Làm cả ngày (có qua trưa)
+        if total_hours >= Decimal("7.5"):
+            return Decimal("1.00")
+        elif total_hours >= Decimal("3.5"):
+            return Decimal("0.50")
+        return Decimal("0.00")
 
 
-    def overlap_hours(s: time, e: time, ws: time, we: time) -> Decimal:
-        start = max(datetime.combine(date.min, s), datetime.combine(date.min, ws))
-        end = min(datetime.combine(date.min, e), datetime.combine(date.min, we))
-        delta = (end - start).total_seconds() / 3600
-        return Decimal(str(max(delta, 0)))
-
-
-    total_hours += overlap_hours(in_t, out_t, a_start, a_end)
-    total_hours += overlap_hours(in_t, out_t, b_start, b_end)
-
-
-    # 8 hours -> 1 công; 4 hours -> 0.5 công; trễ 30 phút không tính công ca sáng; về sớm 30 phút không tính công ca chiều
-    if total_hours >= Decimal("7.5"):
-        return Decimal("1.00")
-    if total_hours >= Decimal("3.5"):
-        return Decimal("0.50")
-    return Decimal("0.00")
-    
-        
 def get_tinhsocong_1nhanvien_theothang_service(nhan_vien_id, thang, nam):
     dschamcong = ChamCong.query.filter(ChamCong.nhan_vien_id == nhan_vien_id,extract('month', ChamCong.ngay) == thang,extract('year', ChamCong.ngay) == nam).all()
     if not dschamcong:
         return None
     else:
         for cc in dschamcong:
-            so_cong_moi = tinh_so_cong_cho_1_ngay(cc.thoi_gian_vao, cc.thoi_gian_ra)
+            so_cong_moi = tinh_so_cong_cho_1_ngay(cc.id, cc.thoi_gian_vao, cc.thoi_gian_ra)
             cc.so_cong = so_cong_moi  # cập nhật lại cột so_cong
         db.session.commit()
         return True
-    
+
+
+def tinh_cong_theo_giayphep(cham_cong_id) -> Decimal:
+    """Tính thuần (không ghi DB) — dùng làm fallback bên trong tinh_so_cong_cho_1_ngay,
+    nơi việc commit đã được người gọi (get_tinhsocong_1nhanvien_theothang_service)
+    xử lý theo lô, không cần commit riêng lẻ từng dòng."""
+    giay_phep = GiayPhep.query.filter(GiayPhep.cham_cong_id == cham_cong_id, GiayPhep.trang_thai == "Đã duyệt").first()
+    if not giay_phep:
+        return Decimal("0.00")
+    return _quy_doi_gio_giayphep_sang_cong(giay_phep.so_gio)
+
+
 def get_tinhsocong_theogiayphep_service(id):
+    """API thao tác tay: HR bấm 'áp dụng giấy phép cho ngày này' cho 1 bản ghi
+    chấm công cụ thể — ghi đè trực tiếp so_cong và commit ngay, khác với
+    tinh_cong_theo_giayphep() chỉ tính toán thuần túy."""
     cham_cong = ChamCong.query.filter_by(id=id).first()
     giay_phep = GiayPhep.query.filter(GiayPhep.cham_cong_id == id, GiayPhep.trang_thai == "Đã duyệt").first()
 
     if not cham_cong or not giay_phep:
         return {"error": "Không tìm thấy bản ghi chấm công hoặc giấy phép"}, 404
-    
+
     if giay_phep.so_gio == 8:
         cham_cong.so_cong = Decimal("1.0")
         message = "Cập nhật 1 ngày công"

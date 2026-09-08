@@ -44,6 +44,7 @@ class NhanVien(db.Model, SoftDeleteMixin, AuditMixin):
     dia_chi = db.Column(db.String(255))
     phong_ban_id = db.Column(db.Integer, db.ForeignKey('phong_ban.id'), index=True)
     chuc_vu_id = db.Column(db.Integer, db.ForeignKey('chuc_vu.id'), index=True)
+    vai_tro_id = db.Column(db.Integer, db.ForeignKey('vai_tro.id'), index=True)
     avatar = db.Column(db.String(255), nullable=True)
     trang_thai = db.Column(
         db.Enum('Đang làm việc', 'Đã nghỉ việc', 'Tạm nghỉ', 'Thử việc', name='trang_thai_nhan_vien_enum', create_constraint=True)
@@ -54,6 +55,7 @@ class NhanVien(db.Model, SoftDeleteMixin, AuditMixin):
     # Relationships
     phong_ban = db.relationship('PhongBan', back_populates='phong_ban_nv', lazy=True)
     chuc_vu_nv = db.relationship('ChucVu', back_populates='chuc_vu_nv', lazy=True)
+    vai_tro = db.relationship('VaiTro', back_populates='nhan_vien_list', lazy=True)
     cham_cong_nv = db.relationship('ChamCong', foreign_keys='ChamCong.nhan_vien_id', back_populates='cham_cong_nv', lazy=True)
     nghi_phep = db.relationship(
         'NghiPhep',
@@ -128,6 +130,8 @@ class NhanVien(db.Model, SoftDeleteMixin, AuditMixin):
             'trang_thai': self.trang_thai,
             'so_ngay_phep_con_lai': self.so_ngay_phep_con_lai,
             'chuc_vu': self.chuc_vu_nv.ten_chuc_vu if self.chuc_vu_nv else None,
+            'vai_tro_id': self.vai_tro_id,
+            'ten_vai_tro': self.vai_tro.ten_vai_tro if self.vai_tro else None,
             'face_encoding': None  # Không trả về dữ liệu nhạy cảm
         }
 

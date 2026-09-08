@@ -1,7 +1,14 @@
 from flask import Blueprint
 from app.controllers.nhan_vien_phuc_loi_controller import *
 
+from app.decorators.auth_decorators import require_module_permission
+
 nhan_vien_phuc_loi_bp = Blueprint('nhan_vien_phuc_loi', __name__)
+
+
+@nhan_vien_phuc_loi_bp.before_request
+def _require_permission():
+    return require_module_permission("nhan_vien_phuc_loi")()
 
 # GET tất cả
 @nhan_vien_phuc_loi_bp.route('/get-all-nhan-vien-phuc-loi', methods=['GET'])

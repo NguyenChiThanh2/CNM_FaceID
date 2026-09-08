@@ -65,8 +65,20 @@ def delete_thuong_service(thuong_id):
     thuong = get_thuong_by_id_service(thuong_id)
     if not thuong:
         return False
+
+    # Chặn xóa nếu còn nhân viên đang gắn với khoản thưởng này — trước đây
+    # xóa cứng (db.session.delete) trong khi ThuongNhanVien.thuong_id có
+    # ondelete="CASCADE" ở tầng DB, nghĩa là xóa 1 Thuong sẽ tự động xóa CỨNG
+    # theo toàn bộ lịch sử ThuongNhanVien liên quan, mất luôn không khôi phục
+    # được — dù ThuongNhanVien vốn được thiết kế để xóa MỀM.
+    so_nhan_vien = ThuongNhanVien.query.filter_by(thuong_id=thuong_id).count()
+    if so_nhan_vien:
+        raise ValueError(
+            f"Không thể xóa vì còn {so_nhan_vien} nhân viên đang gắn với khoản thưởng này"
+        )
+
     try:
-        db.session.delete(thuong)
+        thuong.soft_delete()
         db.session.commit()
         return True
     except Exception as e:
@@ -152,42 +164,45 @@ def get_thang13_nhan_vien_service(nhanvien_id, ngay_quyet_dinh):
     if not hop_dongs:
         return 0
 
-    # 2️⃣ Lấy bảng lương trong năm
-    luongs = (
-        BangLuong.query
-        .filter_by(nhan_vien_id=nhanvien_id)
-        .filter(BangLuong.nam == nam_qd)
-        .all()
+    # 2️⃣ Đếm SỐ THÁNG có bảng lương trong năm — dùng distinct(BangLuong.thang)
+    # thay vì đếm số dòng: nếu payroll lỡ bị chạy lại 2 lần cho cùng 1 tháng
+    # (tạo 2 dòng BangLuong cùng tháng), đếm dòng sẽ ra >12 tháng, thưởng bị
+    # tính vượt quá 1 tháng lương.
+    so_thang_lam = (
+        db.session.query(db.func.count(db.distinct(BangLuong.thang)))
+        .filter(BangLuong.nhan_vien_id == nhanvien_id, BangLuong.nam == nam_qd)
+        .scalar() or 0
     )
-    so_thang_lam = len(luongs)
-    # print("Số tháng làm việc trong năm:", so_thang_lam)
     if so_thang_lam == 0:
         return 0
 
-    # 3️⃣ Tính tổng lương cơ bản trong năm dựa trên hợp đồng
-    tong_luong_cb = 0
+    # 3️⃣ Tính lương cơ bản bình quân theo tháng trong năm, dựa trên TỪNG hợp
+    # đồng theo đúng số tháng hợp đồng đó có hiệu lực trong năm — trước đây
+    # phần này bị comment hết, chỉ còn dùng "muc_luong_cb" của lần lặp CUỐI
+    # CÙNG (hợp đồng mới nhất) áp cho cả năm, bỏ qua mọi hợp đồng có mức
+    # lương khác trước đó trong cùng năm.
+    tong_luong_cb = Decimal("0")
     for hd in hop_dongs:
         muc_luong_cb = hd.muc_luong_co_ban
-        # ngay_bd = hd.ngay_bat_dau
-        # ngay_kt = hd.ngay_ket_thuc
+        ngay_bd = hd.ngay_bat_dau
+        ngay_kt = hd.ngay_ket_thuc
 
-        # # Chuyển sang date nếu là datetime
-        # if isinstance(ngay_bd, datetime):
-        #     ngay_bd = ngay_bd.date()
-        # if ngay_kt and isinstance(ngay_kt, datetime):
-        #     ngay_kt = ngay_kt.date()
+        if isinstance(ngay_bd, datetime):
+            ngay_bd = ngay_bd.date()
+        if ngay_kt and isinstance(ngay_kt, datetime):
+            ngay_kt = ngay_kt.date()
 
-        # # Giới hạn phạm vi hợp đồng trong năm
-        # if ngay_bd.year < nam_qd:
-        #     ngay_bd = date(nam_qd, 1, 1)
-        # if not ngay_kt or ngay_kt.year > nam_qd:
-        #     ngay_kt = date(nam_qd, 12, 31)
+        # Giới hạn phạm vi hợp đồng trong năm quyết định thưởng
+        ngay_bd_trong_nam = max(ngay_bd, date(nam_qd, 1, 1))
+        ngay_kt_trong_nam = min(ngay_kt or date(nam_qd, 12, 31), date(nam_qd, 12, 31))
 
-        # # Số tháng hợp đồng còn hiệu lực trong năm
-        # so_thang_hd = max(0, (ngay_kt.month - ngay_bd.month + 1))
-        # tong_luong_cb += muc_luong_cb * (so_thang_hd / 12)
-        # print(tong_luong_cb)
-        
+        # Số tháng hợp đồng còn hiệu lực trong năm
+        so_thang_hd = max(
+            0,
+            (ngay_kt_trong_nam.year - ngay_bd_trong_nam.year) * 12
+            + ngay_kt_trong_nam.month - ngay_bd_trong_nam.month + 1,
+        )
+        tong_luong_cb += Decimal(str(muc_luong_cb)) * so_thang_hd / Decimal("12")
 
     # 4️⃣ Kiểm tra hợp đồng hết hạn trước ngày quyết định
     last_hd = hop_dongs[-1]
@@ -199,6 +214,6 @@ def get_thang13_nhan_vien_service(nhanvien_id, ngay_quyet_dinh):
             return 0
 
     # 5️⃣ Tính thưởng tháng 13 theo số tháng thực tế làm việc
-    thuong_thang13 = (muc_luong_cb / 12) * so_thang_lam
+    thuong_thang13 = tong_luong_cb * so_thang_lam / Decimal("12")
 
-    return round(thuong_thang13, 0)
+    return round(float(thuong_thang13), 0)

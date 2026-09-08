@@ -18,6 +18,15 @@ def get_phong_ban_by_id(id):
     else:
         return jsonify({'message': 'Không tìm thấy phòng ban'}), 404
 
+# Lấy phòng ban theo tên — route đã gọi tên này từ trước nhưng controller
+# chưa từng định nghĩa hàm, khiến GET luôn 500 (NameError)
+def get_phong_ban_by_name(ten_phong_ban):
+    phong_ban = get_phong_ban_by_name_service(ten_phong_ban)
+    if phong_ban:
+        return jsonify(phong_ban.to_dict())
+    else:
+        return jsonify({'message': 'Không tìm thấy phòng ban'}), 404
+
 # Tạo phòng ban mới
 def create_phong_ban():
     data = request.get_json()

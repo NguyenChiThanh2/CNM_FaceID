@@ -3,6 +3,8 @@ from flask_cors import CORS
 from .db import db
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -13,6 +15,13 @@ load_dotenv()
 
 jwt = JWTManager()  #  KHỞI TẠO ĐÚNG Ở ĐÂY
 migrate = Migrate()
+# Rate limiter — dùng để chặn brute-force ở /login (xem app/routes/nhan_vien_routes.py).
+# key_func=get_remote_address: đếm giới hạn theo IP của người gọi. Backend mặc
+# định là in-memory (không cần Redis) — ĐỦ DÙNG cho 1 process, nhưng nếu chạy
+# nhiều worker gunicorn thì mỗi worker đếm riêng (giới hạn thực tế = số lần
+# cấu hình × số worker) — muốn chính xác tuyệt đối khi scale nhiều worker thì
+# cần trỏ storage_uri sang Redis, không thuộc phạm vi sửa lần này.
+limiter = Limiter(key_func=get_remote_address)
 
 
 # SQLite mặc định KHÔNG enforce ràng buộc khóa ngoại trừ khi bật PRAGMA này cho
@@ -47,7 +56,14 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
-    CORS(app)
+    limiter.init_app(app)
+    # Cấu hình CORS DUY NHẤT ở đây — trước đây có 2 nơi gọi CORS(app) (chỗ này
+    # và run.py), cùng áp lên 1 app instance. Toàn bộ route trong hệ thống đều
+    # nằm dưới /api/* (kể cả các route không khai url_prefix ở register_routes
+    # đều tự khai '/api' ngay trong Blueprint hoặc trong path — xem
+    # app/routes/__init__.py), nên giữ đúng nguyên cấu hình đang chạy thật
+    # (origins mở, cho phép gửi kèm credentials) nhưng chỉ khai 1 lần duy nhất.
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
     # Alembic (flask db upgrade) là nguồn quản lý schema duy nhất kể từ khi
     # chuyển sang PostgreSQL — không còn dùng db.create_all() song song để
