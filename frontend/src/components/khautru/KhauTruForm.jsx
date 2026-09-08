@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const API_BASE = "http://localhost:5000";
 const KhauTruForm = ({ onAdded, editingKhauTru, setEditingKhauTru }) => {
   const [formData, setFormData] = useState({
     ten_khau_tru: "",
@@ -68,14 +67,14 @@ const KhauTruForm = ({ onAdded, editingKhauTru, setEditingKhauTru }) => {
 
       let response;
       if (editingKhauTru) {
-        response = await axios.put(
-          `${API_BASE}/api/edit-khau-tru/${editingKhauTru.id}`,
+        response = await axiosInstance.put(
+          `/edit-khau-tru/${editingKhauTru.id}`,
           fd,
           { headers: { "Content-Type": "multipart/form-data" } }
         );
       } else {
-        response = await axios.post(
-          `${API_BASE}/api/add-khau-tru`,
+        response = await axiosInstance.post(
+          `/add-khau-tru`,
           fd,
           { headers: { "Content-Type": "multipart/form-data" } }
         );
@@ -96,7 +95,10 @@ const KhauTruForm = ({ onAdded, editingKhauTru, setEditingKhauTru }) => {
         setFile(null);
       }
     } catch (error) {
-      const message = error.response?.data?.error || error.message;
+      // axiosInstance đã tự chuẩn hoá lỗi (xem normalizeError trong
+      // services/axiosInstance.js) — error.message ở đây đã ưu tiên lấy
+      // message/error từ response BE rồi, không còn error.response nữa.
+      const message = error.message;
       console.error("Lỗi khi xử lý form:", message);
       setErrorMessage("Lỗi hệ thống: " + message);
       toast.error("Đã xảy ra lỗi: " + message);

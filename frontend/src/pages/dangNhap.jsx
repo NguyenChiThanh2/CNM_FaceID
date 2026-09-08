@@ -29,21 +29,22 @@ const DangNhap = () => {
     try {
       setLoading(true);
 
-      // call API
+      // call API — token JWT giờ do BE set thẳng vào cookie httpOnly (xem
+      // set_access_cookies ở /login), không còn trả về trong JSON body nữa
       const res = await loginApi(emailOrPhone.trim(), password.trim());
-      const { access_token, nhan_vien } = res.data || {};
+      const { nhan_vien } = res.data || {};
 
       // validate response
-      if (!access_token || !nhan_vien) {
+      if (!nhan_vien) {
         toast.error("Phản hồi đăng nhập không hợp lệ");
         return;
       }
 
-      // lưu thông tin user
+      // lưu thông tin hồ sơ (không nhạy cảm) để hiển thị UI — JWT thật nằm
+      // trong cookie httpOnly, JS không đọc/lưu được nữa
       localStorage.setItem(
         "user",
         JSON.stringify({
-          token: access_token,
           nhan_vien: {
             id: nhan_vien.id,
             ho_ten: nhan_vien.ho_ten,

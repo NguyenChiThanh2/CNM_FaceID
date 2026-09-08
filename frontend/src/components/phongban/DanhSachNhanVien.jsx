@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import { useParams, useNavigate } from "react-router-dom";
 import { Table, Spinner, Button, Breadcrumb, Card, Row, Col, Badge } from "react-bootstrap";
 import { FaHome, FaBuilding, FaUsers, FaEnvelope, FaUserTie, FaRegCheckCircle, FaArrowLeft } from "react-icons/fa";
@@ -15,8 +15,8 @@ const DanhSachNhanVien = () => {
     const fetchData = async () => {
       try {
         const [nvRes, pbRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/nhan-vien-by-phong-ban/${id}`),
-          axios.get(`http://localhost:5000/api/get-phong-ban-by-id/${id}`)
+          axiosInstance.get(`/nhan-vien-by-phong-ban/${id}`),
+          axiosInstance.get(`/get-phong-ban-by-id/${id}`)
         ]);
         setNhanVienList(nvRes.data);
         setPhongBanInfo(pbRes.data);

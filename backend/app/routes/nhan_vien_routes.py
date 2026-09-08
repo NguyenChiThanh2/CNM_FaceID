@@ -1,6 +1,12 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import check_password_hash
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt
+from flask_jwt_extended import (
+    create_access_token,
+    jwt_required,
+    get_jwt,
+    set_access_cookies,
+    unset_jwt_cookies,
+)
 from app.decorators.auth_decorators import require_module_permission
 from app.models import NhanVien
 from app import limiter
@@ -99,8 +105,10 @@ def login_nhan_vien():
             "ten_chuc_vu": nhan_vien.chuc_vu_nv.ten_chuc_vu if nhan_vien.chuc_vu_nv else None,
         },
     )
-    return jsonify({
-        "access_token": access_token,
+    # Token không còn trả trong JSON body — set thẳng vào cookie httpOnly để
+    # JS phía FE (kể cả script độc nếu có XSS) không đọc được. FE chỉ nhận lại
+    # thông tin hồ sơ (không nhạy cảm) để hiển thị UI.
+    resp = jsonify({
         "nhan_vien": {
             "id": nhan_vien.id,
             "ho_ten": nhan_vien.ho_ten,
@@ -111,14 +119,20 @@ def login_nhan_vien():
             "ten_phong_ban": nhan_vien.phong_ban.ten_phong_ban if nhan_vien.phong_ban else None,
             "ten_chuc_vu": nhan_vien.chuc_vu_nv.ten_chuc_vu if nhan_vien.chuc_vu_nv else None
         }
-    }), 200
+    })
+    set_access_cookies(resp, access_token)
+    return resp, 200
 
 
 @nhan_vien_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout_nhan_vien():
     ho_ten = get_jwt().get("ho_ten")
-    return jsonify({"msg": f"Đăng xuất thành công cho {ho_ten}"}), 200
+    resp = jsonify({"msg": f"Đăng xuất thành công cho {ho_ten}"})
+    # JS không xóa được cookie httpOnly — BE phải chủ động clear ở đây, nếu
+    # không token cũ vẫn còn hiệu lực trong cookie tới khi hết hạn tự nhiên.
+    unset_jwt_cookies(resp)
+    return resp, 200
 
 
 # # app/routes/nhan_vien_routes.py

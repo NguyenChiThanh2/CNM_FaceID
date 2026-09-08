@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   FaUser, FaBirthdayCake, FaEnvelope, FaPhoneAlt, FaMapMarkerAlt, 
@@ -23,7 +23,6 @@ import HopDongFormModal from "../../components/contracts/HopDongFormModal";
 import SalaryHistory from "../../components/contracts/SalaryHistory.jsx";
 import Loading from "../../../src/components/Loading";
 
-const BASE_URL = "http://127.0.0.1:5000";
 const nz = (v, d = "—") => (v === null || v === undefined ? d : v);
 
 export default function NhanSuDetail() {
@@ -66,7 +65,7 @@ export default function NhanSuDetail() {
     (async () => {
       setLoading(true); setError("");
       try {
-        const { data } = await axios.get(`${BASE_URL}/api/get-nhan-vien-by-id/${id}`, { signal: abort.signal });
+        const { data } = await axiosInstance.get(`/get-nhan-vien-by-id/${id}`, { signal: abort.signal });
         setNhanSu(data);
         const [cv, pb, pl, hd] = await Promise.all([
           getChucVuById(data.chuc_vu_id),
@@ -79,7 +78,11 @@ export default function NhanSuDetail() {
         setPhucLoiList(Array.isArray(pl) ? pl : []);
         setHopDong(hd || null);
       } catch (err) {
-        if (err?.name !== "CanceledError") {
+        // axiosInstance đã tự chuẩn hoá lỗi (xem normalizeError trong
+        // services/axiosInstance.js) — error gốc (giữ .name để nhận biết
+        // request bị abort lúc unmount) giờ nằm ở err.raw, không còn ở err
+        // trực tiếp nữa.
+        if (err?.raw?.name !== "CanceledError") {
           console.error(err); setError("Không thể tải dữ liệu nhân sự. Vui lòng thử lại.");
         }
       } finally { setLoading(false); }
@@ -133,7 +136,7 @@ export default function NhanSuDetail() {
     
     // Nếu là tên file, tạo URL đúng
     const avatarFile = nhanSu.avatar;
-    return `${BASE_URL}/api/images/${avatarFile}`;
+    return `${axiosInstance.defaults.baseURL}/images/${avatarFile}`;
   }, [nhanSu]);
 
   // Hàm xử lý lỗi ảnh

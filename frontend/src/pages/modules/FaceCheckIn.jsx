@@ -109,11 +109,14 @@ export default function FaceCheckin() {
   const [previewToken, setPreviewToken] = useState(null);
   const [stableStart, setStableStart] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalHtml, setModalHtml] = useState("");
+  const [modalContent, setModalContent] = useState(null);
   const [modalType, setModalType] = useState("success");
 
-  function showModal(html, type = "success") {
-    setModalHtml(html);
+  // Nhận JSX (hoặc chuỗi text thuần) thay vì chuỗi HTML — tránh phải dùng
+  // dangerouslySetInnerHTML với dữ liệu tên nhân viên lấy từ BE (rủi ro XSS
+  // nếu tên nhân viên trong DB từng chứa thẻ HTML/script độc).
+  function showModal(content, type = "success") {
+    setModalContent(content);
     setModalType(type);
     setModalOpen(true);
     setTimeout(() => setModalOpen(false), 3000);
@@ -427,8 +430,11 @@ export default function FaceCheckin() {
                   const nvName = (result.data?.nhan_vien && result.data.nhan_vien.ho_ten) || (nvNow && nvNow.ho_ten) || "";
                   const time = result.data?.time || "";
                   showModal(
-                    `✅ ${message} <strong style="font-weight:900;">${nvName}</strong><br/>
-                     <small>Thời gian: <strong style="font-weight:900;">${time}</strong></small>`,
+                    <>
+                      ✅ {message} <strong style={{ fontWeight: 900, color: "white" }}>{nvName}</strong>
+                      <br />
+                      <small>Thời gian: <strong style={{ fontWeight: 900, color: "white" }}>{time}</strong></small>
+                    </>,
                     "success"
                   );
 
@@ -437,9 +443,14 @@ export default function FaceCheckin() {
                   setPreviewToken(null); previewTokenRef.current = null;
                   setStableStart(null); stableStartRef.current = null;
                 } else {
-                  const nvName = (result.data?.name || (nvNow && nvNow.ho_ten))
-                    ? ` <strong style="font-weight:900;">${result.data?.name || nvNow.ho_ten}</strong>` : "";
-                  showModal(`❌ ${result.data?.message || "Chấm công thất bại"}${nvName}`, "danger");
+                  const nvName = result.data?.name || (nvNow && nvNow.ho_ten) || "";
+                  showModal(
+                    <>
+                      ❌ {result.data?.message || "Chấm công thất bại"}
+                      {nvName && <> <strong style={{ fontWeight: 900, color: "white" }}>{nvName}</strong></>}
+                    </>,
+                    "danger"
+                  );
                 }
               } else {
                 dlog("blocked: image too blur");
@@ -822,11 +833,7 @@ export default function FaceCheckin() {
               <FaExclamationTriangle size={48} />
             )}
           </div>
-          <div
-            dangerouslySetInnerHTML={{
-              __html: modalHtml.replace(/<strong/g, '<strong style="color: white;"')
-            }}
-          />
+          <div>{modalContent}</div>
         </Modal.Body>
       </Modal>
     </div>

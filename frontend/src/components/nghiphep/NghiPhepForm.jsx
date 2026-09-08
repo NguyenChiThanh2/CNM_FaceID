@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { toast } from "react-toastify";
@@ -29,16 +29,16 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
 
   useEffect(() => {
     // Lấy danh sách nhân viên
-    axios
-      .get("http://127.0.0.1:5000/api/get-all-nhan-vien")
+    axiosInstance
+      .get("/get-all-nhan-vien")
       .then((response) => setNhanVienList(response.data))
       .catch((error) =>
         setErrorMessage("Lỗi khi lấy danh sách nhân viên: " + error.message)
       );
 
     // Lấy danh sách loại nghỉ phép
-    axios
-      .get("http://127.0.0.1:5000/api/loai-nghi-phep")
+    axiosInstance
+      .get("/loai-nghi-phep")
       .then((response) => setLoaiNghiPhepList(response.data))
       .catch((error) =>
         setErrorMessage(
@@ -145,14 +145,14 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
 
     let response;
     if (editingNghiPhep) {
-      response = await axios.put(
-        `http://127.0.0.1:5000/api/edit-nghi-phep/${editingNghiPhep.id}`,
+      response = await axiosInstance.put(
+        `/edit-nghi-phep/${editingNghiPhep.id}`,
         fd,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
     } else {
-      response = await axios.post(
-        "http://127.0.0.1:5000/api/add-nghi-phep",
+      response = await axiosInstance.post(
+        "/add-nghi-phep",
         fd,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -177,7 +177,10 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
       setFile(null);
     }
   } catch (error) {
-    const message = error.response?.data?.error || error.message;
+    // axiosInstance đã tự chuẩn hoá lỗi (xem normalizeError trong
+    // services/axiosInstance.js) — error.message ở đây đã ưu tiên lấy
+    // message/error từ response BE rồi, không còn error.response nữa.
+    const message = error.message;
     console.error("Lỗi khi xử lý form:", message);
     setErrorMessage("Lỗi hệ thống: " + message);
     toast.error("Đã xảy ra lỗi: " + message);

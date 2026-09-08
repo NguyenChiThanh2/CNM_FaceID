@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Form, Button, Row, Col, Modal,Spinner } from "react-bootstrap";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import { toast } from "react-toastify";
-
-const API_URL = "http://127.0.0.1:5000/api";
 
 const GiayPhepForm = ({ onAdded, editingGiayPhep, setEditingGiayPhep }) => {
   const [formData, setFormData] = useState({
@@ -41,8 +39,8 @@ const GiayPhepForm = ({ onAdded, editingGiayPhep, setEditingGiayPhep }) => {
     try {
       setLoading(true);
       if (editingGiayPhep) {
-        const response = await axios.put(
-          `${API_URL}/edit-giay-phep/${editingGiayPhep.id}`,
+        const response = await axiosInstance.put(
+          `/edit-giay-phep/${editingGiayPhep.id}`,
           formData
         );
         if (response.status === 200) {
@@ -55,7 +53,7 @@ const GiayPhepForm = ({ onAdded, editingGiayPhep, setEditingGiayPhep }) => {
           toast.error("Cập nhật đơn nghỉ phép thất bại!");
         }
       } else {
-        await axios.post(`${API_URL}/add-giay-phep`, formData);
+        await axiosInstance.post(`/add-giay-phep`, formData);
         setLoading(false);
         toast.success("Thêm giấy phép thành công!");
       }
@@ -75,8 +73,8 @@ const GiayPhepForm = ({ onAdded, editingGiayPhep, setEditingGiayPhep }) => {
     }
     setChecking(true);
     try {
-      const res = await axios.get(
-        `${API_URL}/get-cham-cong-by-id/${formData.cham_cong_id}`
+      const res = await axiosInstance.get(
+        `/get-cham-cong-by-id/${formData.cham_cong_id}`
       );
       if (res.data) {
         setFormData((prev) => ({

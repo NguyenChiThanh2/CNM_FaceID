@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Form, Button, Row, Col, Modal, Spinner } from "react-bootstrap";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import { toast } from "react-toastify";
-
-const API_URL = "http://127.0.0.1:5000/api";
 
 const NgayNghiLeForm = ({ onAdded, editingNgayNghiLe, setEditingNgayNghiLe }) => {
   console.log("🧩 editingNgayNghiLe:", editingNgayNghiLe);
@@ -51,8 +49,8 @@ const NgayNghiLeForm = ({ onAdded, editingNgayNghiLe, setEditingNgayNghiLe }) =>
     try {
       setLoading(true);
       if (editingNgayNghiLe) {
-        const response = await axios.put(
-          `${API_URL}/edit-ngay-nghi-le/${editingNgayNghiLe.id}`,
+        const response = await axiosInstance.put(
+          `/edit-ngay-nghi-le/${editingNgayNghiLe.id}`,
           formData
         );
         if (response.status === 200) {
@@ -63,8 +61,8 @@ const NgayNghiLeForm = ({ onAdded, editingNgayNghiLe, setEditingNgayNghiLe }) =>
           setErrorMessage("❎ Lỗi khi cập nhật ngày nghỉ lễ.");
         }
       } else {
-        const response = await axios.post(
-          `${API_URL}/add-ngay-nghi-le`,
+        const response = await axiosInstance.post(
+          `/add-ngay-nghi-le`,
           formData
         );
         if (response.status === 200 || response.status === 201) {
@@ -74,7 +72,9 @@ const NgayNghiLeForm = ({ onAdded, editingNgayNghiLe, setEditingNgayNghiLe }) =>
       }
     } catch (error) {
       console.error("Lỗi khi lưu ngày nghỉ lễ:", error);
-      setErrorMessage("Thông báo: " + (error.response?.data?.error || "❎ Lỗi khi thêm ngày nghỉ lễ."));
+      // axiosInstance đã tự chuẩn hoá lỗi (xem normalizeError trong
+      // services/axiosInstance.js), không còn error.response nữa.
+      setErrorMessage("Thông báo: " + (error.message || "❎ Lỗi khi thêm ngày nghỉ lễ."));
     } finally {
       setLoading(false);
     }

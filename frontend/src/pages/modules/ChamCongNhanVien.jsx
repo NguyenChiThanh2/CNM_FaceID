@@ -14,7 +14,7 @@ import {
   Table
 } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import { 
   FaHome, 
   FaUser, 
@@ -29,8 +29,6 @@ import {
   FaImage
 } from "react-icons/fa";
 import Loading from '../../../src/components/Loading';
-
-const API_BASE = "http://127.0.0.1:5000";
 
 const ChamCongNhanVien = () => {
   const { id } = useParams();
@@ -55,19 +53,18 @@ const ChamCongNhanVien = () => {
   }, [id, thang, nam]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/get-nhan-vien-by-id/${id}`)
-      .then((res) => res.json())
-      .then((data) => setNhanVien(data));
+    axiosInstance
+      .get(`/get-nhan-vien-by-id/${id}`)
+      .then((res) => setNhanVien(res.data));
   }, [id]);
 
   const fetchChamCong = async (thang, nam) => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${API_BASE}/api/chamcong_1nhanvien_theothang/${id}?thang=${thang}&nam=${nam}`
+      const response = await axiosInstance.get(
+        `/chamcong_1nhanvien_theothang/${id}?thang=${thang}&nam=${nam}`
       );
-      const data = await response.json();
-      setChamCong(data);
+      setChamCong(response.data);
     } catch (error) {
       console.error("Lỗi khi fetch dữ liệu chấm công:", error);
     } finally {
@@ -81,8 +78,8 @@ const ChamCongNhanVien = () => {
     setShowModal(true);
      
     try {
-      const laygiayphep = await axios.get(
-        `${API_BASE}/api/get_giay_phep_quen_chamcong/${cc}`
+      const laygiayphep = await axiosInstance.get(
+        `/get_giay_phep_quen_chamcong/${cc}`
       );
       setFormData(laygiayphep.data);
     } catch (error) {
@@ -97,18 +94,16 @@ const ChamCongNhanVien = () => {
   const tinhSoCong = async (thang, nam) => {
     try {
       setLoading(true);
-      const res = await fetch(
-        `${API_BASE}/api/tinh-so-cong/${id}?thang=${thang}&nam=${nam}`
+      const res = await axiosInstance.get(
+        `/tinh-so-cong/${id}?thang=${thang}&nam=${nam}`
       );
-      const data = await res.json();
-      setModalMessage("✅ " + data.message);
+      setModalMessage("✅ " + res.data.message);
       setShowModalTB(true);
 
-      const chamCongRes = await fetch(
-        `${API_BASE}/api/chamcong_1nhanvien_theothang/${id}?thang=${thang}&nam=${nam}`
+      const chamCongRes = await axiosInstance.get(
+        `/chamcong_1nhanvien_theothang/${id}?thang=${thang}&nam=${nam}`
       );
-      const chamCongData = await chamCongRes.json();
-      setChamCong(chamCongData);
+      setChamCong(chamCongRes.data);
     } catch (error) {
       console.error("Lỗi khi tính số ngày công:", error);
       setModalMessage("❌ Có lỗi khi tính số ngày công");
@@ -122,8 +117,8 @@ const ChamCongNhanVien = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await axios.put(
-        `${API_BASE}/api/tinhsocong_theogiayphep`, formData
+      const response = await axiosInstance.put(
+        `/tinhsocong_theogiayphep`, formData
       );
       if (response.status === 200) {
         setModalMessage("✅ Cập nhật giấy phép và số công thành công!");
@@ -133,7 +128,10 @@ const ChamCongNhanVien = () => {
       }
     } catch (error) {
       console.error("Lỗi khi cập nhật:", error);
-      setModalMessage("❌" + error.response.data.body.error);
+      // axiosInstance đã tự chuẩn hoá lỗi (xem normalizeError trong
+      // services/axiosInstance.js) — payload gốc từ BE giờ nằm ở error.data,
+      // không còn error.response nữa.
+      setModalMessage("❌" + (error.data?.body?.error || error.message));
       setShowModalTB(true);
     } finally {
       setLoading(false);
@@ -371,7 +369,7 @@ const ChamCongNhanVien = () => {
                       <td style={{ padding: "12px", textAlign: "center" }}>
                         {cc.hinh_anh_vao ? (
                           <img
-                            src={`${API_BASE}/api/checkin_images/${cc.hinh_anh_vao}`}
+                            src={`${axiosInstance.defaults.baseURL}/checkin_images/${cc.hinh_anh_vao}`}
                             alt="Ảnh vào"
                             width="50"
                             height="50"
@@ -389,7 +387,7 @@ const ChamCongNhanVien = () => {
                       <td style={{ padding: "12px", textAlign: "center" }}>
                         {cc.hinh_anh_ra ? (
                           <img
-                            src={`${API_BASE}/api/checkin_images/${cc.hinh_anh_ra}`}
+                            src={`${axiosInstance.defaults.baseURL}/checkin_images/${cc.hinh_anh_ra}`}
                             alt="Ảnh ra"
                             width="50"
                             height="50"

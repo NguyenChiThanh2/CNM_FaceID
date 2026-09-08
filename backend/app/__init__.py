@@ -52,6 +52,18 @@ def create_app():
     # để ký token xác thực, lộ ra source code là có thể giả mạo token bất kỳ user nào)
     app.config['JWT_SECRET_KEY'] = os.environ['JWT_SECRET_KEY']
 
+    # JWT lưu trong cookie httpOnly thay vì trả access_token trong JSON body để
+    # FE cất vào localStorage — localStorage đọc được bằng JS nên 1 lỗ XSS bất
+    # kỳ ở FE là đủ để đánh cắp token; cookie httpOnly thì JS (kể cả script độc)
+    # không đọc được. Cookie tự động được trình duyệt đính kèm ở mọi request
+    # nên phải bật CSRF protection đi kèm (JWT_COOKIE_CSRF_PROTECT) để chặn
+    # CSRF — nếu không, 1 trang web độc bất kỳ cũng có thể khiến trình duyệt
+    # nạn nhân tự gửi cookie hợp lệ kèm request giả mạo.
+    app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+    app.config['JWT_COOKIE_CSRF_PROTECT'] = True
+    app.config['JWT_COOKIE_SECURE'] = os.environ.get('COOKIE_SECURE', 'false').lower() == 'true'
+    app.config['JWT_COOKIE_SAMESITE'] = os.environ.get('COOKIE_SAMESITE', 'Lax')
+
     # Khởi tạo các extension
     db.init_app(app)
     jwt.init_app(app)
@@ -61,9 +73,14 @@ def create_app():
     # và run.py), cùng áp lên 1 app instance. Toàn bộ route trong hệ thống đều
     # nằm dưới /api/* (kể cả các route không khai url_prefix ở register_routes
     # đều tự khai '/api' ngay trong Blueprint hoặc trong path — xem
-    # app/routes/__init__.py), nên giữ đúng nguyên cấu hình đang chạy thật
-    # (origins mở, cho phép gửi kèm credentials) nhưng chỉ khai 1 lần duy nhất.
-    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    # app/routes/__init__.py).
+    # origins KHÔNG còn để "*" — trình duyệt tự chặn mọi response CORS có
+    # Access-Control-Allow-Credentials: true kèm Allow-Origin là "*" (wildcard
+    # + credentials bị cấm theo spec), nên từ khi FE gửi cookie kèm request
+    # (withCredentials/supports_credentials) BẮT BUỘC phải khai đúng origin cụ
+    # thể của FE, đọc từ .env để môi trường prod đổi domain không cần sửa code.
+    frontend_origin = os.environ.get('FRONTEND_ORIGIN', 'http://localhost:5173')
+    CORS(app, resources={r"/api/*": {"origins": frontend_origin}}, supports_credentials=True)
 
     # Alembic (flask db upgrade) là nguồn quản lý schema duy nhất kể từ khi
     # chuyển sang PostgreSQL — không còn dùng db.create_all() song song để

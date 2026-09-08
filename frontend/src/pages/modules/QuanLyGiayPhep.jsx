@@ -1,6 +1,6 @@
 // src/pages/modules/QuanLyGiayPhep.jsx
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import GiayPhepForm from "../../components/giayphep/GiayPhepForm";
 import { Modal, Button, Table, Breadcrumb, Card, Row, Col, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +10,6 @@ import "react-toastify/dist/ReactToastify.css";
 import { getNhanVienInfo } from "../../utils/auth";
 import { FaHome, FaSearch, FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaFileAlt } from "react-icons/fa";
 
-const API_URL = "http://127.0.0.1:5000/api";
 const HR_DEPARTMENT_ID = 2;
 
 const QuanLyGiayPhep = () => {
@@ -54,7 +53,7 @@ const QuanLyGiayPhep = () => {
 
   const fetchNhanVien = useCallback(async () => {
     try {
-      const resp = await axios.get(`${API_URL}/get-all-nhan-vien`);
+      const resp = await axiosInstance.get(`/get-all-nhan-vien`);
       setNhanVienList(Array.isArray(resp.data) ? resp.data : []);
     } catch (error) {
       console.error("Lỗi khi gọi API nhân viên:", error);
@@ -65,7 +64,7 @@ const QuanLyGiayPhep = () => {
   const fetchGiayPhep = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await axios.get(`${API_URL}/get-all-giay-phep`);
+      const resp = await axiosInstance.get(`/get-all-giay-phep`);
       let list = resp.data || [];
       if (userId && !isHR) {
         list = list.filter((gp) => gp.nhan_vien_id === userId);
@@ -110,7 +109,7 @@ const QuanLyGiayPhep = () => {
 
     setLoading(true);
     try {
-      await axios.delete(`${API_URL}/cancel-giay-phep/${id}`);
+      await axiosInstance.delete(`/cancel-giay-phep/${id}`);
       toast.success("Đã hủy giấy phép thành công!");
       fetchGiayPhep();
     } catch (error) {
@@ -128,7 +127,7 @@ const QuanLyGiayPhep = () => {
 
     setLoading(true);
     try {
-      await axios.put(`${API_URL}/approve-giay-phep/${id}`);
+      await axiosInstance.put(`/approve-giay-phep/${id}`);
       toast.success("Đã duyệt giấy phép thành công!");
       fetchGiayPhep();
     } catch (error) {
@@ -146,7 +145,7 @@ const QuanLyGiayPhep = () => {
 
     setLoading(true);
     try {
-      await axios.put(`${API_URL}/reject-giay-phep/${id}`);
+      await axiosInstance.put(`/reject-giay-phep/${id}`);
       toast.success("Đã từ chối giấy phép thành công!");
       fetchGiayPhep();
     } catch (error) {

@@ -1,6 +1,6 @@
 // src/pages/modules/QuanLyNghiPhep.jsx
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import NghiPhepForm from "../../components/nghiphep/NghiPhepForm";
 import { Modal, Button, Table, Breadcrumb, Card, Row, Col, Form } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +8,6 @@ import { ToastContainer, toast } from "react-toastify";
 import Loading from "../../../src/components/Loading";
 import { FaHome, FaSearch, FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaFileAlt, FaBaby } from "react-icons/fa";
 
-const API_URL = "http://127.0.0.1:5000/api";
 const HR_DEPARTMENT_ID = 2;
 
 const getUserInfo = () => {
@@ -53,9 +52,8 @@ const QuanLyNghiPhep = () => {
   const fetchNghiPhep = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/get-all-nghi-phep`);
+      const response = await axiosInstance.get(`/get-all-nghi-phep`);
       let list = response.data || [];
-      console.log(response.data); 
 
       if (userInfo && !isHR) {
         list = list.filter((np) => np.nhan_vien_id === userInfo.id);
@@ -73,7 +71,7 @@ const QuanLyNghiPhep = () => {
   const fetchNhanVien = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
+      const response = await axiosInstance.get(`/get-all-nhan-vien`);
       setNhanVienList(response.data || []);
     } catch (error) {
       console.error("Lỗi khi gọi API nhân viên:", error);
@@ -98,7 +96,7 @@ const QuanLyNghiPhep = () => {
       return;
     setLoading(true);
     try {
-      await toast.promise(axios.delete(`${API_URL}/delete-nghi-phep/${id}`), {
+      await toast.promise(axiosInstance.delete(`/delete-nghi-phep/${id}`), {
         pending: "Đang hủy đơn...",
         success: "Đã hủy đơn nghỉ phép!",
         error: "Hủy đơn thất bại!",
@@ -116,7 +114,7 @@ const QuanLyNghiPhep = () => {
       return;
     setLoading(true);
     try {
-      await toast.promise(axios.put(`${API_URL}/approve-nghi-phep/${id}`), {
+      await toast.promise(axiosInstance.put(`/approve-nghi-phep/${id}`), {
         pending: "Đang duyệt...",
         success: "Đã duyệt đơn nghỉ phép!",
         error: "Duyệt đơn thất bại!",
@@ -135,7 +133,7 @@ const QuanLyNghiPhep = () => {
       return;
     setLoading(true);
     try {
-      await toast.promise(axios.put(`${API_URL}/reject-nghi-phep/${id}`), {
+      await toast.promise(axiosInstance.put(`/reject-nghi-phep/${id}`), {
         pending: "Đang từ chối...",
         success: "Đã từ chối đơn nghỉ phép!",
         error: "Từ chối đơn thất bại!",
@@ -369,7 +367,7 @@ const QuanLyNghiPhep = () => {
                         <td style={{ padding: "12px" }}>
                           {nghiPhep.can_cu_phap_ly_file ? (
                             <a
-                              href={`${API_URL}/can_cu_phap_ly_${nghiPhep.loai_nghi_phep_id === 1 ? 'phep_nam' : nghiPhep.loai_nghi_phep_id === 2 ? 'phep_kl' : 'thai_san'}/${nghiPhep.can_cu_phap_ly_file}`}
+                              href={`${axiosInstance.defaults.baseURL}/can_cu_phap_ly_${nghiPhep.loai_nghi_phep_id === 1 ? 'phep_nam' : nghiPhep.loai_nghi_phep_id === 2 ? 'phep_kl' : 'thai_san'}/${nghiPhep.can_cu_phap_ly_file}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="btn btn-sm btn-outline-primary"
@@ -495,7 +493,7 @@ const QuanLyNghiPhep = () => {
                         <td style={{ padding: "12px" }}>
                           {nghiPhep.can_cu_phap_ly_file ? (
                             <a
-                              href={`${API_URL}/can_cu_phap_ly_thai_san/${nghiPhep.can_cu_phap_ly_file}`}
+                              href={`${axiosInstance.defaults.baseURL}/can_cu_phap_ly_thai_san/${nghiPhep.can_cu_phap_ly_file}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="btn btn-sm btn-outline-primary"
@@ -507,7 +505,7 @@ const QuanLyNghiPhep = () => {
                           )}
                           {nghiPhep.file_bo_sung ? (
                             <a
-                              href={`${API_URL}/can_cu_phap_ly_thai_san/${nghiPhep.file_bo_sung}`}
+                              href={`${axiosInstance.defaults.baseURL}/can_cu_phap_ly_thai_san/${nghiPhep.file_bo_sung}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="btn btn-sm btn-outline-primary"

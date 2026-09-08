@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import "./style.css";
 const URL_HINH = 'http://127.0.0.1:5000/api'; 
 const getUserInfo = () => {
@@ -60,19 +60,15 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
   });
 
   const handleLogout = async () => {
-    const token = localStorage.getItem("access_token");
+    // JWT nằm trong cookie httpOnly, JS không có cách nào đọc/xóa trực tiếp —
+    // luôn phải gọi BE để BE tự xóa cookie (unset_jwt_cookies), không còn
+    // kiểu check "có token trong localStorage thì mới gọi" như trước (token
+    // giờ không nằm ở localStorage nữa nên check đó luôn luôn sai).
     try {
-      if (token) {
-        await axios.post(
-          "/api/auth/logout",
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
+      await axiosInstance.post("/logout");
     } catch (error) {
       console.error("Lỗi khi đăng xuất:", error);
     } finally {
-      localStorage.removeItem("access_token");
       localStorage.removeItem("user");
       // close overlay if mobile
       if (isMobile) toggleSidebar();

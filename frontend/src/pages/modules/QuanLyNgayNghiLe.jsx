@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import NgayNghiLeForm from "../../components/ngaynghile/NgayNghiLeForm";
 import { Modal, Button, Table, Breadcrumb, Card, Row, Col, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import Loading from "../../../src/components/Loading";
 import { FaHome, FaSearch, FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaCalendarDay } from "react-icons/fa";
-
-const API_URL = "http://127.0.0.1:5000/api";
 
 const NgayNghiLe = () => {
   const [ngayNghiLeList, setNgayNghiLeList] = useState([]);
@@ -30,7 +28,7 @@ const NgayNghiLe = () => {
   const fetchNgayNghiLe = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/get-all-ngay-nghi-le`);
+      const response = await axiosInstance.get(`/get-all-ngay-nghi-le`);
       setNgayNghiLeList(response.data);
     } catch (error) {
       console.error("Lỗi khi gọi API ngày nghỉ có lương:", error);
@@ -54,7 +52,7 @@ const NgayNghiLe = () => {
     if (window.confirm("Bạn có chắc muốn xóa ngày nghỉ có lương này không?")) {
       setLoading(true);
       try {
-        await axios.delete(`${API_URL}/delete-ngay-nghi-le/${id}`);
+        await axiosInstance.delete(`/delete-ngay-nghi-le/${id}`);
         fetchNgayNghiLe();
         toast.success("Đã xóa ngày nghỉ có lương thành công!");
       } catch (error) {

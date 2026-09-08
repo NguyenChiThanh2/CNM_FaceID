@@ -16,7 +16,7 @@ import KhauTruForm from "../../components/khautru/KhauTruForm";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { ToastContainer, toast } from "react-toastify";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import Loading from "../../../src/components/Loading";
 import { 
   FaHome, 
@@ -63,7 +63,6 @@ const KhauTru = () => {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-  const API_BASE = "http://localhost:5000";
 
   // Format helpers
   const formatCurrency = (amount) =>
@@ -84,18 +83,13 @@ const KhauTru = () => {
         return;
       }
 
-      let url = `${API_BASE}/api/get-all-khau-tru`;
+      let url = `/get-all-khau-tru`;
       if (!isHR) {
-        url = `${API_BASE}/api/get-khau-tru-by-nhan-vien-id/${currentUser.id}`;
+        url = `/get-khau-tru-by-nhan-vien-id/${currentUser.id}`;
       }
 
-      const res = await fetch(url);
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`HTTP ${res.status}: ${txt}`);
-      }
-      const data = await res.json();
-      setKhauTruList(Array.isArray(data) ? data : []);
+      const res = await axiosInstance.get(url);
+      setKhauTruList(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Lỗi khi tải khấu trừ:", err);
       toast.error(String(err?.message || "Không thể tải danh sách khấu trừ!"));
@@ -143,8 +137,7 @@ const KhauTru = () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa không?")) {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/delete-khau-tru/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error();
+        await axiosInstance.delete(`/delete-khau-tru/${id}`);
         await fetchKhauTruList();
         toast.success("Xóa khấu trừ thành công!");
         setCurrentPage(1);
@@ -191,10 +184,10 @@ const KhauTru = () => {
     if (!isHR) return;
     setLoading(true);
     try {
-      const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
+      const respb = await axiosInstance.get(`/get-all-phong-ban`);
       setPhongBanList(respb.data);
 
-      const res = await axios.get(`${API_BASE}/api/get-all-nhan-vien-by-khau-tru-id/${khautruId}`);
+      const res = await axiosInstance.get(`/get-all-nhan-vien-by-khau-tru-id/${khautruId}`);
       setSelectedNhanVien(Array.isArray(res.data) ? res.data : []);
       setSelectedKhauTruId(khautruId);
     } catch (err) {
@@ -213,7 +206,7 @@ const KhauTru = () => {
     if (window.confirm("Bạn có chắc muốn xóa nhân viên này khỏi khấu trừ?")) {
       setLoading(true);
       try {
-        await axios.post(`${API_BASE}/api/remove-nhan-vien-from-khau-tru`, {
+        await axiosInstance.post(`/remove-nhan-vien-from-khau-tru`, {
           khautru_id: selectedKhauTruId,
           nhan_vien_id: nhanVienId,
         });
@@ -233,11 +226,11 @@ const KhauTru = () => {
     if (!isHR) return;
     setLoading(true);
     try {
-      const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
+      const respb = await axiosInstance.get(`/get-all-phong-ban`);
       setPhongBanList(respb.data);
 
-      const res = await axios.get(`${API_BASE}/api/get-all-nhan-vien`);
-      const resSelected = await axios.get(`${API_BASE}/api/get-all-nhan-vien-by-khau-tru-id/${khautruId}`);
+      const res = await axiosInstance.get(`/get-all-nhan-vien`);
+      const resSelected = await axiosInstance.get(`/get-all-nhan-vien-by-khau-tru-id/${khautruId}`);
 
       if (Array.isArray(resSelected.data) && resSelected.data.length > 0) {
         const selectedIds = resSelected.data.map((nv) => nv.id);
@@ -288,7 +281,7 @@ const KhauTru = () => {
           return soTien ? { id, so_tien_thuc_te: parseFloat(soTien) } : { id };
         }),
       };
-      await axios.post(`${API_BASE}/api/add-nhan-vien-to-khau-tru`, { payload });
+      await axiosInstance.post(`/add-nhan-vien-to-khau-tru`, { payload });
       toast.success("Đã thêm nhân viên vào khấu trừ.");
       setShowAddNhanVienModal(false);
       setSelectedNhanVienIds([]);
@@ -470,7 +463,7 @@ const KhauTru = () => {
                       <td style={{ padding: "12px" }}>
                         {pl.file_dinh_kem ? (
                           <a
-                            href={`${API_BASE}/api/file_dinh_kem_khau_tru/${pl.file_dinh_kem}`}
+                            href={`${axiosInstance.defaults.baseURL}/file_dinh_kem_khau_tru/${pl.file_dinh_kem}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-sm btn-outline-primary"

@@ -1,6 +1,6 @@
 // src/pages/danhgia/QuanLyDanhGia.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import {
     Container, Row, Col, Button, Table, Modal, Breadcrumb, OverlayTrigger, Tooltip,
     Card, Form, Badge
@@ -38,7 +38,7 @@ import Loading from "../../components/Loading";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const API_URL = "http://127.0.0.1:5000/api/danhgia";
+const DANHGIA_PATH = "/danhgia";
 const ALLOWED_ROLE_IDS = [4, 5]; // 4=Quản lý, 5=Trưởng phòng
 
 const QuanLyDanhGia = () => {
@@ -170,7 +170,7 @@ const QuanLyDanhGia = () => {
     const fetchDanhGias = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await axios.get(API_URL);
+            const res = await axiosInstance.get(DANHGIA_PATH);
             const raw = Array.isArray(res.data) ? res.data : [];
             setDanhGias(enrichDanhGiasWithDept(raw, pbMap, nvDeptMap, nvDeptNameMap));
         } catch (error) {
@@ -245,7 +245,7 @@ const QuanLyDanhGia = () => {
             async () => {
                 try {
                     await toast.promise(
-                        axios.delete(`${API_URL}/${id}`),
+                        axiosInstance.delete(`${DANHGIA_PATH}/${id}`),
                         {
                             pending: "Đang xóa đánh giá...",
                             success: "Đã xóa đánh giá!",
@@ -254,7 +254,8 @@ const QuanLyDanhGia = () => {
                     );
                     fetchDanhGias();
                 } catch (err) {
-                    const msg = err?.response?.data?.message || "Xóa thất bại.";
+                    // axiosInstance đã tự chuẩn hoá lỗi, không còn err.response nữa.
+                    const msg = err?.message || "Xóa thất bại.";
                     toast.error(msg);
                 }
             },
@@ -266,7 +267,7 @@ const QuanLyDanhGia = () => {
         try {
             if (selectedDG) {
                 await toast.promise(
-                    axios.put(`${API_URL}/${selectedDG.id}`, data),
+                    axiosInstance.put(`${DANHGIA_PATH}/${selectedDG.id}`, data),
                     {
                         pending: "Đang cập nhật đánh giá...",
                         success: "Cập nhật đánh giá thành công!",
@@ -275,7 +276,7 @@ const QuanLyDanhGia = () => {
                 );
             } else {
                 await toast.promise(
-                    axios.post(API_URL, data),
+                    axiosInstance.post(DANHGIA_PATH, data),
                     {
                         pending: "Đang tạo đánh giá...",
                         success: "Thêm đánh giá thành công!",
@@ -287,7 +288,8 @@ const QuanLyDanhGia = () => {
             setSelectedDG(null);
             fetchDanhGias();
         } catch (err) {
-            const msg = err?.response?.data?.message || "Lỗi khi lưu đánh giá.";
+            // axiosInstance đã tự chuẩn hoá lỗi, không còn err.response nữa.
+            const msg = err?.message || "Lỗi khi lưu đánh giá.";
             toast.error(msg);
         }
     };

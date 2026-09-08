@@ -16,7 +16,7 @@ import ThuongForm from "../../components/thuong/ThuongForm";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { ToastContainer, toast } from "react-toastify";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import Loading from "../../../src/components/Loading";
 import {
   FaHome,
@@ -61,31 +61,23 @@ const Thuong = () => {
   const [ngayquyetdinh, setngayquyetdinh] = useState(null);
 
   const navigate = useNavigate();
-  const API_BASE = "http://localhost:5000";
 
   const fetchThuongList = async () => {
     setLoading(true);
     try {
-      let url = `${API_BASE}/api/get-all-thuong`;
+      let url = `/get-all-thuong`;
       if (!isHR && currentUser?.id) {
-        url = `${API_BASE}/api/get-thuong-by-nhan-vien-id/${currentUser.id}`;
+        url = `/get-thuong-by-nhan-vien-id/${currentUser.id}`;
       }
-      const res = await fetch(url);
-
-      if (res.status === 404) {
-        setThuongList([]);
-        return;
-      }
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`HTTP ${res.status}: ${txt}`);
-      }
-
-      const data = await res.json();
-      setThuongList(Array.isArray(data) ? data : []);
+      const res = await axiosInstance.get(url);
+      setThuongList(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("Lỗi khi tải thưởng:", err);
-      toast.error(String(err?.message || "Không thể tải danh sách thưởng!"));
+      if (err?.status === 404) {
+        setThuongList([]);
+      } else {
+        console.error("Lỗi khi tải thưởng:", err);
+        toast.error(String(err?.message || "Không thể tải danh sách thưởng!"));
+      }
     } finally {
       setLoading(false);
     }
@@ -130,10 +122,7 @@ const Thuong = () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa không?")) {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/delete-thuong/${id}`, {
-          method: "DELETE",
-        });
-        if (!res.ok) throw new Error();
+        await axiosInstance.delete(`/delete-thuong/${id}`);
         await fetchThuongList();
         toast.success("Xóa thưởng thành công!");
         setCurrentPage(1);
@@ -186,11 +175,11 @@ const Thuong = () => {
   const handleViewNhanVien = async (thuongId) => {
     setLoading(true);
     try {
-      const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
+      const respb = await axiosInstance.get(`/get-all-phong-ban`);
       setPhongBanList(respb.data);
 
-      const res = await axios.get(
-        `${API_BASE}/api/get-all-nhan-vien-by-thuong-id/${thuongId}`
+      const res = await axiosInstance.get(
+        `/get-all-nhan-vien-by-thuong-id/${thuongId}`
       );
       setSelectedNhanVien(Array.isArray(res.data) ? res.data : []);
       setSelectedThuongId(thuongId);
@@ -209,7 +198,7 @@ const Thuong = () => {
     if (window.confirm("Bạn có chắc muốn xóa nhân viên này khỏi thưởng?")) {
       setLoading(true);
       try {
-        await axios.post(`${API_BASE}/api/remove-nhan-vien-from-thuong`, {
+        await axiosInstance.post(`/remove-nhan-vien-from-thuong`, {
           thuong_id: selectedThuongId,
           nhan_vien_id: nhanVienId,
         });
@@ -227,12 +216,12 @@ const Thuong = () => {
   const handleShowAddNhanVienModal = async (thuongId, ngay_quyet_dinh) => {
     setLoading(true);
     try {
-      const respb = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
+      const respb = await axiosInstance.get(`/get-all-phong-ban`);
       setPhongBanList(respb.data);
 
-      const res = await axios.get(`${API_BASE}/api/get-all-nhan-vien`);
-      const resSelected = await axios.get(
-        `${API_BASE}/api/get-all-nhan-vien-by-thuong-id/${thuongId}`
+      const res = await axiosInstance.get(`/get-all-nhan-vien`);
+      const resSelected = await axiosInstance.get(
+        `/get-all-nhan-vien-by-thuong-id/${thuongId}`
       );
       const thuongObj = thuongList.find((t) => t.id === thuongId);
       const loaiThuong = thuongObj?.loai_thuong || "";
@@ -290,7 +279,7 @@ const Thuong = () => {
           return soTien ? { id, so_tien_thuc_te: parseFloat(soTien) } : { id };
         }),
       };
-      await axios.post(`${API_BASE}/api/add-nhan-vien-to-thuong`, {
+      await axiosInstance.post(`/add-nhan-vien-to-thuong`, {
         payload,
       });
       toast.success("Đã thêm nhân viên vào thưởng.");
@@ -844,8 +833,8 @@ const Thuong = () => {
                               setLoading(true);
                               for (const nvId of ids) {
                                 try {
-                                  const res = await axios.post(
-                                    `${API_BASE}/api/get-thang-13-nhan-vien`, {
+                                  const res = await axiosInstance.post(
+                                    `/get-thang-13-nhan-vien`, {
                                         id: nvId,
                                         ngay_quyet_dinh: ngayquyetdinh,
                                       });
@@ -904,8 +893,8 @@ const Thuong = () => {
                                     if (selectedLoaiThuong === "THANG13") {
                                       try {
                                         
-                                        const res = await axios.post(
-                                          `${API_BASE}/api/get-thang-13-nhan-vien`, {
+                                        const res = await axiosInstance.post(
+                                          `/get-thang-13-nhan-vien`, {
                                               id: nv.id,
                                               ngay_quyet_dinh: ngayquyetdinh,
                                             });

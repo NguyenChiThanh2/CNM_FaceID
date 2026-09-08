@@ -1,11 +1,14 @@
 // src/services/axiosInstance.js
 import axios from "axios";
+import { attachAuthToken } from "../utils/auth";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
 });
+
+attachAuthToken(axiosInstance);
 
 // (Tùy chọn) Gắn token động
 export const setAuthToken = (token) => {
