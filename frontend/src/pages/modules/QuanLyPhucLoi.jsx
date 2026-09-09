@@ -16,8 +16,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
-const API_BASE = "http://localhost:5000";
+import axiosInstance from "../../services/axiosInstance";
 import {
   getAllPhucLoi,
   deletePhucLoi as apiDeletePhucLoi,
@@ -63,9 +62,11 @@ const QuanLyPhucLoi = () => {
       const data = await getAllPhucLoi();
       setPhucLoiList(data || []);
     } catch (err) {
+      // getAllPhucLoi (phucLoiApi.js) đã tự chuẩn hoá lỗi qua axiosInstance —
+      // payload BE nằm ở err.data, không còn err.response nữa.
       console.error("Lỗi khi tải phúc lợi:", err);
       toast.error(
-        err?.response?.data?.message ||
+        err?.data?.message ||
           err?.message ||
           "Không thể tải danh sách phúc lợi!"
       );
@@ -78,16 +79,23 @@ const QuanLyPhucLoi = () => {
     fetchPhucLoiList();
   }, [fetchPhucLoiList]);
 
+  // Danh sách phòng ban gần như tĩnh — fetch 1 lần ở đây rồi 2 modal "Xem/
+  // Thêm nhân viên" dùng lại, thay vì mỗi lần mở modal lại gọi lại.
+  useEffect(() => {
+    axiosInstance
+      .get(`/get-all-phong-ban`)
+      .then((res) => setPhongBanList(res.data))
+      .catch((err) => console.error("Lỗi khi tải danh sách phòng ban:", err));
+  }, []);
+
   // Chuẩn hóa keyword tìm kiếm
   const normalizedKeyword = searchKeyword.trim().toLowerCase();
 
   const handleViewNhanVien = async (phucLoiId) => {
     setLoading(true);
     try {
-      const pbRes = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
-      setPhongBanList(pbRes.data);
-      const nvRes = await axios.get(
-        `${API_BASE}/api/get-all-nhan-vien-by-phuc-loi-id/${phucLoiId}`
+      const nvRes = await axiosInstance.get(
+        `/get-all-nhan-vien-by-phuc-loi-id/${phucLoiId}`
       );
       setSelectedNhanVien(nvRes.data || []);
       setSelectedPhucLoiId(phucLoiId);
@@ -102,13 +110,11 @@ const QuanLyPhucLoi = () => {
   const handleShowAddNhanVienModal = async (phucLoiId) => {
     setLoading(true);
     try {
-      const pbRes = await axios.get(`${API_BASE}/api/get-all-phong-ban`);
-      const nvRes = await axios.get(`${API_BASE}/api/get-all-nhan-vien`);
-      const nvDaCo = await axios.get(
-        `${API_BASE}/api/get-all-nhan-vien-by-phuc-loi-id/${phucLoiId}`
+      const nvRes = await axiosInstance.get(`/get-all-nhan-vien`);
+      const nvDaCo = await axiosInstance.get(
+        `/get-all-nhan-vien-by-phuc-loi-id/${phucLoiId}`
       );
 
-      setPhongBanList(pbRes.data);
       setNhanVienList(nvRes.data);
       setSelectedNhanVienIds(nvDaCo.data.map((nv) => nv.id));
       setSelectedPhucLoiId(phucLoiId);
@@ -124,7 +130,7 @@ const QuanLyPhucLoi = () => {
     if (!selectedPhucLoiId) return;
     setLoading(true);
     try {
-      await axios.post(`${API_BASE}/api/add-nhan-vien-to-phuc-loi`, {
+      await axiosInstance.post(`/add-nhan-vien-to-phuc-loi`, {
         phuc_loi_id: selectedPhucLoiId,
         nhan_vien_ids: selectedNhanVienIds,
       });
@@ -141,7 +147,7 @@ const QuanLyPhucLoi = () => {
     if (window.confirm("Bạn có chắc muốn xóa nhân viên này khỏi phúc lợi?")) {
       setLoading(true);
       try {
-        await axios.post(`${API_BASE}/api/remove-nhan-vien-from-phuc-loi`, {
+        await axiosInstance.post(`/remove-nhan-vien-from-phuc-loi`, {
           phuc_loi_id: selectedPhucLoiId,
           nhan_vien_id: nhanVienId,
         });
@@ -207,8 +213,10 @@ const QuanLyPhucLoi = () => {
         setPhucLoiList((prev) => prev.filter((x) => x.id !== id));
         setCurrentPage(1);
       } catch (err) {
+        // apiDeletePhucLoi (phucLoiApi.js) đã tự chuẩn hoá lỗi qua
+        // axiosInstance — payload BE nằm ở err.data, không còn err.response.
         console.error("Lỗi xóa:", err);
-        toast.error(err?.response?.data?.message || "Không thể xóa phúc lợi!");
+        toast.error(err?.data?.message || err?.message || "Không thể xóa phúc lợi!");
       }
     }
   };

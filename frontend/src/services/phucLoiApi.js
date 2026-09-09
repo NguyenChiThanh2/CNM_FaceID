@@ -1,7 +1,10 @@
 import axiosInstance from "./axiosInstance";
 
+// axiosInstance đã tự chuẩn hoá lỗi thành {message, status, raw, data} (xem
+// normalizeError trong axiosInstance.js) — e.response không còn tồn tại,
+// payload gốc từ BE nằm ở e.data.
 const unwrap = (p) => p.then((r) => r.data).catch((e) => {
-  throw e?.response?.data || { message: "Lỗi không xác định" };
+  throw e?.data || { message: e?.message || "Lỗi không xác định" };
 });
 
 export const getAllPhucLoi = () => unwrap(axiosInstance.get("/get-all-phuc-loi"));

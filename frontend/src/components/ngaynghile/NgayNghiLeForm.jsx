@@ -4,7 +4,6 @@ import axiosInstance from "../../services/axiosInstance";
 import { toast } from "react-toastify";
 
 const NgayNghiLeForm = ({ onAdded, editingNgayNghiLe, setEditingNgayNghiLe }) => {
-  console.log("🧩 editingNgayNghiLe:", editingNgayNghiLe);
   const [formData, setFormData] = useState({
     ten_ngay: "",
     tu_ngay: "",
@@ -38,7 +37,6 @@ const NgayNghiLeForm = ({ onAdded, editingNgayNghiLe, setEditingNgayNghiLe }) =>
     });
   }
 }, [editingNgayNghiLe]);
-  console.log("FormData sau khi set:", formData);
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));

@@ -1,18 +1,17 @@
 // File: src/services/nguoiPhuThuocApi.js
 import axiosInstance from "./axiosInstance";
 
-/** Unwrap chuẩn hoá lỗi (đưa msg rõ ràng vào e.userMessage để toast.promise dùng được) */
+/** Unwrap chuẩn hoá lỗi (đưa msg rõ ràng vào e.userMessage để toast.promise dùng được).
+ * axiosInstance đã tự chuẩn hoá lỗi thành {message, status, raw, data} (xem
+ * normalizeError trong axiosInstance.js) — e.response không còn tồn tại, và
+ * e.message đã ưu tiên lấy message/error từ payload BE rồi nên không cần tự
+ * đọc lại e.data.message/e.data.error ở đây nữa. */
 const unwrap = async (p) => {
     try {
         const r = await p;
         return r.data;
     } catch (e) {
-        const msg =
-            e?.response?.data?.message ||
-            e?.response?.data?.error ||
-            e?.message ||
-            "Lỗi kết nối đến máy chủ. Vui lòng thử lại.";
-        e.userMessage = msg;
+        e.userMessage = e?.message || "Lỗi kết nối đến máy chủ. Vui lòng thử lại.";
         throw e;
     }
 };

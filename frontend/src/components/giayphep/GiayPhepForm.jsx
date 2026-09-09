@@ -35,7 +35,6 @@ const GiayPhepForm = ({ onAdded, editingGiayPhep, setEditingGiayPhep }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("📤 Data gửi đi:", formData);
     try {
       setLoading(true);
       if (editingGiayPhep) {

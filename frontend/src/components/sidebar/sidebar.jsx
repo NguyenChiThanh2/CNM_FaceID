@@ -3,7 +3,6 @@ import { Button } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import axiosInstance from "../../services/axiosInstance";
 import "./style.css";
-const URL_HINH = 'http://127.0.0.1:5000/api'; 
 const getUserInfo = () => {
   const storedUser = localStorage.getItem("user");
   if (storedUser) {
@@ -150,7 +149,7 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
             <span style={{ color: "#fff", fontSize: "20px", fontWeight: "bold" }}>
               {userInfo.avatar != "default.jpg" ? (
                 <img
-                  src={`${URL_HINH}/images/${userInfo.avatar}`}
+                  src={`${axiosInstance.defaults.baseURL}/images/${userInfo.avatar}`}
                   alt="avatar"
                   width="65"
                   height="65"

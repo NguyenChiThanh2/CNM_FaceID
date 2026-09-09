@@ -1,10 +1,9 @@
 // hooks/useQuanLyLuong.js
 import { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import axiosInstance from '../services/axiosInstance';
 import { toast } from 'react-toastify';
 import { getNhanVienInfo } from '../utils/auth';
 
-const API_URL = "http://127.0.0.1:5000/api";
 const HR_DEPARTMENT_ID = 2;
 
 export const useQuanLyLuong = () => {
@@ -32,20 +31,24 @@ export const useQuanLyLuong = () => {
   // Fetch data functions
   const fetchPhongBan = async () => {
     try {
-      const res = await axios.get(`${API_URL}/get-all-phong-ban`);
+      const res = await axiosInstance.get(`/get-all-phong-ban`);
       setPhongBanList(res.data);
     } catch (error) {
-      toast.error("Không thể tải danh sách phòng ban!", error);
+      // toast.error chỉ nhận (nội dung, ToastOptions) ở tham số 2 — truyền
+      // thẳng object Error vào đó là sai chữ ký hàm, không có tác dụng gì.
+      console.error("Lỗi khi tải danh sách phòng ban:", error);
+      toast.error("Không thể tải danh sách phòng ban!");
     }
   };
 
   const fetchLuong = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/get-all-bang-luong`);
+      const response = await axiosInstance.get(`/get-all-bang-luong`);
       setLuongList(response.data);
     } catch (error) {
-      toast.error("Không thể tải dữ liệu lương!",error);
+      console.error("Lỗi khi tải dữ liệu lương:", error);
+      toast.error("Không thể tải dữ liệu lương!");
     } finally {
       setLoading(false);
     }
@@ -54,10 +57,11 @@ export const useQuanLyLuong = () => {
   const fetchNhanVien = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
+      const response = await axiosInstance.get(`/get-all-nhan-vien`);
       setNhanVienList(response.data || []);
     } catch (error) {
-      toast.error("Không thể tải danh sách nhân viên!", error);
+      console.error("Lỗi khi tải danh sách nhân viên:", error);
+      toast.error("Không thể tải danh sách nhân viên!");
     } finally {
       setLoading(false);
     }
@@ -70,11 +74,12 @@ export const useQuanLyLuong = () => {
     
     setLoading(true);
     try {
-      await axios.delete(`${API_URL}/delete-bangluong/${luongId}`);
+      await axiosInstance.delete(`/delete-bangluong/${luongId}`);
       toast.success("Xoá lương thành công!");
       fetchLuong();
     } catch (error) {
-      toast.error("Không thể xoá lương.", error);
+      console.error("Lỗi khi xoá lương:", error);
+      toast.error("Không thể xoá lương.");
     } finally {
       setLoading(false);
     }
@@ -99,7 +104,7 @@ export const useQuanLyLuong = () => {
     setLoading(true);
     try {
       if (isTinhTatCa && isHR) {
-        const response = await axios.post(`${API_URL}/get-tinh-luong-tat-ca`, {
+        const response = await axiosInstance.post(`/get-tinh-luong-tat-ca`, {
           thang: parseInt(thang),
           nam: parseInt(nam),
           phong_ban_id: selectedPhongBan ? parseInt(selectedPhongBan) : null,
@@ -121,7 +126,7 @@ export const useQuanLyLuong = () => {
           return;
         }
 
-        const response = await axios.post(`${API_URL}/get-tinh-luong-1nv`, {
+        const response = await axiosInstance.post(`/get-tinh-luong-1nv`, {
           nhan_vien_id: nhanVienId,
           thang: parseInt(thang),
           nam: parseInt(nam),
@@ -137,8 +142,9 @@ export const useQuanLyLuong = () => {
       setShowModal(false);
       fetchLuong();
     } catch (error) {
-      const msg = error.response?.data?.message || "Lỗi hệ thống!";
-      toast.error(msg);
+      // axiosInstance đã tự chuẩn hoá lỗi (xem normalizeError trong
+      // services/axiosInstance.js), không còn error.response nữa.
+      toast.error(error.message || "Lỗi hệ thống!");
     } finally {
       setLoading(false);
     }

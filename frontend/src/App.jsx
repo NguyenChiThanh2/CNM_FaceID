@@ -13,7 +13,6 @@ import QuanLyLoaiNghiPhep from "./pages/modules/QuanLyLoaiNghiPhep";
 import QuanLyPhucLoi from "./pages/modules/QuanLyPhucLoi";
 import QuanLyPhongBan from "./pages/modules/QuanLyPhongBan";
 import NhanSuDetail from "./pages/modules/NhanSuDetail";
-import ChamCong from "./pages/modules/ChamCong";
 import QuanLyLuong from "./pages/modules/QuanLyLuong";
 import QuanLyChamCong from "./pages/modules/QuanLyChamCong";
 import FaceCheckIn from "./pages/modules/FaceCheckIn";
@@ -198,14 +197,6 @@ const AppLayout = () => {
               element={
                 <PrivateRoute>
                   <QuanLyPhucLoi />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/cham-cong"
-              element={
-                <PrivateRoute>
-                  <ChamCong />
                 </PrivateRoute>
               }
             />

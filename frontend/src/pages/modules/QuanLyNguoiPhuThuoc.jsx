@@ -274,7 +274,6 @@ const QuanLyNguoiPhuThuoc = () => {
         } catch (err) {
             const msg =
                 err?.data?.errors?.join("; ") ||
-                err?.response?.data?.message ||
                 err.userMessage ||
                 err.message ||
                 "Lỗi lưu dữ liệu";
@@ -298,7 +297,6 @@ const QuanLyNguoiPhuThuoc = () => {
             fetchData();
         } catch (err) {
             toast.error(
-                err?.response?.data?.message ||
                 err.userMessage ||
                 err.message ||
                 "Xóa thất bại"

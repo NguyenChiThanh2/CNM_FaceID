@@ -15,9 +15,12 @@ attachAuthToken(axios);
 attachSessionExpiredRedirect(axios);
 
 
-// createRoot(document.getElementById('root')).render(
-//   <StrictMode> {/* sẽ chạy hai lần trong môi trường development. Cmt khi khi build dev */}
-//     <App />
-//   </StrictMode>,
-// )
-createRoot(document.getElementById('root')).render(<App />);
+// StrictMode chỉ ảnh hưởng môi trường dev (không chạy trong bản build
+// production) — cố tình gọi lại 2 lần các hàm như effect/render để lộ ra
+// side-effect thiếu cleanup (vd không dừng camera/stream) ngay lúc dev thay
+// vì để tới khi người dùng thật gặp rò rỉ.
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);

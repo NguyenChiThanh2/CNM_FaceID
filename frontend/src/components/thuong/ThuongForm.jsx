@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Toast, ToastContainer } from "react-bootstrap";
+import axiosInstance from "../../services/axiosInstance";
 
 const initialState = {
   ten_thuong: "",
@@ -8,7 +9,6 @@ const initialState = {
   ngay_quyet_dinh: "",
   ghi_chu: ""
 };
-const API_BASE = "http://localhost:5000";
 const ThuongForm = ({ fetchThuongList, selected, onClose, onAdded }) => {
   const [form, setForm] = useState(initialState);
   const [loading, setLoading] = useState(false);
@@ -41,20 +41,11 @@ const ThuongForm = ({ fetchThuongList, selected, onClose, onAdded }) => {
     setError("");
     setSuccess("");
 
-    const method = form.id ? "PUT" : "POST";
-    const url = form.id
-      ? `${API_BASE}/api/edit-thuong/${form.id}`
-      : `${API_BASE}/api/add-thuong`;
-
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        throw new Error("Lỗi khi lưu dữ liệu");
+      if (form.id) {
+        await axiosInstance.put(`/edit-thuong/${form.id}`, form);
+      } else {
+        await axiosInstance.post(`/add-thuong`, form);
       }
 
       const message = form.id ? "Cập nhật thưởng thành công!" : "Thêm thưởng thành công!";

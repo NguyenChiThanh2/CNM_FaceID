@@ -25,7 +25,11 @@ import {
 import { createFaceDetector } from "../../lib/faceDetectorFallback";
 import { getDeviceToken } from "../DeviceGuard";
 
-const API_BASE = "http://127.0.0.1:5000";
+// Trang kiosk xác thực bằng X-Device-Token (không phải JWT người dùng), nên
+// cố tình KHÔNG dùng axiosInstance (gắn cookie/CSRF theo phiên đăng nhập,
+// không liên quan gì tới thiết bị kiosk) — chỉ đọc base URL qua biến môi
+// trường giống các nơi khác để đổi domain production không phải sửa code.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api";
 
 // Nhịp nhận diện & điều kiện
 const RECOGNIZE_EVERY = 1300;
@@ -231,7 +235,7 @@ export default function FaceCheckin() {
     const dataURL = snapBase64(0.85);
     if (!dataURL) { dlog("No dataURL for recognize"); return null; }
     try {
-      const res = await fetch(`${API_BASE}/api/face/recognize`, {
+      const res = await fetch(`${API_BASE}/face/recognize`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -255,7 +259,7 @@ export default function FaceCheckin() {
       : { image_base64: snapBase64(0.92), preview_token: token };
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/api/face-checkin`, {
+      const res = await fetch(`${API_BASE}/face-checkin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

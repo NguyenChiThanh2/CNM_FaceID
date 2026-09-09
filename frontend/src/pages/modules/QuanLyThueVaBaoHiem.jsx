@@ -1,6 +1,6 @@
 // pages/QuanLyThueVaBaoHiem.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../services/axiosInstance';
 import {
   Card,
   Row,
@@ -49,10 +49,9 @@ import {
 } from 'recharts';
 import Loading from '../../components/Loading';
 import { getNhanVienInfo } from '../../utils/auth';
-import { exportEmployeeTaxExcel, exportCompanyInsuranceExcel } from "../../utils/exportThueBaoHiem";
+import { exportEmployeeTaxExcel, exportCompanyInsuranceExcel, exportCompanyEmployeeDetailsExcel } from "../../utils/exportThueBaoHiem";
 import '../../css/QuanLyThueVaBaoHiem.css';
 
-const API_URL = "http://127.0.0.1:5000/api";
 const HR_DEPARTMENT_ID = 2;
 
 const QuanLyThueVaBaoHiem = () => {
@@ -75,19 +74,18 @@ const QuanLyThueVaBaoHiem = () => {
     setLoading(true);
     try {
       // Lấy danh sách lương
-      const luongResponse = await axios.get(`${API_URL}/get-all-bang-luong`);
+      const luongResponse = await axiosInstance.get(`/get-all-bang-luong`);
       setLuongList(luongResponse.data || []);
 
       // Lấy danh sách nhân viên
-      const nhanVienResponse = await axios.get(`${API_URL}/get-all-nhan-vien`);
+      const nhanVienResponse = await axiosInstance.get(`/get-all-nhan-vien`);
       setNhanVienList(nhanVienResponse.data || []);
 
       // Nếu là HR, lấy thông tin bảo hiểm doanh nghiệp
       if (isHR) {
         try {
-          const baoHiemResponse = await axios.get(`${API_URL}/get-bao-hiem-doanh-nghiep`);
+          const baoHiemResponse = await axiosInstance.get(`/get-bao-hiem-doanh-nghiep`);
           setBaoHiemDoanhNghiepList(baoHiemResponse.data || []);
-          console.log(baoHiemResponse);
         } catch (error) {
           console.warn('Không thể lấy thông tin bảo hiểm doanh nghiệp:', error);
           toast.warning('Không thể tải dữ liệu bảo hiểm doanh nghiệp');

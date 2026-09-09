@@ -67,10 +67,14 @@ const DangNhap = () => {
         navigate("/", { replace: true });
       }, 800);
     } catch (error) {
-      // lấy message BE trả về nếu có
+      // axiosInstance đã tự chuẩn hoá lỗi (xem normalizeError trong
+      // axiosInstance.js) — payload gốc từ BE nằm ở error.data, không còn
+      // error.response nữa. BE /login trả field "msg" (không phải "message"),
+      // normalizeError không biết field này nên phải tự đọc lại ở đây.
       const msg =
-        error?.response?.data?.msg ||
-        error?.response?.data?.message ||
+        error?.data?.msg ||
+        error?.data?.message ||
+        error?.message ||
         "Email hoặc mật khẩu không đúng!";
       toast.error(msg); // ❌ báo lỗi
     } finally {

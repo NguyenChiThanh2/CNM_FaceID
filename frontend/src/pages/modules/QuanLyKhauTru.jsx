@@ -103,6 +103,17 @@ const KhauTru = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHR, currentUser?.id]);
 
+  // Danh sách phòng ban gần như tĩnh — chỉ HR mới mở modal "Xem/Thêm nhân
+  // viên" cần tới nó, nên fetch 1 lần ở đây rồi 2 handler dùng lại, thay vì
+  // mỗi handler tự gọi lại /get-all-phong-ban mỗi lần mở modal.
+  useEffect(() => {
+    if (!isHR) return;
+    axiosInstance
+      .get(`/get-all-phong-ban`)
+      .then((res) => setPhongBanList(res.data))
+      .catch((err) => console.error("Lỗi khi tải danh sách phòng ban:", err));
+  }, [isHR]);
+
   // Tìm kiếm an toàn
   const filteredList = khautruList.filter((pl) => {
     const kw = (searchKeyword || "").toLowerCase();
@@ -175,7 +186,8 @@ const KhauTru = () => {
       saveAs(file, "DanhSachKhauTru.xlsx");
       toast.success("📤 Đã xuất Excel!");
     } catch (e) {
-      toast.error("❌ Xuất Excel thất bại!", e);
+      console.error("Lỗi khi xuất Excel:", e);
+      toast.error("❌ Xuất Excel thất bại!");
     }
   };
 
@@ -184,9 +196,6 @@ const KhauTru = () => {
     if (!isHR) return;
     setLoading(true);
     try {
-      const respb = await axiosInstance.get(`/get-all-phong-ban`);
-      setPhongBanList(respb.data);
-
       const res = await axiosInstance.get(`/get-all-nhan-vien-by-khau-tru-id/${khautruId}`);
       setSelectedNhanVien(Array.isArray(res.data) ? res.data : []);
       setSelectedKhauTruId(khautruId);
@@ -226,9 +235,6 @@ const KhauTru = () => {
     if (!isHR) return;
     setLoading(true);
     try {
-      const respb = await axiosInstance.get(`/get-all-phong-ban`);
-      setPhongBanList(respb.data);
-
       const res = await axiosInstance.get(`/get-all-nhan-vien`);
       const resSelected = await axiosInstance.get(`/get-all-nhan-vien-by-khau-tru-id/${khautruId}`);
 

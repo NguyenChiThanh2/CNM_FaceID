@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Toast, ToastContainer } from "react-bootstrap";
+import axiosInstance from "../../services/axiosInstance";
 
 const initialState = {
   ten_phuc_loi: "",
@@ -40,20 +41,11 @@ const PhucLoiForm = ({ fetchPhucLoiList, selected, onClose, onAdded }) => {
     setError("");
     setSuccess("");
 
-    const method = form.id ? "PUT" : "POST";
-    const url = form.id
-      ? `http://localhost:5000/api/edit-phuc-loi/${form.id}`
-      : "http://localhost:5000/api/add-phuc-loi";
-
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        throw new Error("Lỗi khi lưu dữ liệu");
+      if (form.id) {
+        await axiosInstance.put(`/edit-phuc-loi/${form.id}`, form);
+      } else {
+        await axiosInstance.post(`/add-phuc-loi`, form);
       }
 
       const message = form.id ? "Cập nhật thành công!" : "Thêm mới thành công!";
