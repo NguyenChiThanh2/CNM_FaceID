@@ -267,7 +267,7 @@ export default function NhanSuDetail() {
       });
     } catch (err) { 
       console.error(err); 
-      toast.danger("Xuất PDF lỗi. Bạn có thể dùng In → Save as PDF."); 
+      toast.error("Xuất PDF lỗi. Bạn có thể dùng In → Save as PDF.");
     } finally { 
       setExporting(false); 
     }

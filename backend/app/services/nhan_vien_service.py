@@ -187,7 +187,8 @@ def delete_nhan_vien_service(id):
         return {'message': 'Xóa nhân viên thành công'}
     except SQLAlchemyError as e:
         db.session.rollback()
-        return {'error': str(e)}
+        print(f"Lỗi khi xóa nhân viên: {e}")
+        return {'error': 'Không thể xóa nhân viên, vui lòng thử lại sau'}
     
 def search_nhan_vien_theoten_service(q):
     return NhanVien.query.filter(

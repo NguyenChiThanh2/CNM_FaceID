@@ -58,6 +58,7 @@ const QuanLyDanhGia = () => {
     const [pbMap, setPbMap] = useState({});
     const [nvDeptMap, setNvDeptMap] = useState({});
     const [nvDeptNameMap, setNvDeptNameMap] = useState({});
+    const [nhanVienList, setNhanVienList] = useState([]);
 
     const navigate = useNavigate();
     const currentUser = getNhanVienInfo();
@@ -131,6 +132,7 @@ const QuanLyDanhGia = () => {
                 });
                 setNvDeptMap(mapIdToDept);
                 setNvDeptNameMap(mapIdToDeptName);
+                setNhanVienList(Array.isArray(nvs) ? nvs : []);
             } catch (err) {
                 console.error("Lỗi khi tải nhân viên:", err);
                 toast.error("Không thể tải danh sách nhân viên!");
@@ -983,6 +985,7 @@ const QuanLyDanhGia = () => {
                 <Modal.Body className="p-4">
                     <DanhGiaForm
                         initialData={selectedDG}
+                        nhanViens={nhanVienList}
                         onSubmit={async (data) =>
                             await handleFormSubmit(data)
                         }

@@ -40,9 +40,17 @@ export const normalizeError = (error) => {
 axiosInstance.interceptors.response.use(
   (res) => res,
   (error) => {
+    const normalized = normalizeError(error);
+    // Chỉ log ở môi trường dev (import.meta.env.DEV — Vite tự tắt khi build
+    // production). Trước đây log nguyên object error (gồm error.config —
+    // chứa payload request thật như lương, ảnh khuôn mặt base64) ra console
+    // production không gate, không kiểm soát — chỉ log status+message ngắn
+    // gọn, không log payload request/response đầy đủ.
+    if (import.meta.env.DEV) {
+      console.error(`Axios error [${normalized.status}]:`, normalized.message);
+    }
     // Bạn có thể log thêm ở đây (Sentry, Datadog…)
-    console.error("Axios error:", error);
-    return Promise.reject(normalizeError(error));
+    return Promise.reject(normalized);
   }
 );
 

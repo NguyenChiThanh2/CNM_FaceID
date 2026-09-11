@@ -33,8 +33,9 @@ def create_giay_phep_controller():
         )
         return jsonify(giayphep.to_dict()), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
-    
+        print(f"Lỗi khi tạo giấy phép: {e}")
+        return jsonify({'error': 'Không thể tạo giấy phép, vui lòng thử lại sau'}), 400
+
 
 def update_giay_phep_controller(id):
     # Trước đây chỉ có FE ẩn nút "Sửa" — BE cho phép bất kỳ ai có quyền
@@ -62,7 +63,8 @@ def update_giay_phep_controller(id):
         )
         return jsonify(updated_giay_phep.to_dict()), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        print(f"Lỗi khi sửa giấy phép: {e}")
+        return jsonify({'error': 'Không thể cập nhật giấy phép, vui lòng thử lại sau'}), 400
 
 
 def approve_giay_phep_controller(id):
@@ -91,7 +93,8 @@ def reject_giay_phep_controller(id):
         rejected_giay_phep = reject_giay_phep_service(id)
         return jsonify(rejected_giay_phep.to_dict()), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        print(f"Lỗi khi từ chối giấy phép: {e}")
+        return jsonify({'error': 'Không thể từ chối giấy phép, vui lòng thử lại sau'}), 400
 
 
 def cancle_giay_phep_controller(id):
@@ -109,7 +112,8 @@ def cancle_giay_phep_controller(id):
     except ValueError as e:
         return jsonify({'message': str(e)}), 400
     except Exception as e:
-        return jsonify({'message': str(e)}), 500
+        print(f"Lỗi khi hủy giấy phép: {e}")
+        return jsonify({'message': 'Không thể hủy giấy phép, vui lòng thử lại sau'}), 500
 
 
 # def delete_giay_phep_controller(id):

@@ -428,9 +428,27 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                     )
                     .all()
                 )
-                
-                
-                
+
+                # Prefetch 1 lần toàn bộ giấy phép "Tăng ca" đã duyệt ứng với
+                # các ngày chấm công ở trên — trước đây query riêng GiayPhep
+                # cho TỪNG ngày chấm công bên trong vòng lặp bên dưới (N+1
+                # query: N = số ngày công trong tháng của 1 nhân viên, và hàm
+                # này lại được gọi lặp lại cho MỖI nhân viên khi tính lương cả
+                # công ty — xem tinh_luong_cho_tat_ca_nhan_vien).
+                tangca_map = {}
+                if chamcongs:
+                    for gp in (
+                        GiayPhep.query
+                        .filter(
+                            GiayPhep.cham_cong_id.in_([cc.id for cc in chamcongs]),
+                            GiayPhep.trang_thai == "Đã duyệt",
+                            GiayPhep.loai_giay_phep == "Tăng ca",
+                        )
+                        .all()
+                    ):
+                        tangca_map.setdefault(gp.cham_cong_id, gp)
+
+
                 # print("Ngày cuối tuần trong tháng:", [d.day for d in ds_ngay_cuoi_tuan])
                 # cong = 0.0
                 # tong_ngay_cong = 0.0
@@ -494,11 +512,7 @@ def tinh_luong_cho_1nv(nhanvien_id: int, thang: int, nam: int):
                         tong_luong += cong * luong_ngay
                         # print(tong_luong)
                         # ======= TĂNG CA =======
-                        tangca = (
-                            GiayPhep.query
-                            .filter(GiayPhep.cham_cong_id == cc.id, GiayPhep.trang_thai == "Đã duyệt", GiayPhep.loai_giay_phep == "Tăng ca")
-                            .first()
-                        )
+                        tangca = tangca_map.get(cc.id)
                         if tangca:
                             gio_tang_ca = tangca.so_gio
                             tong_gio_tang_ca += gio_tang_ca

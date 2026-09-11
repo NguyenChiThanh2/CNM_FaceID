@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from flask import Blueprint, jsonify, request
-from app import db
+from app import db, limiter
 from app.models.thiet_bi_model import ThietBiChamCong
 
 facecheckin_bp = Blueprint("facecheckin", __name__, url_prefix="/api")
@@ -38,6 +38,9 @@ def allow_facecheckin():
 
 
 @facecheckin_bp.post("/devices/register")
+# Chặn brute-force dò DEVICE_SETUP_KEY: tối đa 5 lần thử/phút mỗi IP — cùng
+# hạn mức và lý do như /login (xem nhan_vien_routes.py).
+@limiter.limit("5 per minute")
 def register_device():
     """
     Tạo thiết bị mới + sinh token. Chỉ dùng 1 lần lúc setup máy kiosk.

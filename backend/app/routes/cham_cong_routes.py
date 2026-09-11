@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.decorators.auth_decorators import require_module_permission, permission_required
+from app import limiter
 from app.controllers.cham_cong_controller import (
     get_all_cham_cong,
     get_cham_cong_by_id,
@@ -57,7 +58,13 @@ def delete_cham_cong_router(id):
     return delete_cham_cong(id)
 
 # Check-in (passive liveness nếu có frames; fallback 1 ảnh)
+# Rate limit theo IP thiết bị — mỗi request chạy face_recognition (nặng CPU) và
+# không yêu cầu JWT (chỉ cần X-Device-Token), nên không có hạn mức nào chặn
+# trước đó; không giới hạn thì 1 request lặp lại liên tục (script hoặc thiết
+# bị hỏng) có thể làm cạn CPU server (DoS). 20/phút đủ rộng cho giờ cao điểm
+# nhân viên xếp hàng chấm công thật tại 1 kiosk.
 @cham_cong_bp.route('/face-checkin', methods=['POST'])
+@limiter.limit("20 per minute")
 def face_checkin_router():
     device = find_active_device(get_device_token_from_request())
     if not device:

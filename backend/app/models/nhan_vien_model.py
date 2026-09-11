@@ -63,7 +63,6 @@ class NhanVien(db.Model, SoftDeleteMixin, AuditMixin):
         back_populates='nhan_vien',
         lazy=True
     )
-    luong_nv = db.relationship('Luong', back_populates='luong_nv', lazy=True)
     phuc_lois = db.relationship('NhanVienPhucLoi', foreign_keys='NhanVienPhucLoi.nhan_vien_id', back_populates='nhan_vien', lazy=True)
     hopdong_nv = db.relationship("HopDongLaoDong", foreign_keys='HopDongLaoDong.nhan_vien_id', back_populates="hopdong_nv", lazy=True)
     bang_luong_nhan_vien = db.relationship('BangLuong', foreign_keys='BangLuong.nhan_vien_id', back_populates='bang_luong_nhan_vien', lazy=True)

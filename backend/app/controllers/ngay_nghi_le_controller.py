@@ -10,7 +10,8 @@ def get_all_ngay_nghi_le():
         ngay_nghi_les = get_all_ngay_nghi_le_service()
         return jsonify([ngay_nghi_le.to_dict() for ngay_nghi_le in ngay_nghi_les]), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        print(f"Lỗi khi lấy danh sách ngày nghỉ lễ: {e}")
+        return jsonify({'error': 'Không thể lấy danh sách ngày nghỉ lễ, vui lòng thử lại sau'}), 400
 
 # API: Get Nghi Phep by ID
 
@@ -21,7 +22,8 @@ def get_ngay_nghi_le_by_id(id):
             return jsonify({'error': 'Nghỉ phép không tồn tại'}), 404
         return jsonify(ngay_nghi_le.to_dict()), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        print(f"Lỗi khi lấy ngày nghỉ lễ: {e}")
+        return jsonify({'error': 'Không thể lấy dữ liệu ngày nghỉ lễ, vui lòng thử lại sau'}), 400
 
 # API: Create Nghi Phep
 
@@ -37,7 +39,8 @@ def create_ngay_nghi_le():
         )
         return jsonify(new_ngay_nghi_le.to_dict()), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        print(f"Lỗi khi tạo ngày nghỉ lễ: {e}")
+        return jsonify({"error": "Không thể tạo ngày nghỉ lễ, vui lòng thử lại sau"}), 400
 
 # API: Update Nghi Phep
 
@@ -56,7 +59,8 @@ def update_ngay_nghi_le(id):
 
         return jsonify({"message": "Cập nhật thành công", "data": updated_ngay_nghi_le.to_dict()}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        print(f"Lỗi khi sửa ngày nghỉ lễ: {e}")
+        return jsonify({"error": "Không thể cập nhật ngày nghỉ lễ, vui lòng thử lại sau"}), 400
 
 
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Form, Button, Row, Col } from "react-bootstrap";
-import { getAllNhanVien } from "../../services/nhanSuApi";
 import { getNhanVienInfo } from "../../utils/auth";
 import { ToastContainer, toast } from "react-toastify";
 
@@ -15,10 +14,11 @@ const firstDayOfMonthISO = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 };
 
-const DanhGiaForm = ({ initialData = {}, onSubmit, onClose }) => {
+// nhanViens nhận qua props từ QuanLyDanhGia.jsx (trang cha đã fetch sẵn 1
+// lần) — trước đây form tự fetch lại toàn bộ danh sách nhân viên mỗi lần
+// modal "Thêm/Sửa đánh giá" mở, dù dữ liệu đã có sẵn ở trang cha.
+const DanhGiaForm = ({ initialData = {}, onSubmit, onClose, nhanViens = [] }) => {
   const currentUser = useMemo(() => getNhanVienInfo(), []);
-  const [nhanViens, setNhanViens] = useState([]);
-  const [loadingNV, setLoadingNV] = useState(false);
 
   const [formData, setFormData] = useState({
     nhan_vien_id: "",
@@ -46,20 +46,6 @@ const DanhGiaForm = ({ initialData = {}, onSubmit, onClose }) => {
   const isEditing = Boolean(initialData && initialData.id);
 
   // ==== Effects ====
-  useEffect(() => {
-    (async () => {
-      setLoadingNV(true);
-      try {
-        const list = await getAllNhanVien();
-        setNhanViens(Array.isArray(list) ? list : []);
-      } catch (err) {
-        toast.error("Lỗi khi tải danh sách nhân viên:", err);
-        setNhanViens([]);
-      } finally {
-        setLoadingNV(false);
-      }
-    })();
-  }, []);
 
   // Prefill khi edit
   useEffect(() => {
@@ -173,7 +159,7 @@ const DanhGiaForm = ({ initialData = {}, onSubmit, onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!currentUser?.id) {
-      toast.danger("Không xác định được người đánh giá. Vui lòng đăng nhập lại.");
+      toast.error("Không xác định được người đánh giá. Vui lòng đăng nhập lại.");
       return;
     }
     if (!formData.nhan_vien_id) {
@@ -203,15 +189,11 @@ const DanhGiaForm = ({ initialData = {}, onSubmit, onClose }) => {
               style={{ maxHeight: 220, overflowY: "auto" }}
             >
               <option value="">-- Chọn nhân viên --</option>
-              {loadingNV ? (
-                <option disabled>Đang tải...</option>
-              ) : (
-                nhanViensCungPhong.map((nv) => (
-                  <option key={nv.id} value={nv.id}>
-                    {nv.ho_ten}
-                  </option>
-                ))
-              )}
+              {nhanViensCungPhong.map((nv) => (
+                <option key={nv.id} value={nv.id}>
+                  {nv.ho_ten}
+                </option>
+              ))}
             </Form.Select>
           </Form.Group>
         </Col>

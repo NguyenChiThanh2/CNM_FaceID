@@ -7,7 +7,7 @@ from app import db
 from app.models.nguoi_phu_thuoc_model import NguoiPhuThuoc
 from app.models.nhan_vien_model import NhanVien
 
-from app.decorators.auth_decorators import require_module_permission
+from app.decorators.auth_decorators import require_module_permission, get_current_nhan_vien, is_hr
 
 nguoi_phu_thuoc_bp = Blueprint("nguoi_phu_thuoc_bp", __name__)
 
@@ -164,7 +164,16 @@ def list_nguoi_phu_thuoc():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error listing dependents: {e}"}), 500
+        print(f"Error listing dependents: {e}")
+        return jsonify({"message": "Lỗi hệ thống, vui lòng thử lại sau"}), 500
+
+
+# Chỉ HR hoặc đúng nhân viên có người phụ thuộc đó mới được xem/sửa/xóa —
+# trước đây BE không kiểm tra, ai có quyền "nguoi_phu_thuoc.xem/sua/xoa" xem/
+# sửa/xóa được người phụ thuộc của bất kỳ nhân viên nào.
+def _khong_phai_chu_so_huu(item):
+    nv = get_current_nhan_vien()
+    return not (is_hr(nv) or (nv and item.nhan_vien_id == nv.id))
 
 
 @nguoi_phu_thuoc_bp.get("/<int:dep_id>")
@@ -172,6 +181,8 @@ def get_nguoi_phu_thuoc(dep_id):
     item = NguoiPhuThuoc.query.filter_by(id=dep_id).first()
     if not item:
         return jsonify({"message": "Không tìm thấy người phụ thuộc"}), 404
+    if _khong_phai_chu_so_huu(item):
+        return jsonify({"message": "Bạn không có quyền xem người phụ thuộc này"}), 403
     return jsonify(build_item_dict(item)), 200
 
 
@@ -219,7 +230,8 @@ def create_nguoi_phu_thuoc():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error creating dependent: {e}"}), 500
+        print(f"Error creating dependent: {e}")
+        return jsonify({"message": "Không thể tạo người phụ thuộc, vui lòng thử lại sau"}), 500
 
 
 @nguoi_phu_thuoc_bp.put("/<int:dep_id>")
@@ -229,6 +241,8 @@ def update_nguoi_phu_thuoc(dep_id):
         item = NguoiPhuThuoc.query.filter_by(id=dep_id).first()
         if not item:
             return jsonify({"message": "Không tìm thấy người phụ thuộc"}), 404
+        if _khong_phai_chu_so_huu(item):
+            return jsonify({"message": "Bạn không có quyền sửa người phụ thuộc này"}), 403
 
         payload = request.get_json(silent=True) or {}
         errors, nhan_vien_id, ho_ten, quan_he, ngay_bat_dau, ngay_ket_thuc = validate_payload(payload, updating=True)
@@ -293,7 +307,8 @@ def update_nguoi_phu_thuoc(dep_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error updating dependent: {e}"}), 500
+        print(f"Error updating dependent: {e}")
+        return jsonify({"message": "Không thể cập nhật người phụ thuộc, vui lòng thử lại sau"}), 500
 
 
 @nguoi_phu_thuoc_bp.delete("/<int:dep_id>")
@@ -302,9 +317,12 @@ def delete_nguoi_phu_thuoc(dep_id):
         item = NguoiPhuThuoc.query.filter_by(id=dep_id).first()
         if not item:
             return jsonify({"message": "Không tìm thấy người phụ thuộc"}), 404
+        if _khong_phai_chu_so_huu(item):
+            return jsonify({"message": "Bạn không có quyền xóa người phụ thuộc này"}), 403
         item.soft_delete()
         db.session.commit()
         return jsonify({"message": "Xóa thành công"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error deleting dependent: {e}"}), 500
+        print(f"Error deleting dependent: {e}")
+        return jsonify({"message": "Không thể xóa người phụ thuộc, vui lòng thử lại sau"}), 500

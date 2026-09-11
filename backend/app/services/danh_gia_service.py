@@ -169,13 +169,20 @@ def create_danh_gia_service(payload: Dict[str, Any]) -> Tuple[Optional[DanhGia],
 
         # 2) Check trùng kỳ (cho message đẹp)
         nv_id = int(payload["nhan_vien_id"])
+        nguoi_danh_gia_id = int(payload["nguoi_danh_gia_id"])
+        # Không cho phép tự đánh giá chính mình — nguoi_danh_gia_id ở đây đã
+        # được controller ép bằng người đang đăng nhập (trừ khi HR chủ động
+        # chỉ định người khác), nên nếu 2 id trùng nhau nghĩa là ai đó đang tự
+        # tạo đánh giá cho chính mình.
+        if nguoi_danh_gia_id == nv_id:
+            return None, "Người đánh giá không được trùng với người được đánh giá (không thể tự đánh giá chính mình)."
         if _exists_same_period(nv_id, ky_ngay_canon, ky_loai_val):
             return None, "Đã tồn tại đánh giá cho nhân viên này ở kỳ đã chọn."
 
         # 3) Tạo model (đặt ky_ngay = canonical)
         dg = DanhGia(
             nhan_vien_id=nv_id,
-            nguoi_danh_gia_id=payload["nguoi_danh_gia_id"],
+            nguoi_danh_gia_id=nguoi_danh_gia_id,
             ky_ngay=ky_ngay_canon,
             ky_loai=ky_loai_val,
 
@@ -211,7 +218,8 @@ def create_danh_gia_service(payload: Dict[str, Any]) -> Tuple[Optional[DanhGia],
         return None, f"Thiếu trường bắt buộc: {str(e)}"
     except Exception as e:
         db.session.rollback()
-        return None, str(e)
+        print(f"Lỗi khi tạo đánh giá: {e}")
+        return None, "Không thể tạo đánh giá, vui lòng thử lại sau"
 
 
 def update_danh_gia_service(id: int, payload: Dict[str, Any]) -> Tuple[Optional[DanhGia], Optional[str]]:
@@ -242,6 +250,13 @@ def update_danh_gia_service(id: int, payload: Dict[str, Any]) -> Tuple[Optional[
             if exists:
                 return None, "Đã tồn tại đánh giá cho nhân viên này ở kỳ đã chọn."
 
+        # Không cho phép tự đánh giá chính mình sau khi áp thay đổi (nếu FE
+        # gửi nhan_vien_id/nguoi_danh_gia_id mới) — cùng lý do như lúc tạo.
+        nhan_vien_id_new = int(payload.get("nhan_vien_id", dg.nhan_vien_id))
+        nguoi_danh_gia_id_new = int(payload.get("nguoi_danh_gia_id", dg.nguoi_danh_gia_id))
+        if nhan_vien_id_new == nguoi_danh_gia_id_new:
+            return None, "Người đánh giá không được trùng với người được đánh giá (không thể tự đánh giá chính mình)."
+
         # Gán dữ liệu
         for field in [
             "nhan_vien_id", "nguoi_danh_gia_id",
@@ -267,7 +282,8 @@ def update_danh_gia_service(id: int, payload: Dict[str, Any]) -> Tuple[Optional[
         return None, "Dữ liệu cập nhật vi phạm ràng buộc (có thể trùng kỳ)."
     except Exception as e:
         db.session.rollback()
-        return None, str(e)
+        print(f"Lỗi khi sửa đánh giá: {e}")
+        return None, "Không thể cập nhật đánh giá, vui lòng thử lại sau"
 
 
 
@@ -281,5 +297,6 @@ def delete_danh_gia_service(id: int) -> Tuple[bool, Optional[str]]:
         return True, None
     except Exception as e:
         db.session.rollback()
-        return False, str(e)
+        print(f"Lỗi khi xóa đánh giá: {e}")
+        return False, "Không thể xóa đánh giá, vui lòng thử lại sau"
 

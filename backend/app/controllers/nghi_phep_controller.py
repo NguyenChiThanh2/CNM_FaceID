@@ -22,7 +22,8 @@ def get_all_nghi_phep():
         nghi_pheps = get_all_nghi_phep_service()
         return jsonify([nghi_phep.to_dict() for nghi_phep in nghi_pheps]), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        print(f"Lỗi khi lấy danh sách nghỉ phép: {e}")
+        return jsonify({'error': 'Không thể lấy danh sách nghỉ phép, vui lòng thử lại sau'}), 400
 
 # API: Get Nghi Phep by ID
 
@@ -33,7 +34,8 @@ def get_nghi_phep_by_id(id):
             return jsonify({'error': 'Nghỉ phép không tồn tại'}), 404
         return jsonify(nghi_phep.to_dict()), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        print(f"Lỗi khi lấy nghỉ phép: {e}")
+        return jsonify({'error': 'Không thể lấy dữ liệu nghỉ phép, vui lòng thử lại sau'}), 400
 
 # API: Get Nghi Phep theo nhân viên — route đã gọi tên này từ trước nhưng
 # controller chưa từng định nghĩa hàm, khiến GET luôn 500 (NameError)
@@ -42,7 +44,8 @@ def get_nghi_phep_by_nhan_vien_id(nhan_vien_id):
         nghi_pheps = get_nghi_phep_by_nhan_vien_id_service(nhan_vien_id)
         return jsonify([nghi_phep.to_dict() for nghi_phep in nghi_pheps]), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        print(f"Lỗi khi lấy nghỉ phép theo nhân viên: {e}")
+        return jsonify({'error': 'Không thể lấy dữ liệu nghỉ phép, vui lòng thử lại sau'}), 400
 
 # API: Create Nghi Phep
 
@@ -64,7 +67,8 @@ def create_nghi_phep():
         )
         return jsonify(new_nghi_phep.to_dict()), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        print(f"Lỗi khi tạo nghỉ phép: {e}")
+        return jsonify({"error": "Không thể tạo đơn nghỉ phép, vui lòng thử lại sau"}), 400
 
 # API: Update Nghi Phep
 
@@ -101,7 +105,8 @@ def update_nghi_phep(id):
 
         return jsonify({"message": "Cập nhật thành công", "data": updated_nghi_phep.to_dict()}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        print(f"Lỗi khi sửa nghỉ phép: {e}")
+        return jsonify({"error": "Không thể cập nhật đơn nghỉ phép, vui lòng thử lại sau"}), 400
 
 
 def approve_nghi_phep(id):
@@ -133,7 +138,8 @@ def reject_nghi_phep(id):
         rejected_nghi_phep = reject_nghi_phep_service(id)
         return jsonify(rejected_nghi_phep.to_dict()), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        print(f"Lỗi khi từ chối nghỉ phép: {e}")
+        return jsonify({'error': 'Không thể từ chối đơn nghỉ phép, vui lòng thử lại sau'}), 400
 
 
 def cancle_nghi_phep(id):
@@ -156,7 +162,8 @@ def cancle_nghi_phep(id):
         return jsonify({'message': str(e)}), 400
     except Exception as e:
         # Xử lý các lỗi khác
-        return jsonify({'message': str(e)}), 500
+        print(f"Lỗi khi hủy nghỉ phép: {e}")
+        return jsonify({'message': 'Không thể hủy đơn nghỉ phép, vui lòng thử lại sau'}), 500
 
 
 # Xóa nghỉ phép theo ID

@@ -7,7 +7,9 @@ from app import db
 from app.models.hopdong_laodong_model import HopDongLaoDong
 
 # Đảm bảo blueprint gắn với /api để khớp FE gọi /api/hop-dong
-from app.decorators.auth_decorators import require_module_permission, permission_required
+from app.decorators.auth_decorators import (
+    require_module_permission, permission_required, get_current_nhan_vien, is_hr,
+)
 
 hopdong_bp = Blueprint("hopdong_bp", __name__, url_prefix="/api")
 
@@ -234,7 +236,7 @@ def create_hop_dong():
     except Exception as e:
         db.session.rollback()
         print("❌ Lỗi tạo hợp đồng:", e)
-        return jsonify({"message": "Tạo hợp đồng thất bại", "error": str(e)}), 500
+        return jsonify({"message": "Tạo hợp đồng thất bại, vui lòng thử lại sau"}), 500
 
 
 @hopdong_bp.route("/hop-dong/<int:id>", methods=["PUT"])
@@ -242,6 +244,13 @@ def update_hop_dong(id):
     hopdong = HopDongLaoDong.query.filter_by(id=id).first()
     if not hopdong:
         return jsonify({"message": "Không tìm thấy hợp đồng"}), 404
+
+    # Chỉ HR hoặc đúng chủ hợp đồng mới được sửa — trước đây BE không kiểm
+    # tra, ai có quyền "hopdong.sua" sửa được hợp đồng lao động (lương cơ
+    # bản, phụ cấp...) của bất kỳ nhân viên nào.
+    nv = get_current_nhan_vien()
+    if not (is_hr(nv) or (nv and hopdong.nhan_vien_id == nv.id)):
+        return jsonify({"message": "Bạn không có quyền sửa hợp đồng này"}), 403
 
     data = request.get_json(silent=True) or {}
     try:
@@ -300,7 +309,7 @@ def update_hop_dong(id):
     except Exception as e:
         db.session.rollback()
         print("❌ Lỗi cập nhật hợp đồng:", e)
-        return jsonify({"message": "Cập nhật hợp đồng thất bại", "error": str(e)}), 500
+        return jsonify({"message": "Cập nhật hợp đồng thất bại, vui lòng thử lại sau"}), 500
 
 @hopdong_bp.route("/hop-dong/by-nhan-vien/batch", methods=["POST"])
 @permission_required("hopdong.xem")

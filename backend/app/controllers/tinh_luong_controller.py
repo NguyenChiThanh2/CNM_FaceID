@@ -15,7 +15,8 @@ def tinh_luong_cho_1nv_controller(nhan_vien_id, thang, nam):
         else:
             return jsonify({'error': f'Không tính được lương cho nhân viên ID={nhan_vien_id}'}), 400
     except Exception as e:
-        return jsonify({'error': f'Lỗi: {str(e)}'}), 500
+        print(f"Lỗi khi tính lương cho nhân viên {nhan_vien_id}: {e}")
+        return jsonify({'error': 'Không thể tính lương, vui lòng thử lại sau'}), 500
 
 
 def tinh_luong_cho_tat_ca_nhan_vien_controller(thang,nam,phongbanid=None):

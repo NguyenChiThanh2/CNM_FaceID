@@ -610,6 +610,8 @@ const QuanLyNhanSu = () => {
             onAdded={handleFormSubmit}
             editingNhanSu={editingNhanSu}
             setEditingNhanSu={setEditingNhanSu}
+            dsChucVu={dsChucVu}
+            dsPhongBan={dsPhongBan}
           />
         </Modal.Body>
         <Modal.Footer>

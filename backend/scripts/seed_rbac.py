@@ -25,7 +25,7 @@ from app.models.nhan_vien_model import NhanVien
 MODULES = [
     "bang_luong", "bao_hiem_dn", "cham_cong", "chi_tiet_luong", "chuc_vu",
     "chung_chi", "danh_gia", "giay_phep", "hopdong", "khau_tru",
-    "loai_nghi_phep", "luong", "ngay_nghi_le", "nghi_phep", "nguoi_phu_thuoc",
+    "loai_nghi_phep", "ngay_nghi_le", "nghi_phep", "nguoi_phu_thuoc",
     "nhan_vien", "nhan_vien_phuc_loi", "phong_ban", "phuc_loi", "thuong",
     "tinh_luong", "vai_tro",
 ]

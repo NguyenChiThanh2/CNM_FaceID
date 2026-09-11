@@ -92,7 +92,7 @@ def create_nhan_vien_controller():
             data['face_encoding'] = face_encoding
         except Exception as e:
             logger.error(f"Lỗi khi xử lý ảnh: {str(e)}")
-            return jsonify({'message': f'Lỗi khi xử lý ảnh: {str(e)}'}), 500
+            return jsonify({'message': 'Lỗi khi xử lý ảnh, vui lòng thử lại sau'}), 500
     else:
         data['avatar'] = None
         data['face_encoding'] = None
@@ -156,7 +156,7 @@ def update_nhan_vien_controller(nhan_vien_id):
                 data['avatar'] = filename
             except Exception as e:
                 logger.error(f"Lỗi khi lưu file ảnh mới: {str(e)}")
-                return jsonify({'message': f'Lỗi khi lưu file ảnh mới: {str(e)}'}), 500
+                return jsonify({'message': 'Lỗi khi lưu file ảnh mới, vui lòng thử lại sau'}), 500
 
         # xử lý password
         if data.get('reset_password') == '1':
@@ -202,7 +202,7 @@ def update_nhan_vien_controller(nhan_vien_id):
 
     except Exception as e:
         logger.error(f"Lỗi hệ thống khi cập nhật nhân viên: {str(e)}")
-        return jsonify({'message': f'Lỗi hệ thống: {str(e)}'}), 500
+        return jsonify({'message': 'Lỗi hệ thống, vui lòng thử lại sau'}), 500
 
 # ========================== DELETE ==========================
 def delete_nhan_vien_controller(id):
@@ -238,7 +238,7 @@ def handle_uploaded_image(file_path):
 
     except Exception as e:
         logger.error(f"Lỗi khi xử lý ảnh: {str(e)}")
-        return None, f"Lỗi khi xử lý ảnh: {str(e)}"
+        return None, "Lỗi khi xử lý ảnh, vui lòng thử lại với ảnh khác"
 
 
 def search_nhan_vien_theoten_controller(q):

@@ -2,7 +2,6 @@
 from .phuc_loi_routes import phuc_loi_bp
 from .phong_ban_routes import phong_ban_bp
 from .nghi_phep_routes import nghi_phep_bp
-from .luong_routes import luong_bp
 from .danh_gia_routes import danh_gia_bp
 from .chuc_vu_routes import chuc_vu_bp
 from app.routes.cham_cong_routes import cham_cong_bp
@@ -39,7 +38,6 @@ def register_routes(app):
     app.register_blueprint(phuc_loi_bp, url_prefix='/api')
     app.register_blueprint(phong_ban_bp, url_prefix='/api')
     app.register_blueprint(nghi_phep_bp, url_prefix='/api')
-    app.register_blueprint(luong_bp, url_prefix='/api')
     app.register_blueprint(danh_gia_bp, url_prefix='/api/danhgia')
     app.register_blueprint(chuc_vu_bp, url_prefix='/api')
     app.register_blueprint(cham_cong_bp)

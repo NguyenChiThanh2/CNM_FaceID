@@ -2,12 +2,14 @@
 from flask import request, jsonify
 
 from app.models import NhanVien
+from app.models.bang_cap_chung_chi_model import BangCapChungChi
 from app.services.chung_chi_service import (
     create_chung_chi_service,
     get_chung_chi_by_nhan_vien_service,
     delete_chung_chi_service,
     ChungChiFileError,
 )
+from app.decorators.auth_decorators import get_current_nhan_vien, is_hr
 
 
 def create_chung_chi_controller(nv_id):
@@ -49,6 +51,16 @@ def get_chung_chi_by_nhan_vien_controller(nv_id):
 
 
 def delete_chung_chi_controller(cc_id):
+    # Chỉ HR hoặc đúng chủ chứng chỉ mới được xóa — trước đây BE không kiểm
+    # tra, ai có quyền "chung_chi.xoa" xóa được chứng chỉ/bằng cấp của bất kỳ
+    # nhân viên nào.
+    cc = BangCapChungChi.query.filter_by(id=cc_id).first()
+    if not cc:
+        return jsonify({"message": "Không tìm thấy chứng chỉ/bằng cấp"}), 404
+    nv = get_current_nhan_vien()
+    if not (is_hr(nv) or (nv and cc.nhan_vien_id == nv.id)):
+        return jsonify({"message": "Bạn không có quyền xóa chứng chỉ/bằng cấp này"}), 403
+
     deleted = delete_chung_chi_service(cc_id)
     if not deleted:
         return jsonify({"message": "Không tìm thấy chứng chỉ/bằng cấp"}), 404

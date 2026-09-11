@@ -9,4 +9,5 @@ def get_chi_tiet_luong_controller(bang_luong_id):
         else:
             return jsonify({'message': 'Không có dữ liệu chi tiết lương'}), 404
     except Exception as e:
-        return jsonify({'message': str(e)}), 500
+        print(f"Lỗi khi lấy chi tiết lương: {e}")
+        return jsonify({'message': 'Lỗi hệ thống, vui lòng thử lại sau'}), 500

@@ -31,16 +31,18 @@ def get_thuong_by_nhan_vien_id(nhan_vien_id):
         thuongs = get_thuong_by_nhan_vien_id_service(nhan_vien_id)
         return jsonify([t.to_dict() for t in thuongs] if thuongs else []), 200
     except Exception as e:
-        return jsonify({'message': f'Lỗi khi lấy thưởng nhân viên: {str(e)}'}), 500
+        print(f"Lỗi khi lấy thưởng nhân viên: {e}")
+        return jsonify({'message': 'Không thể lấy dữ liệu thưởng, vui lòng thử lại sau'}), 500
 # Tạo mới thưởng
 def create_thuong():
-    
+
     data = request.get_json()
     try:
         new_thuong = create_thuong_service(data)
         return jsonify(new_thuong.to_dict()), 201
     except Exception as e:
-        return jsonify({'message': f'Lỗi khi tạo thưởng: {str(e)}'}), 500
+        print(f"Lỗi khi tạo thưởng: {e}")
+        return jsonify({'message': 'Không thể tạo thưởng, vui lòng thử lại sau'}), 500
 
 # Cập nhật thưởng
 def update_thuong(thuong_id):
@@ -78,7 +80,8 @@ def add_nhan_vien_to_thuong_controller(data):
 
         return jsonify({"message": "Đã thêm nhân viên vào thưởng."}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Lỗi khi thêm nhân viên vào thưởng: {e}")
+        return jsonify({"error": "Không thể thêm nhân viên vào thưởng, vui lòng thử lại sau"}), 500
     
 def get_nhan_vien_by_thuong_controller(thuong_id):
     try:
@@ -90,8 +93,9 @@ def get_nhan_vien_by_thuong_controller(thuong_id):
         return jsonify(result), 200
 
     except Exception as e:
-        return jsonify({"message": f"Lỗi server: {str(e)}"}), 500
-    
+        print(f"Lỗi khi lấy nhân viên theo thưởng: {e}")
+        return jsonify({"message": "Lỗi hệ thống, vui lòng thử lại sau"}), 500
+
 def remove_nhan_vien_from_thuong_controller():
     try:
         data = request.json
@@ -106,8 +110,9 @@ def remove_nhan_vien_from_thuong_controller():
         return jsonify({"message": result}), 200
 
     except Exception as e:
-        return jsonify({"message": f"Lỗi server: {str(e)}"}), 500
-    
+        print(f"Lỗi khi xóa nhân viên khỏi thưởng: {e}")
+        return jsonify({"message": "Lỗi hệ thống, vui lòng thử lại sau"}), 500
+
 def get_thang13_nhan_vien_controller():
     try:
         data = request.json
@@ -124,4 +129,4 @@ def get_thang13_nhan_vien_controller():
         }), 200
     except Exception as e:
         print("Lỗi controller:", e)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Lỗi hệ thống, vui lòng thử lại sau"}), 500

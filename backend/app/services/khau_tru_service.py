@@ -70,7 +70,8 @@ def create_khau_tru_service(ten_khau_tru,loai_khau_tru,so_tien,ghi_chu,ngay_quye
        
     except Exception as e:
         db.session.rollback()
-        return {"message": f"Lỗi server: {str(e)}"}, 500
+        print(f"Lỗi khi tạo khấu trừ: {e}")
+        return {"message": "Lỗi hệ thống, vui lòng thử lại sau"}, 500
 
 # Cập nhật khấu trừ
 def update_khau_tru_service(id,ten_khau_tru,loai_khau_tru,so_tien,ghi_chu,ngay_quyet_dinh,file=None,file_status=None):
@@ -103,7 +104,8 @@ def update_khau_tru_service(id,ten_khau_tru,loai_khau_tru,so_tien,ghi_chu,ngay_q
         return khau_tru
     except Exception as e:
         db.session.rollback()
-        return {"message": f"Lỗi server: {str(e)}"}, 500
+        print(f"Lỗi khi sửa khấu trừ: {e}")
+        return {"message": "Lỗi hệ thống, vui lòng thử lại sau"}, 500
 
 # Xóa khấu trừ — xóa MỀM, và chặn hẳn nếu còn nhân viên đang gắn với khoản
 # khấu trừ này. Trước đây xóa cứng (db.session.delete) trong khi
@@ -134,11 +136,20 @@ def delete_khau_tru_service(khau_tru_id):
 
 
 def add_nhan_vien_to_khau_tru_service(khau_tru_id, nhan_vien_ids):
+    # Prefetch 1 lần toàn bộ bản ghi đã tồn tại cho các nhân viên trong danh
+    # sách — trước đây query riêng KhauTruNhanVien cho TỪNG nhân viên trong
+    # vòng lặp (N+1 query: N = số nhân viên được chọn thêm vào khấu trừ).
+    ids = [item["id"] for item in nhan_vien_ids]
+    existing_map = {
+        e.nhan_vien_id: e
+        for e in db.session.query(KhauTruNhanVien)
+        .filter(KhauTruNhanVien.khau_tru_id == khau_tru_id, KhauTruNhanVien.nhan_vien_id.in_(ids))
+        .all()
+    } if ids else {}
+
     for nv_id in nhan_vien_ids:
         so_tien = nv_id.get("so_tien_thuc_te")  # có thể là None
-        existing = db.session.query(KhauTruNhanVien).filter_by(
-            nhan_vien_id=nv_id["id"], khau_tru_id=khau_tru_id
-        ).first()
+        existing = existing_map.get(nv_id["id"])
 
         if not existing:
             new_entry = KhauTruNhanVien(
@@ -147,11 +158,17 @@ def add_nhan_vien_to_khau_tru_service(khau_tru_id, nhan_vien_ids):
                 so_tien_thuc_te=so_tien
             )
             db.session.add(new_entry)
+            # Ghi lại vào map — nếu nhan_vien_ids có id trùng lặp trong cùng 1
+            # lần gọi, lần lặp sau vẫn nhận ra là "đã tồn tại" thay vì insert
+            # trùng thêm 1 bản ghi nữa (giữ đúng hành vi như bản .first() cũ,
+            # vì SQLAlchemy tự autoflush trước mỗi query nên bản cũ vẫn thấy
+            # được insert chưa commit ở lần lặp trước).
+            existing_map[nv_id["id"]] = new_entry
         else:
             # cập nhật lại nếu khác
             if existing.so_tien_thuc_te != so_tien:
                 existing.so_tien_thuc_te = so_tien
-            
+
     try:
         db.session.commit()
     except Exception as e:

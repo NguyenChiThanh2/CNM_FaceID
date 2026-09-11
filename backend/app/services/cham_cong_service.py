@@ -601,12 +601,12 @@ def create_cham_cong_from_face_service_passive(payload):
                 }, 400
 
         except Exception as e:
-            # nếu lỗi tz/so sánh -> fail-safe nhưng có debug
+            # nếu lỗi tz/so sánh -> fail-safe, log chi tiết ở server, không trả ra client
+            print(f"Lỗi xác minh khoảng cách chấm công: {e}")
             return {
                 "ok": False,
                 "message": "Không thể xác minh khoảng cách giữa 2 lần chấm. Vui lòng thử lại sau.",
                 "name": nv.ho_ten,
-                "error": str(e),
             }, 400
 
         # đủ gap -> cho RA
@@ -781,4 +781,5 @@ def get_tinhsocong_theogiayphep_service(id):
         return {"success": message}, 200
     except Exception as e:
         db.session.rollback()
-        return {"error": str(e)}, 500 
+        print(f"Lỗi khi cập nhật công theo giấy phép: {e}")
+        return {"error": "Lỗi hệ thống, vui lòng thử lại sau"}, 500 

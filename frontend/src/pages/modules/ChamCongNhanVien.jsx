@@ -42,6 +42,7 @@ const ChamCongNhanVien = () => {
   const [chamCong, setChamCong] = useState([]);
   const [loading, setLoading] = useState(true);
   const [nhanVien, setNhanVien] = useState(null);
+  const [nhanVienError, setNhanVienError] = useState(null);
   const [modalMessage, setModalMessage] = useState("");
   
   const [showModal, setShowModal] = useState(false);
@@ -55,7 +56,11 @@ const ChamCongNhanVien = () => {
   useEffect(() => {
     axiosInstance
       .get(`/get-nhan-vien-by-id/${id}`)
-      .then((res) => setNhanVien(res.data));
+      .then((res) => setNhanVien(res.data))
+      .catch((error) => {
+        console.error("Lỗi khi lấy thông tin nhân viên:", error);
+        setNhanVienError(error.message || "Không thể tải thông tin nhân viên");
+      });
   }, [id]);
 
   const fetchChamCong = async (thang, nam) => {
@@ -153,6 +158,13 @@ const ChamCongNhanVien = () => {
     );
   };
 
+  if (nhanVienError) {
+    return (
+      <div className="p-4 ps-5">
+        <p className="text-danger">Lỗi: {nhanVienError}</p>
+      </div>
+    );
+  }
   if (!nhanVien) return <Loading />;
   if (loading) return <Loading />;
 

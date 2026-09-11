@@ -6,7 +6,10 @@ import { toast } from "react-toastify";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
+// nhanVienList/loaiNghiPhepList nhận qua props từ QuanLyNghiPhep.jsx (trang
+// cha đã fetch sẵn 1 lần) — trước đây form tự fetch lại 2 API này mỗi lần
+// modal "Thêm/Sửa đơn nghỉ phép" mở, dù dữ liệu đã có sẵn ở trang cha.
+const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep, nhanVienList = [], loaiNghiPhepList = [] }) => {
   const [formData, setFormData] = useState({
     nhan_vien_id: "",
     loai_nghi_phep_id: "",
@@ -21,31 +24,11 @@ const NghiPhepForm = ({ onAdded, editingNghiPhep, setEditingNghiPhep }) => {
     can_cu_phap_ly: null,
     file_bo_sung: null,
   });
-  const [nhanVienList, setNhanVienList] = useState([]);
-  const [loaiNghiPhepList, setLoaiNghiPhepList] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [file, setFile] = useState(null);
   // const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Lấy danh sách nhân viên
-    axiosInstance
-      .get("/get-all-nhan-vien")
-      .then((response) => setNhanVienList(response.data))
-      .catch((error) =>
-        setErrorMessage("Lỗi khi lấy danh sách nhân viên: " + error.message)
-      );
-
-    // Lấy danh sách loại nghỉ phép
-    axiosInstance
-      .get("/loai-nghi-phep")
-      .then((response) => setLoaiNghiPhepList(response.data))
-      .catch((error) =>
-        setErrorMessage(
-          "Lỗi khi lấy danh sách loại nghỉ phép: " + error.message
-        )
-      );
-
     if (editingNghiPhep) {
       // Chuyển đổi ngày tháng về định dạng yyyy-mm-dd
       const formatDate = (dateString) => {

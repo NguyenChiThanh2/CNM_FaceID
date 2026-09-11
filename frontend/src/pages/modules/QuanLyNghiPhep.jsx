@@ -35,6 +35,7 @@ const QuanLyNghiPhep = () => {
   const [editingNghiPhep, setEditingNghiPhep] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [nhanVienList, setNhanVienList] = useState([]);
+  const [loaiNghiPhepList, setLoaiNghiPhepList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -43,6 +44,7 @@ const QuanLyNghiPhep = () => {
   useEffect(() => {
     fetchNghiPhep();
     fetchNhanVien();
+    fetchLoaiNghiPhep();
   }, []);
 
   useEffect(() => {
@@ -78,6 +80,15 @@ const QuanLyNghiPhep = () => {
       toast.error("Có lỗi xảy ra khi tải danh sách nhân viên!");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLoaiNghiPhep = async () => {
+    try {
+      const response = await axiosInstance.get(`/loai-nghi-phep`);
+      setLoaiNghiPhepList(response.data || []);
+    } catch (error) {
+      console.error("Lỗi khi gọi API loại nghỉ phép:", error);
     }
   };
 
@@ -658,6 +669,8 @@ const QuanLyNghiPhep = () => {
             onAdded={handleFormSubmit}
             editingNghiPhep={editingNghiPhep}
             setEditingNghiPhep={setEditingNghiPhep}
+            nhanVienList={nhanVienList}
+            loaiNghiPhepList={loaiNghiPhepList}
           />
         </Modal.Body>
         <Modal.Footer>

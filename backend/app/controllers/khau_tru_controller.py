@@ -32,7 +32,8 @@ def get_khau_tru_by_nhan_vien_id(nhan_vien_id):
         # 👉 Trả về mảng rỗng thay vì 404
         return jsonify([kt.to_dict() for kt in khau_trus] if khau_trus else []), 200
     except Exception as e:
-        return jsonify({'message': f'Lỗi khi lấy khấu trừ nhân viên: {str(e)}'}), 500
+        print(f"Lỗi khi lấy khấu trừ nhân viên: {e}")
+        return jsonify({'message': 'Không thể lấy dữ liệu khấu trừ, vui lòng thử lại sau'}), 500
 
 
 # Tạo mới khấu trừ
@@ -52,7 +53,8 @@ def create_khau_tru():
 
         return jsonify(new_khau_tru.to_dict()), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        print(f"Lỗi khi tạo khấu trừ: {e}")
+        return jsonify({"error": "Không thể tạo khấu trừ, vui lòng thử lại sau"}), 400
 
 # Cập nhật khấu trừ
 def update_khau_tru(khau_tru_id):
@@ -73,7 +75,8 @@ def update_khau_tru(khau_tru_id):
         )
         return jsonify({"message": "Cập nhật thành công", "data": updated_khau_tru.to_dict()}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        print(f"Lỗi khi sửa khấu trừ: {e}")
+        return jsonify({"error": "Không thể cập nhật khấu trừ, vui lòng thử lại sau"}), 400
 
 # Xóa khấu trừ
 def delete_khau_tru(khau_tru_id):
@@ -101,7 +104,8 @@ def add_nhan_vien_to_khau_tru_controller(data):
 
         return jsonify({"message": "Đã thêm nhân viên vào khấu trừ."}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Lỗi khi thêm nhân viên vào khấu trừ: {e}")
+        return jsonify({"error": "Không thể thêm nhân viên vào khấu trừ, vui lòng thử lại sau"}), 500
     
 def get_nhan_vien_by_khau_tru_controller(khau_tru_id):
     try:
@@ -113,8 +117,9 @@ def get_nhan_vien_by_khau_tru_controller(khau_tru_id):
         return jsonify(result), 200
 
     except Exception as e:
-        return jsonify({"message": f"Lỗi server: {str(e)}"}), 500
-    
+        print(f"Lỗi khi lấy nhân viên theo khấu trừ: {e}")
+        return jsonify({"message": "Lỗi hệ thống, vui lòng thử lại sau"}), 500
+
 def remove_nhan_vien_from_khau_tru_controller():
     try:
         data = request.json
@@ -129,5 +134,6 @@ def remove_nhan_vien_from_khau_tru_controller():
         return jsonify({"message": result}), 200
 
     except Exception as e:
-        return jsonify({"message": f"Lỗi server: {str(e)}"}), 500
+        print(f"Lỗi khi xóa nhân viên khỏi khấu trừ: {e}")
+        return jsonify({"message": "Lỗi hệ thống, vui lòng thử lại sau"}), 500
     

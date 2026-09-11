@@ -5,10 +5,11 @@ import {
   createNhanVien,
   updateNhanVien,
 } from "../../services/nhanSuApi";
-import { getAllChucVu } from "../../services/chucVuApi";
-import { getAllPhongBan } from "../../services/phongBanApi";
 
-const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
+// dsChucVu/dsPhongBan nhận qua props từ QuanLyNhanSu.jsx (trang cha đã fetch
+// sẵn 1 lần cho bảng danh sách) — trước đây form tự fetch lại 2 API này mỗi
+// lần modal "Thêm/Sửa nhân sự" mở, dù dữ liệu đã có sẵn ở trang cha.
+const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu, dsChucVu = [], dsPhongBan = [] }) => {
   const [formData, setFormData] = useState({
     ho_ten: "",
     gioi_tinh: "Nam",
@@ -23,30 +24,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
 
   });
 
-  const [dsChucVu, setDsChucVu] = useState([]);
-  const [dsPhongBan, setDsPhongBan] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const [cv, pb] = await Promise.all([
-          getAllChucVu({ signal: controller.signal }),
-          getAllPhongBan({ signal: controller.signal }),
-        ]);
-        setDsChucVu(Array.isArray(cv) ? cv : []);
-        setDsPhongBan(Array.isArray(pb) ? pb : []);
-      } catch (err) {
-        if (err.name !== "CanceledError" && err.name !== "AbortError")
-          console.error("Lỗi load danh mục:", err);
-      }
-    })();
-
-    return () => controller.abort(); // Hủy request khi unmount
-  }, []);
-
 
   useEffect(() => {
     if (editingNhanSu) {

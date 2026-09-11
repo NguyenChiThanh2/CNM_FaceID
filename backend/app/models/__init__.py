@@ -2,7 +2,6 @@ from .nhan_vien_model import NhanVien
 from .cham_cong_model import ChamCong
 from .phuc_loi_model import PhucLoi
 from .nghi_phep_model import NghiPhep
-from .luong_model import Luong
 from .danh_gia_model import DanhGia
 from .nhan_vien_phuc_loi_model import NhanVienPhucLoi
 from .phong_ban_model import PhongBan
@@ -26,7 +25,7 @@ from .bh_dn import BaoHiemDoanhNghiep
 from .thiet_bi_model import ThietBiChamCong
 
 __all__ = [
-    'NhanVien', 'ChamCong', 'PhucLoi', 'NghiPhep', 'Luong',  'DanhGia',
+    'NhanVien', 'ChamCong', 'PhucLoi', 'NghiPhep', 'DanhGia',
     'NhanVienPhucLoi', 'PhongBan', 'ChucVu', 'VaiTro', 'Quyen', 'LoaiNghiPhep',
     'HopDongLaoDong', 'QuyCheCongTy', 'GiayPhep', 'BangLuong', 'NguoiPhuThuoc', 'ChiTietLuong',
     'NgayNghiLe', 'Thuong', 'ThuongNhanVien', 'KhauTru', 'KhauTruNhanVien', 'BaoHiemDoanhNghiep',
