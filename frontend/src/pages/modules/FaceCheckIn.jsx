@@ -22,7 +22,7 @@ import {
   FaLightbulb,
   FaSyncAlt
 } from "react-icons/fa";
-import { createFaceDetector } from "../../lib/faceDetectorFallback";
+import { createFaceDetector, destroyFaceDetector } from "../../lib/faceDetectorFallback";
 import { getDeviceToken } from "../DeviceGuard";
 
 // Trang kiosk xác thực bằng X-Device-Token (không phải JWT người dùng), nên
@@ -502,7 +502,14 @@ export default function FaceCheckin() {
         }
       }
     })();
-    return () => { cancelled = true; };
+    // Giải phóng model nhận diện khuôn mặt (WASM, vài MB) khi rời trang —
+    // trước đây hàm destroyFaceDetector() có sẵn nhưng chưa từng được gọi ở
+    // đâu, khiến model bị giữ trong bộ nhớ vô thời hạn kể cả sau khi rời hẳn
+    // trang chấm công.
+    return () => {
+      cancelled = true;
+      destroyFaceDetector();
+    };
   }, []);
 
   // ===== Lifecycle camera =====

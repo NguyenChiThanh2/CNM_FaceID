@@ -12,8 +12,7 @@ import {
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import PhucLoiForm from "../../components/phucloi/PhucLoiForm";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { exportJsonToExcel } from "../../utils/excelExport";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "../../services/axiosInstance";
@@ -230,7 +229,7 @@ const QuanLyPhucLoi = () => {
   };
 
   // Xuất Excel
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     try {
       const exportData = phucLoiList.map((item) => ({
         "Tên phúc lợi": item.ten_phuc_loi,
@@ -239,18 +238,7 @@ const QuanLyPhucLoi = () => {
         Loại: item.loai,
       }));
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "PhucLoi");
-
-      const excelBuffer = XLSX.write(workbook, {
-        bookType: "xlsx",
-        type: "array",
-      });
-      const file = new Blob([excelBuffer], {
-        type: "application/octet-stream",
-      });
-      saveAs(file, "DanhSachPhucLoi.xlsx");
+      await exportJsonToExcel(exportData, "PhucLoi", "DanhSachPhucLoi.xlsx");
       toast.success("📤 Đã xuất Excel!");
     } catch {
       toast.error("❌ Xuất Excel thất bại!");

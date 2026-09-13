@@ -17,16 +17,16 @@ import {
   deleteChungChi,
 } from "../../services/chungChiApi";
 import { FaCertificate } from "react-icons/fa";
-import { getNhanVienInfo } from "../../utils/auth";
+import { getNhanVienInfo, isHrOrAdmin } from "../../utils/auth";
+import axiosInstance from "../../services/axiosInstance";
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
 const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg"];
-const HR_DEPARTMENT_ID = 2; // giống logic trong QuanLyNhanSu
 
 const ChungChiModal = ({ show, onHide, nhanVien, onChanged }) => {
   // ===== CURRENT USER & QUYỀN =====
   const currentUser = getNhanVienInfo();
-  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const isHR = isHrOrAdmin(currentUser);
 
   // Nhân viên thường chỉ được xem chứng chỉ của CHÍNH HỌ
   // -> cho phép xem nếu là HR hoặc cùng ID
@@ -38,11 +38,7 @@ const ChungChiModal = ({ show, onHide, nhanVien, onChanged }) => {
   const canManageCertificates = isHR;
 
   // ====== BASE URLS ======
-  const API_BASE = useMemo(
-    () =>
-      import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api",
-    []
-  );
+  const API_BASE = axiosInstance.defaults.baseURL;
 
   // STATIC_BASE: nơi trả file đính kèm
   const STATIC_BASE = useMemo(() => {

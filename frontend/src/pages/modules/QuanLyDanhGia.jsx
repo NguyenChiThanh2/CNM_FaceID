@@ -6,8 +6,7 @@ import {
     Card, Form, Badge
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { exportJsonToExcel } from "../../utils/excelExport";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import {
@@ -317,7 +316,7 @@ const QuanLyDanhGia = () => {
     const currentItems = filteredDanhGias.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredDanhGias.length / itemsPerPage) || 1;
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
         const exportData = filteredDanhGias.map((dg) => ({
             ID: dg.id,
             "Nhân viên": dg.nhan_vien?.ho_ten,
@@ -340,13 +339,7 @@ const QuanLyDanhGia = () => {
             "MC Chủ động": dg.minh_chung?.chu_dong ?? dg.mc_chu_dong_ref ?? "",
         }));
 
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "DanhGia");
-
-        const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-        const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-        saveAs(blob, "danh_gia.xlsx");
+        await exportJsonToExcel(exportData, "DanhGia", "danh_gia.xlsx");
     };
 
     const handleExportPDF = () => {

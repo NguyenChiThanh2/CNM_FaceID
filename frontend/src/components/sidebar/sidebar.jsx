@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import axiosInstance from "../../services/axiosInstance";
+import { isHrOrAdmin } from "../../utils/auth";
 import "./style.css";
 const getUserInfo = () => {
   const storedUser = localStorage.getItem("user");
@@ -13,6 +14,7 @@ const getUserInfo = () => {
         username: nv.ho_ten || parsed.username || "Người dùng",
         phong_ban_id: nv.phong_ban_id,
         ten_phong_ban: nv.ten_phong_ban || "",
+        ten_vai_tro: nv.ten_vai_tro,
         avatar: nv.avatar || null,
         ten_chuc_vu: nv.ten_chuc_vu || "",
       };
@@ -32,7 +34,6 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
   // if not open (mobile closed), don't render anything
   if (isMobile && !isOpen) return null;
 
-  const HR_DEPARTMENT_ID = 2;
   const restrictedPaths = ["/ngay-nghi-le"];
 
   const modules = [
@@ -53,7 +54,7 @@ const Sidebar = ({ isCollapsed = false, toggleSidebar = () => {}, isMobile = fal
   ];
 
   const visibleModules = modules.filter((module) => {
-    if (userInfo.phong_ban_id !== HR_DEPARTMENT_ID && restrictedPaths.includes(module.path))
+    if (!isHrOrAdmin(userInfo) && restrictedPaths.includes(module.path))
       return false;
     return true;
   });

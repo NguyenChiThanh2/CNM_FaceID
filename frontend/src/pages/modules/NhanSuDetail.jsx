@@ -9,7 +9,7 @@ import {
 import { Button, Modal, Breadcrumb, Spinner, Alert, Card, Row, Col, Badge } from "react-bootstrap";
 import {toast, ToastContainer } from "react-toastify";
 import { jsPDF } from "jspdf";
-import * as XLSX from "xlsx";
+import { exportJsonToExcel } from "../../utils/excelExport";
 import { Document, Packer, Paragraph } from "docx";
 import { saveAs } from "file-saver";
 import { getChucVuById } from "../../services/chucVuApi";
@@ -17,7 +17,7 @@ import { getPhongBanById } from "../../services/phongBanApi";
 import { getPhucLoiByNhanVienId } from "../../services/phucLoiApi";
 import { getHopDongByNhanVienId, createHopDongForNhanVien, updateHopDong } from "../../services/hopDongLaoDongApi";
 import { fmtVND, fmtDate } from "../../utils/format";
-import { getNhanVienInfo } from "../../utils/auth";
+import { getNhanVienInfo, isHrOrAdmin, HR_DEPARTMENT_ID } from "../../utils/auth";
 import A4PreviewModal from "../../components/contracts/A4PreviewModal";
 import HopDongFormModal from "../../components/contracts/HopDongFormModal";
 import SalaryHistory from "../../components/contracts/SalaryHistory.jsx";
@@ -29,9 +29,11 @@ export default function NhanSuDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const currentUser = getNhanVienInfo();
-  const HR_DEPARTMENT_ID = 2;
   const TRUONG_PHONG_ROLE_ID = 5;
-  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const isHR = isHrOrAdmin(currentUser);
+  // Riêng quyền sửa hợp đồng: cố tình KHÔNG gộp chung Admin — đây là quy tắc
+  // nghiệp vụ hẹp hơn ("Trưởng phòng Nhân sự" cụ thể), không phải "toàn quyền
+  // hệ thống" như isHR ở trên.
   const canEditContract =
     currentUser?.phong_ban_id === HR_DEPARTMENT_ID &&
     Number(currentUser?.chuc_vu_id) === TRUONG_PHONG_ROLE_ID;
@@ -144,13 +146,13 @@ export default function NhanSuDetail() {
     e.target.src = "https://via.placeholder.com/120x120/667eea/ffffff?text=Avatar";
   };
 
-  const exportToExcel = useCallback(() => {
+  const exportToExcel = useCallback(async () => {
     if (!nhanSu) return;
     setShowModal(false); setExporting(true);
     try {
       const phucLoiText = (Array.isArray(phucLoiList) ? phucLoiList : [])
         .map((i) => `${i.ten_phuc_loi}: ${i.gia_tri != null ? i.gia_tri : (i.mo_ta ?? "")}`).join(", ");
-      
+
       const excelRow = [{
         "Tên": nz(nhanSu.ho_ten),
         "Chức vụ": nz(chucVu, "—"),
@@ -165,15 +167,12 @@ export default function NhanSuDetail() {
         "Số ngày phép còn lại": nz(nhanSu.so_ngay_phep_con_lai, 0),
       }];
 
-      const ws = XLSX.utils.json_to_sheet(excelRow);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "NhanSu");
-      XLSX.writeFile(wb, `NhanSu_${nz(nhanSu.ho_ten, "NoName")}.xlsx`);
-    } catch (e) { 
-      console.error(e); 
-      alert("Xuất Excel thất bại."); 
-    } finally { 
-      setExporting(false); 
+      await exportJsonToExcel(excelRow, "NhanSu", `NhanSu_${nz(nhanSu.ho_ten, "NoName")}.xlsx`);
+    } catch (e) {
+      console.error(e);
+      alert("Xuất Excel thất bại.");
+    } finally {
+      setExporting(false);
     }
   }, [nhanSu, chucVu, phongBan, phucLoiList]);
 

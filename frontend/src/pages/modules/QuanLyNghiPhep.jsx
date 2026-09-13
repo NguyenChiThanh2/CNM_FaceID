@@ -7,8 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import Loading from "../../../src/components/Loading";
 import { FaHome, FaSearch, FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaFileAlt, FaBaby } from "react-icons/fa";
-
-const HR_DEPARTMENT_ID = 2;
+import { isHrOrAdmin } from "../../utils/auth";
 
 const getUserInfo = () => {
   try {
@@ -21,6 +20,7 @@ const getUserInfo = () => {
       ho_ten: nv.ho_ten,
       phong_ban_id: nv.phong_ban_id,
       ten_phong_ban: nv.ten_phong_ban || "",
+      ten_vai_tro: nv.ten_vai_tro,
       role: parsed.role?.ma_vai_tro || "user",
     };
   } catch {
@@ -202,7 +202,7 @@ const QuanLyNghiPhep = () => {
   const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
   const userInfo = getUserInfo();
-  const isHR = !!userInfo && userInfo.phong_ban_id === HR_DEPARTMENT_ID;
+  const isHR = isHrOrAdmin(userInfo);
 
   if (loading)
     return (

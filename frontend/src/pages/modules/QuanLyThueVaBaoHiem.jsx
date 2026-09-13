@@ -48,11 +48,9 @@ import {
   Line
 } from 'recharts';
 import Loading from '../../components/Loading';
-import { getNhanVienInfo } from '../../utils/auth';
+import { getNhanVienInfo, isHrOrAdmin } from '../../utils/auth';
 import { exportEmployeeTaxExcel, exportCompanyInsuranceExcel, exportCompanyEmployeeDetailsExcel } from "../../utils/exportThueBaoHiem";
 import '../../css/QuanLyThueVaBaoHiem.css';
-
-const HR_DEPARTMENT_ID = 2;
 
 const QuanLyThueVaBaoHiem = () => {
   const navigate = useNavigate();
@@ -64,7 +62,7 @@ const QuanLyThueVaBaoHiem = () => {
   const [nhanVienList, setNhanVienList] = useState([]);
   
   const currentUser = getNhanVienInfo();
-  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const isHR = isHrOrAdmin(currentUser);
 
   useEffect(() => {
     fetchData();
@@ -257,7 +255,7 @@ const QuanLyThueVaBaoHiem = () => {
   }, [companyInsuranceData, employeeTaxInsuranceData, selectedYear, baoHiemDoanhNghiepList, isHR]);
 
   // Hàm xuất file Excel cho nhân viên
-  const handleExportEmployeeExcel = () => {
+  const handleExportEmployeeExcel = async () => {
     try {
       if (employeeTaxInsuranceData.length === 0) {
         toast.warning('Không có dữ liệu để xuất file!');
@@ -270,7 +268,7 @@ const QuanLyThueVaBaoHiem = () => {
         trungBinhThang: item.totalAll / item.monthCount
       }));
       
-      exportEmployeeTaxExcel(exportData, selectedYear, currentUser);
+      await exportEmployeeTaxExcel(exportData, selectedYear, currentUser);
       toast.success('Xuất file Excel thành công!');
     } catch (error) {
       console.error('Lỗi khi xuất file:', error);
@@ -279,7 +277,7 @@ const QuanLyThueVaBaoHiem = () => {
   };
 
   // Hàm xuất file Excel cho doanh nghiệp
-  const handleExportCompanyExcel = () => {
+  const handleExportCompanyExcel = async () => {
     try {
       if (companyInsuranceData.yearlyData.length === 0) {
         toast.warning('Không có dữ liệu bảo hiểm doanh nghiệp để xuất!');
@@ -292,7 +290,7 @@ const QuanLyThueVaBaoHiem = () => {
         trungBinhThang: item.totalAll / item.monthCount
       }));
       
-      exportCompanyInsuranceExcel(exportData, selectedYear);
+      await exportCompanyInsuranceExcel(exportData, selectedYear);
       toast.success('Xuất file Excel bảo hiểm doanh nghiệp thành công!');
     } catch (error) {
       console.error('Lỗi khi xuất file:', error);
@@ -301,7 +299,7 @@ const QuanLyThueVaBaoHiem = () => {
   };
 
   // Hàm xuất chi tiết theo nhân viên
-  const handleExportEmployeeDetailsExcel = () => {
+  const handleExportEmployeeDetailsExcel = async () => {
     try {
       if (companyInsuranceData.totalByEmployee.length === 0) {
         toast.warning('Không có dữ liệu chi tiết nhân viên để xuất!');
@@ -309,7 +307,7 @@ const QuanLyThueVaBaoHiem = () => {
       }
       
       // Tạo workbook cho chi tiết nhân viên
-      exportCompanyEmployeeDetailsExcel(companyInsuranceData.totalByEmployee, selectedYear);
+      await exportCompanyEmployeeDetailsExcel(companyInsuranceData.totalByEmployee, selectedYear);
       toast.success('Xuất file Excel chi tiết nhân viên thành công!');
     } catch (error) {
       console.error('Lỗi khi xuất file chi tiết:', error);

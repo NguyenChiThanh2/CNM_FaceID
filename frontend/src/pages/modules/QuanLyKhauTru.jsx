@@ -13,13 +13,13 @@ import {
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import KhauTruForm from "../../components/khautru/KhauTruForm";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { exportJsonToExcel } from "../../utils/excelExport";
 import { ToastContainer, toast } from "react-toastify";
 import axiosInstance from "../../services/axiosInstance";
 import Loading from "../../../src/components/Loading";
-import { 
-  FaHome, 
+import { getNhanVienInfo, isHrOrAdmin } from "../../utils/auth";
+import {
+  FaHome,
   FaSearch, 
   FaPlus, 
   FaEdit, 
@@ -32,18 +32,8 @@ import {
 } from "react-icons/fa";
 
 const KhauTru = () => {
-  // Lấy user từ localStorage
-  const raw = localStorage.getItem("user");
-  let currentUser = null;
-  try {
-    currentUser = raw ? JSON.parse(raw)?.nhan_vien : null;
-  } catch {
-    currentUser = null;
-  }
-
-  // Phân quyền: HR = phòng ban 2
-  const HR_DEPARTMENT_ID = 2;
-  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const currentUser = getNhanVienInfo();
+  const isHR = isHrOrAdmin(currentUser);
 
   const [khautruList, setKhauTruList] = useState([]);
   const [selectedKhauTru, setSelectedKhauTru] = useState(null);
@@ -168,7 +158,7 @@ const KhauTru = () => {
     setCurrentPage(1);
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     try {
       const exportData = filteredList.map((item) => ({
         "Tên khấu trừ": item.ten_khau_tru,
@@ -177,13 +167,7 @@ const KhauTru = () => {
         Loại: item.loai_khau_tru,
       }));
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "KhauTru");
-
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-      const file = new Blob([excelBuffer], { type: "application/octet-stream" });
-      saveAs(file, "DanhSachKhauTru.xlsx");
+      await exportJsonToExcel(exportData, "KhauTru", "DanhSachKhauTru.xlsx");
       toast.success("📤 Đã xuất Excel!");
     } catch (e) {
       console.error("Lỗi khi xuất Excel:", e);

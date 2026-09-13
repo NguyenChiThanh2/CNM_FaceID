@@ -2,9 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import axiosInstance from '../services/axiosInstance';
 import { toast } from 'react-toastify';
-import { getNhanVienInfo } from '../utils/auth';
-
-const HR_DEPARTMENT_ID = 2;
+import { getNhanVienInfo, isHrOrAdmin } from '../utils/auth';
 
 export const useQuanLyLuong = () => {
   const [luongList, setLuongList] = useState([]);
@@ -26,7 +24,7 @@ export const useQuanLyLuong = () => {
 
   const itemsPerPage = 10;
   const currentUser = getNhanVienInfo();
-  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const isHR = isHrOrAdmin(currentUser);
 
   // Fetch data functions
   const fetchPhongBan = async () => {

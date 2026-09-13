@@ -7,10 +7,8 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import Loading from "../../../src/components/Loading";
 import "react-toastify/dist/ReactToastify.css";
-import { getNhanVienInfo } from "../../utils/auth";
+import { getNhanVienInfo, isHrOrAdmin } from "../../utils/auth";
 import { FaHome, FaSearch, FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaFileAlt } from "react-icons/fa";
-
-const HR_DEPARTMENT_ID = 2;
 
 const QuanLyGiayPhep = () => {
   const [giayPhepList, setGiayPhepList] = useState([]);
@@ -28,7 +26,7 @@ const QuanLyGiayPhep = () => {
 
   const [currentUser] = useState(() => getNhanVienInfo());
   const userId = currentUser?.id ?? null;
-  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const isHR = isHrOrAdmin(currentUser);
 
   useEffect(() => {
     if (userId == null) navigate("/dang-nhap", { replace: true });

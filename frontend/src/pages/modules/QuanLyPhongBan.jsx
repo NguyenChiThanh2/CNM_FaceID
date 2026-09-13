@@ -7,17 +7,14 @@ import PhongBanForm from "../../components/phongban/PhongBanForm";
 import PhongBanList from "../../components/phongban/PhongBanList";
 import { getAllPhongBan, deletePhongBan, getPhongBanById } from "../../services/phongBanApi";
 import Loading from "../../../src/components/Loading";
+import { getNhanVienInfo, isHrOrAdmin } from "../../utils/auth";
 const QuanLyPhongBan = () => {
   // ====== PHÂN QUYỀN ======
-  const raw = localStorage.getItem("user");
-  let currentUser = null;
-  try { currentUser = raw ? JSON.parse(raw)?.nhan_vien : null; } catch { }
-  const HR_DEPARTMENT_ID = 2;
-  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
-  const isAdmin = (currentUser?.role || currentUser?.vai_tro) === "ADMIN";
+  const currentUser = getNhanVienInfo();
+  const isHR = isHrOrAdmin(currentUser);
 
-  // Cho phép thêm (HR hoặc Admin), nhưng Sửa/Xoá chỉ HR
-  const canAdd = isHR || isAdmin;
+  // Cho phép thêm/sửa/xoá: HR hoặc Admin (isHR đã gộp cả 2 trường hợp)
+  const canAdd = isHR;
   const canEditDelete = isHR;
 
   const [phongBanList, setPhongBanList] = useState([]);
@@ -96,7 +93,7 @@ const QuanLyPhongBan = () => {
 
   const handleViewNhanVien = (phongBanId) => {
     // nhân viên thường chỉ được xem trang chi tiết phòng ban của chính mình
-    if (!(isHR || isAdmin) && phongBanId !== currentUser?.phong_ban_id) {
+    if (!isHR && phongBanId !== currentUser?.phong_ban_id) {
       toast.error("Bạn không có quyền xem phòng ban này.");
       return;
     }

@@ -16,11 +16,12 @@ import { useNavigate } from "react-router-dom";
 import NhanSuAddForm from "../../components/nhansu/NhanSuAddForm";
 import { getAllChucVu } from "../../services/chucVuApi";
 import { getAllPhongBan } from "../../services/phongBanApi";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { getAllVaiTro } from "../../services/vaiTroApi";
+import axiosInstance from "../../services/axiosInstance";
+import { exportJsonToExcel } from "../../utils/excelExport";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { getNhanVienInfo } from "../../utils/auth";
+import { getNhanVienInfo, isHrOrAdmin } from "../../utils/auth";
 import { getHopDongBatchByNhanVienIds } from "../../services/hopDongLaoDongApi";
 import { getAllNhanVien, deleteNhanVien as apiDeleteNhanVien } from "../../services/nhanSuApi";
 import ChungChiModal from "../../components/nhansu/ChungChiModal";
@@ -44,19 +45,19 @@ const QuanLyNhanSu = () => {
   const [showModal, setShowModal] = useState(false);
   const [dsChucVu, setDsChucVu] = useState([]);
   const [dsPhongBan, setDsPhongBan] = useState([]);
+  const [dsVaiTro, setDsVaiTro] = useState([]);
   const [selectedTrangThai, setSelectedTrangThai] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const currentUser = getNhanVienInfo();
   const [showCCModal, setShowCCModal] = useState(false);
   const [selectedNV, setSelectedNV] = useState(null);
-  const HR_DEPARTMENT_ID = 2;
-  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const isHR = isHrOrAdmin(currentUser);
   const [contracts, setContracts] = useState({});
 
   const itemsPerPage = 10;
   const navigate = useNavigate();
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api";
+  const API_BASE = axiosInstance.defaults.baseURL;
 
   const fetchNhanSu = useCallback(async () => {
     setLoading(true);
@@ -91,6 +92,16 @@ const QuanLyNhanSu = () => {
       } catch (err) {
         console.error("Lỗi tải danh mục:", err);
         toast.error("Không thể tải danh sách chức vụ/phòng ban!");
+      }
+      // Tách riêng vai trò: chỉ tài khoản có quyền "vai_tro.xem" mới gọi được
+      // API này — lỗi ở đây (vd 403 với tài khoản không phải Admin) không nên
+      // chặn cả trang hay các danh mục còn lại, chỉ đơn giản là ô "Vai trò"
+      // trong form thêm mới sẽ không có lựa chọn nào.
+      try {
+        const vt = await getAllVaiTro();
+        setDsVaiTro(Array.isArray(vt) ? vt : []);
+      } catch (err) {
+        console.error("Không tải được danh sách vai trò (có thể do thiếu quyền):", err);
       }
     })();
   }, [fetchNhanSu]);
@@ -186,7 +197,7 @@ const QuanLyNhanSu = () => {
     if (pageNumber >= 1 && pageNumber <= totalPages) setCurrentPage(pageNumber);
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const exportData = filteredList.map((nv) => ({
       ID: nv.id,
       "Họ tên": nv.ho_ten,
@@ -200,13 +211,11 @@ const QuanLyNhanSu = () => {
       "Trạng thái": nv.trang_thai,
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachNhanSu");
-
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-    saveAs(data, `DanhSachNhanSu_${new Date().toLocaleDateString("vi-VN")}.xlsx`);
+    await exportJsonToExcel(
+      exportData,
+      "DanhSachNhanSu",
+      `DanhSachNhanSu_${new Date().toLocaleDateString("vi-VN")}.xlsx`
+    );
   };
 
   function getHopDongBadge(hd) {
@@ -612,6 +621,7 @@ const QuanLyNhanSu = () => {
             setEditingNhanSu={setEditingNhanSu}
             dsChucVu={dsChucVu}
             dsPhongBan={dsPhongBan}
+            dsVaiTro={dsVaiTro}
           />
         </Modal.Body>
         <Modal.Footer>

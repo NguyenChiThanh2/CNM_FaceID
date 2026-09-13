@@ -24,6 +24,7 @@ import {
 } from "../../services/nguoiPhuThuocApi";
 
 import { getAllNhanVien } from "../../services/nhanSuApi";
+import { isHrOrAdmin } from "../../utils/auth";
 
 import {
     FaHome,
@@ -36,7 +37,6 @@ import {
 } from "react-icons/fa";
 
 const ITEMS_PER_PAGE = 10;
-const HR_DEPARTMENT_ID = 2; // chỉnh theo ID phòng Nhân sự thực tế
 
 const initForm = {
     nhan_vien_id: "",
@@ -58,6 +58,7 @@ const getUserInfo = () => {
             id: nv.id,
             ho_ten: nv.ho_ten,
             phong_ban_id: nv.phong_ban_id,
+            ten_vai_tro: nv.ten_vai_tro,
             role: parsed.role?.ma_vai_tro || "user",
         };
     } catch {
@@ -70,7 +71,7 @@ const QuanLyNguoiPhuThuoc = () => {
 
     // ===== user & quyền =====
     const userInfo = getUserInfo();
-    const isHR = !!userInfo && userInfo.phong_ban_id === HR_DEPARTMENT_ID;
+    const isHR = isHrOrAdmin(userInfo);
 
     // ===== state chính =====
     const [list, setList] = useState([]);

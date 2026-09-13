@@ -5,11 +5,12 @@ import {
   createNhanVien,
   updateNhanVien,
 } from "../../services/nhanSuApi";
+import { ganVaiTroChoNhanVien } from "../../services/vaiTroApi";
 
-// dsChucVu/dsPhongBan nhận qua props từ QuanLyNhanSu.jsx (trang cha đã fetch
-// sẵn 1 lần cho bảng danh sách) — trước đây form tự fetch lại 2 API này mỗi
-// lần modal "Thêm/Sửa nhân sự" mở, dù dữ liệu đã có sẵn ở trang cha.
-const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu, dsChucVu = [], dsPhongBan = [] }) => {
+// dsChucVu/dsPhongBan/dsVaiTro nhận qua props từ QuanLyNhanSu.jsx (trang cha
+// đã fetch sẵn 1 lần cho bảng danh sách) — trước đây form tự fetch lại các
+// API này mỗi lần modal "Thêm/Sửa nhân sự" mở, dù dữ liệu đã có sẵn ở trang cha.
+const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu, dsChucVu = [], dsPhongBan = [], dsVaiTro = [] }) => {
   const [formData, setFormData] = useState({
     ho_ten: "",
     gioi_tinh: "Nam",
@@ -21,7 +22,11 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu, dsChucVu = []
     phong_ban_id: "",
     trang_thai: "Đang làm việc",
     avatar: null,
-
+    // Chỉ dùng lúc TẠO MỚI (xem handleSubmit) — không gửi kèm trong form data
+    // của add-nhan-vien/edit-nhan-vien (BE cố tình không cho sửa vai_tro_id
+    // qua 2 API đó, tránh 1 nhân viên tự sửa hồ sơ của mình tự nâng quyền).
+    // Sau khi tạo xong, gọi riêng API PUT /nhan-vien/:id/vai-tro để gán.
+    vai_tro_id: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,7 +56,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu, dsChucVu = []
       phong_ban_id: "",
       trang_thai: "Đang làm việc",
       avatar: null,
-
+      vai_tro_id: "",
     });
   };
 
@@ -89,13 +94,19 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu, dsChucVu = []
     try {
       const form = new FormData();
       Object.entries(formData).forEach(([k, v]) => {
+        // vai_tro_id không gửi qua đây — BE cố tình không nhận field này ở
+        // add-nhan-vien/edit-nhan-vien, gán riêng ở dưới bằng API khác.
+        if (k === "vai_tro_id") return;
         if (v !== null && v !== undefined) form.append(k, v);
       });
 
       if (editingNhanSu?.id) {
         await updateNhanVien(editingNhanSu.id, form);
       } else {
-        await createNhanVien(form);
+        const created = await createNhanVien(form);
+        if (formData.vai_tro_id) {
+          await ganVaiTroChoNhanVien(created.id, Number(formData.vai_tro_id));
+        }
       }
 
       await onAdded?.(true);
@@ -225,6 +236,28 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu, dsChucVu = []
             ))}
           </select>
         </div>
+
+        {!editingNhanSu && (
+          <div className="col-md-6 mb-3">
+            <label><strong>Vai trò</strong></label>
+            <select
+              name="vai_tro_id"
+              className="form-control"
+              value={formData.vai_tro_id}
+              onChange={handleChange}
+            >
+              <option value="">-- Không gán vai trò --</option>
+              {dsVaiTro.map((vt) => (
+                <option key={vt.id} value={String(vt.id)}>
+                  {vt.ten_vai_tro}
+                </option>
+              ))}
+            </select>
+            <small className="text-muted">
+              Quyết định nhân viên này được thao tác gì trong hệ thống. Có thể để trống, gán sau.
+            </small>
+          </div>
+        )}
 
         <div className="col-md-6 mb-3">
           <label><strong>Trạng thái</strong></label>

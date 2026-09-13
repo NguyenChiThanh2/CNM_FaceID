@@ -13,6 +13,22 @@ export const getNhanVienInfo = () => {
   return user?.nhan_vien || null;
 };
 
+// ID phòng Nhân sự thật trong DB (đã xác nhận qua bảng phong_ban) — trùng với
+// PHONG_BAN_NHAN_SU_ID ở backend/app/decorators/auth_decorators.py.
+export const HR_DEPARTMENT_ID = 2;
+
+// Trước đây 14 file rải rác tự so `phong_ban_id === 2` để quyết định "có phải
+// HR không" — 1 tài khoản Admin (vai trò RBAC toàn quyền) nhưng KHÔNG thuộc
+// phòng ban nào (vd tài khoản admin bootstrap từ seed_rbac.py, phong_ban_id =
+// null) sẽ luôn bị tính là "không phải HR", dù có toàn quyền thật. Hàm này là
+// nơi DUY NHẤT quyết định "isHR" từ nay — cộng thêm điều kiện vai trò Admin
+// (`ten_vai_tro`, được BE trả về từ /login) để không còn lệch pha với RBAC.
+export const isHrOrAdmin = (nhanVien) => {
+  if (!nhanVien) return false;
+  if (nhanVien.phong_ban_id === HR_DEPARTMENT_ID) return true;
+  return nhanVien.ten_vai_tro === "Admin";
+};
+
 // Đọc 1 cookie theo tên. Dùng để lấy CSRF token do BE set (cookie
 // "csrf_access_token") — cookie này KHÔNG httpOnly nên JS đọc được, đúng theo
 // thiết kế "double-submit cookie" của flask-jwt-extended.
