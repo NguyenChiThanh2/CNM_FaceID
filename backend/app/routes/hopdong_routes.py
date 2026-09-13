@@ -276,12 +276,16 @@ def update_hop_dong(id):
                 rd, _ = parse_duration(hopdong.thoi_gian_hop_dong)
                 hopdong.ngay_ket_thuc = compute_end_date(hopdong.ngay_bat_dau, rd)
 
-        # Các field đơn giản
+        # Các field đơn giản — KHÔNG cho đổi "nhan_vien_id" ở đây: hợp đồng
+        # thuộc về ai chỉ được xác lập lúc tạo mới (POST /hop-dong), không phải
+        # thứ có thể sửa sau. Trước đây cho sửa qua đây khiến 1 nhân viên
+        # thường (được phép sửa hợp đồng CỦA CHÍNH MÌNH) có thể tự đổi
+        # nhan_vien_id để gán nhầm/gán trộm hợp đồng đó sang cho người khác.
         for field in [
-            "nhan_vien_id", "quyche_id", "loai_hop_dong", "dieu_khoan_khac", "trang_thai"
+            "quyche_id", "loai_hop_dong", "dieu_khoan_khac", "trang_thai"
         ]:
             if field in data:
-                if field in ("nhan_vien_id", "quyche_id"):
+                if field == "quyche_id":
                     setattr(hopdong, field, to_int(data.get(field)))
                 elif field == "trang_thai":
                     setattr(hopdong, field, bool(data.get(field)))

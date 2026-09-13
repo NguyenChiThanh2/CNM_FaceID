@@ -1,11 +1,14 @@
-import * as XLSX from "xlsx-js-style";
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { toast } from "react-toastify";
 
 const formatCurrency = (amount) =>
   amount?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-export const exportBangLuongToExcel = (filteredList, nhanVienList) => {
+const THIN_BLACK = { style: "thin", color: { argb: "FF000000" } };
+const THIN_GRAY = { style: "thin", color: { argb: "FFCCCCCC" } };
+
+export const exportBangLuongToExcel = async (filteredList, nhanVienList) => {
   if (!filteredList || filteredList.length === 0) {
     toast.warning("Không có dữ liệu để xuất Excel!");
     return;
@@ -65,91 +68,62 @@ export const exportBangLuongToExcel = (filteredList, nhanVienList) => {
     };
   });
 
-  // Chuyển JSON -> sheet
-  const worksheet = XLSX.utils.json_to_sheet(data, { origin: "A3" });
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Bảng lương");
-
-  // Thêm tiêu đề lớn
-  const title = [["BẢNG LƯƠNG NHÂN VIÊN"]];
-  XLSX.utils.sheet_add_aoa(worksheet, title, { origin: "A1" });
-
-  // Merge ô tiêu đề lớn
-  worksheet["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: Object.keys(data[0]).length - 1 } },
-  ];
-
-  // Style tiêu đề chính
-  worksheet["A1"].s = {
-    font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
-    alignment: { horizontal: "center", vertical: "center" },
-    fill: { fgColor: { rgb: "4F81BD" } },
-  };
-
-  // Style header hàng thứ 3
   const headerKeys = Object.keys(data[0]);
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Bảng lương");
+
+  // Hàng 1: tiêu đề lớn, merge hết chiều ngang bảng
+  worksheet.mergeCells(1, 1, 1, headerKeys.length);
+  const titleCell = worksheet.getCell(1, 1);
+  titleCell.value = "BẢNG LƯƠNG NHÂN VIÊN";
+  titleCell.font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4F81BD" } };
+
+  // Hàng 2 để trống (khoảng cách) — hàng 3 mới là header, giống bản gốc dùng
+  // origin "A3" cho json_to_sheet.
+  const headerRow = worksheet.getRow(3);
   headerKeys.forEach((key, i) => {
-    const cellAddress = XLSX.utils.encode_cell({ r: 2, c: i });
-    if (worksheet[cellAddress]) {
-      worksheet[cellAddress].s = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        alignment: { horizontal: "center", vertical: "center" },
-        fill: { fgColor: { rgb: "1F4E78" } },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } },
-        },
-      };
-    }
+    const cell = headerRow.getCell(i + 1);
+    cell.value = key;
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E78" } };
+    cell.border = { top: THIN_BLACK, bottom: THIN_BLACK, left: THIN_BLACK, right: THIN_BLACK };
   });
 
-  // Thêm border và style cho từng dòng
-  const range = XLSX.utils.decode_range(worksheet["!ref"]);
-  for (let R = 3; R <= range.e.r; ++R) {
-    for (let C = 0; C <= range.e.c; ++C) {
-      const cell = worksheet[XLSX.utils.encode_cell({ r: R, c: C })];
-      if (cell) {
-        cell.s = {
-          border: {
-            top: { style: "thin", color: { rgb: "CCCCCC" } },
-            bottom: { style: "thin", color: { rgb: "CCCCCC" } },
-            left: { style: "thin", color: { rgb: "CCCCCC" } },
-            right: { style: "thin", color: { rgb: "CCCCCC" } },
-          },
-          alignment: {
-            horizontal:
-              typeof cell.v === "number" || cell.v?.includes("₫")
-                ? "right"
-                : "left",
-            vertical: "center",
-          },
-        };
-
-        // Dòng xen kẽ màu nền nhạt
-        if (R % 2 === 0)
-          cell.s.fill = { fgColor: { rgb: "F2F2F2" } };
+  // Dữ liệu từ hàng 4 trở đi — border nhạt, căn phải cho số/tiền, căn trái cho
+  // chữ, dòng xen kẽ tô nền nhạt (zebra stripe). R giữ đúng biến 0-based như
+  // bản gốc để không lệch quy luật chẵn/lẻ zebra.
+  data.forEach((rowObj, idx) => {
+    const R = 3 + idx;
+    const row = worksheet.getRow(R + 1);
+    headerKeys.forEach((key, C) => {
+      const cell = row.getCell(C + 1);
+      const val = rowObj[key];
+      cell.value = val;
+      const isNumeric = typeof val === "number" || (typeof val === "string" && val.includes("₫"));
+      cell.border = { top: THIN_GRAY, bottom: THIN_GRAY, left: THIN_GRAY, right: THIN_GRAY };
+      cell.alignment = { horizontal: isNumeric ? "right" : "left", vertical: "middle" };
+      if (R % 2 === 0) {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2F2" } };
       }
-    }
-  }
+    });
+  });
 
-  // Căn chỉnh độ rộng cột tự động
-  worksheet["!cols"] = headerKeys.map((key) => ({
-    wch: Math.max(15, key.length + 2),
-  }));
+  // Căn chỉnh độ rộng cột
+  headerKeys.forEach((key, i) => {
+    worksheet.getColumn(i + 1).width = Math.max(15, key.length + 2);
+  });
 
-  // Lưu file
+  // Đặt tên file
   const thangDau = filteredList[0]?.thang;
   const namDau = filteredList[0]?.nam;
-
-  // Kiểm tra xem tất cả dữ liệu có cùng tháng và năm không
   const allSameMonthYear = filteredList.every(
     (item) => item.thang === thangDau && item.nam === namDau
   );
 
-  // Nếu tất cả cùng tháng/năm → xuất đúng tháng, năm
-  // Nếu không → xuất file "Tat_ca_bang_luong_[nam]"
   let fileName;
   if (allSameMonthYear) {
     fileName = `Bang_Luong_${thangDau}_${namDau}.xlsx`;
@@ -158,13 +132,8 @@ export const exportBangLuongToExcel = (filteredList, nhanVienList) => {
     fileName = `Tat_ca_bang_luong_${nam}.xlsx`;
   }
 
-  // Ghi file Excel
-  const excelBuffer = XLSX.write(workbook, {
-    bookType: "xlsx",
-    type: "array",
-  });
-
-  const file = new Blob([excelBuffer], {
+  const buffer = await workbook.xlsx.writeBuffer();
+  const file = new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 

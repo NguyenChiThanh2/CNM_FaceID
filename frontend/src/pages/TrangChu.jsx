@@ -2,8 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-
-const HR_DEPARTMENT_ID = 2; // 👈 đổi ID thật
+import { isHrOrAdmin } from "../utils/auth";
 
 const getUserInfo = () => {
   const saved = localStorage.getItem("user");
@@ -15,6 +14,7 @@ const getUserInfo = () => {
       displayName: nv.ho_ten || nv.email || "Người dùng",
       phong_ban_id: nv.phong_ban_id,
       ten_phong_ban: nv.ten_phong_ban || "",
+      ten_vai_tro: nv.ten_vai_tro,
       avatar: nv.avatar,
     };
   } catch {
@@ -38,22 +38,24 @@ const TrangChu = () => {
     { title: "Quản lý nhân sự", icon: "👤", path: "/nhan-su", color: "#667eea" },
     { title: "Quản lý chấm công", icon: "📷", path: "/quan-ly-cham-cong", color: "#764ba2" },
     { title: "Nghỉ phép", icon: "📆", path: "/nghi-phep", color: "#6B73FF" },
-    { title: "Giấy phép", icon: "📜", path: "/quan-ly-giay-phep", color: "#8B5FBF" },
-    { title: "Tính lương", icon: "💰", path: "/tinh-luong", color: "#667eea" },
-    { title: "Thưởng", icon: "🎁", path: "/thuong", color: "#764ba2" },
-    { title: "Khấu trừ", icon: "❌", path: "/khau-tru", color: "#6B73FF" },
-    { title: "Người phụ thuộc", icon: "👨‍👩‍👧‍👦", path: "/nguoi-phu-thuoc", color: "#8B5FBF" },
-    { title: "Phúc lợi", icon: "⚜️", path: "/phuc-loi", color: "#667eea" },
-    { title: "QL nghỉ có lương", icon: "🎆", path: "/ngay-nghi-le", color: "#764ba2" },
-    { title: "Đánh giá", icon: "📈", path: "/danh-gia", color: "#6B73FF" },
-    { title: "Phòng ban", icon: "🏢", path: "/phong-ban", color: "#8B5FBF" },
+    { title: "Danh mục loại nghỉ phép", icon: "🗂️", path: "/loai-nghi-phep", color: "#8B5FBF" },
+    { title: "Giấy phép", icon: "📜", path: "/quan-ly-giay-phep", color: "#667eea" },
+    { title: "Tính lương", icon: "💰", path: "/tinh-luong", color: "#764ba2" },
+    { title: "Thưởng", icon: "🎁", path: "/thuong", color: "#6B73FF" },
+    { title: "Khấu trừ", icon: "❌", path: "/khau-tru", color: "#8B5FBF" },
+    { title: "Người phụ thuộc", icon: "👨‍👩‍👧‍👦", path: "/nguoi-phu-thuoc", color: "#667eea" },
+    { title: "QL các khoản bắt buộc", icon: "💸", path: "/ql-thue-bh", color: "#764ba2" },
+    { title: "Phúc lợi", icon: "⚜️", path: "/phuc-loi", color: "#6B73FF" },
+    { title: "QL nghỉ có lương", icon: "🎆", path: "/ngay-nghi-le", color: "#8B5FBF" },
+    { title: "Đánh giá", icon: "📈", path: "/danh-gia", color: "#667eea" },
+    { title: "Phòng ban", icon: "🏢", path: "/phong-ban", color: "#764ba2" },
   ];
 
   // 👇 Tuỳ chính sách: ẩn bớt module với non-HR (ví dụ lương & phòng ban)
   const restrictedPaths = [];
 
   const visibleModules = modules.filter((m) => {
-    if (userInfo.phong_ban_id === HR_DEPARTMENT_ID) return true; // HR thấy hết
+    if (isHrOrAdmin(userInfo)) return true; // HR/Admin thấy hết
     return !restrictedPaths.includes(m.path); // người khác bị ẩn 1 vài mục
   });
 

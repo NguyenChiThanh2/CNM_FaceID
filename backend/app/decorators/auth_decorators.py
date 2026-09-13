@@ -36,9 +36,22 @@ PHONG_BAN_NHAN_SU_ID = 2
 
 
 def is_hr(nhan_vien):
-    """True nếu `nhan_vien` thuộc phòng Nhân sự — được coi là người có quyền
-    duyệt/từ chối đơn của người khác (giấy phép, nghỉ phép...)."""
-    return bool(nhan_vien) and nhan_vien.phong_ban_id == PHONG_BAN_NHAN_SU_ID
+    """True nếu `nhan_vien` thuộc phòng Nhân sự, HOẶC có vai trò RBAC "Admin"
+    — cả 2 đều được coi là người có quyền duyệt/từ chối/sửa đơn của người khác
+    (giấy phép, nghỉ phép, hợp đồng...).
+
+    Trước đây chỉ xét phong_ban_id: 1 tài khoản Admin (toàn quyền hệ thống qua
+    bảng vai_tro/quyen) nhưng không được xếp vào phòng ban nào (vd tài khoản
+    bootstrap từ scripts/seed_rbac.py) sẽ bị từ chối (403) ở mọi route dùng
+    is_hr() — dù FE đã coi tài khoản đó là "HR" (xem isHrOrAdmin ở
+    frontend/src/utils/auth.js). Thêm điều kiện vai trò ở đây để FE/BE lại
+    khớp nhau.
+    """
+    if not nhan_vien:
+        return False
+    if nhan_vien.phong_ban_id == PHONG_BAN_NHAN_SU_ID:
+        return True
+    return bool(nhan_vien.vai_tro) and nhan_vien.vai_tro.ten_vai_tro == "Admin"
 
 
 def permission_required(ma_quyen):

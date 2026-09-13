@@ -13,11 +13,11 @@ import {
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import ThuongForm from "../../components/thuong/ThuongForm";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { exportJsonToExcel } from "../../utils/excelExport";
 import { ToastContainer, toast } from "react-toastify";
 import axiosInstance from "../../services/axiosInstance";
 import Loading from "../../../src/components/Loading";
+import { getNhanVienInfo, isHrOrAdmin } from "../../utils/auth";
 import {
   FaHome,
   FaSearch,
@@ -31,14 +31,8 @@ import {
 } from "react-icons/fa";
 
 const Thuong = () => {
-  // Lấy user từ localStorage để phân quyền
-  const raw = localStorage.getItem("user");
-  let currentUser = null;
-  try {
-    currentUser = raw ? JSON.parse(raw)?.nhan_vien : null;
-  } catch (_) {}
-  const HR_DEPARTMENT_ID = 2; // id phòng nhân sự
-  const isHR = currentUser?.phong_ban_id === HR_DEPARTMENT_ID;
+  const currentUser = getNhanVienInfo();
+  const isHR = isHrOrAdmin(currentUser);
 
   const [thuongList, setThuongList] = useState([]);
   const [selectedThuong, setSelectedThuong] = useState(null);
@@ -153,7 +147,7 @@ const Thuong = () => {
     setCurrentPage(1);
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     try {
       const exportData = thuongList.map((item) => ({
         "Tên thưởng": item.ten_thuong,
@@ -162,18 +156,7 @@ const Thuong = () => {
         Loại: item.loai_thuong,
       }));
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Thuong");
-
-      const excelBuffer = XLSX.write(workbook, {
-        bookType: "xlsx",
-        type: "array",
-      });
-      const file = new Blob([excelBuffer], {
-        type: "application/octet-stream",
-      });
-      saveAs(file, "DanhSachThuong.xlsx");
+      await exportJsonToExcel(exportData, "Thuong", "DanhSachThuong.xlsx");
       toast.success("📤 Đã xuất Excel!");
     } catch (e) {
       console.error("Lỗi khi xuất Excel:", e);

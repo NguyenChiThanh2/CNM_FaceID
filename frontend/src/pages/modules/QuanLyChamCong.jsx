@@ -32,6 +32,7 @@ import {
 } from "../../services/chamCongApi";
 import axiosInstance from "../../services/axiosInstance";
 import Loading from "../../../src/components/Loading";
+import { isHrOrAdmin } from "../../utils/auth";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -69,15 +70,16 @@ const QuanLyChamCong = () => {
         ho_ten: nv.ho_ten,
         phong_ban_id: nv.phong_ban_id,
         ten_phong_ban: nv.ten_phong_ban || "",
+        ten_vai_tro: nv.ten_vai_tro,
         role: parsed.role?.ma_vai_tro || "user",
       };
     } catch {
       return null;
     }
   };
-  
-  const HR_DEPARTMENT_ID = 2;
+
   const userInfo = getUserInfo();
+  const isHR = isHrOrAdmin(userInfo);
 
   // ====== Load dữ liệu ban đầu ======
   useEffect(() => {
@@ -92,7 +94,7 @@ const QuanLyChamCong = () => {
         let list = Array.isArray(chamCong) ? chamCong : [];
 
         // Nếu không phải phòng nhân sự → chỉ hiển thị bản ghi của chính họ
-        if (userInfo && userInfo.phong_ban_id !== HR_DEPARTMENT_ID) {
+        if (userInfo && !isHR) {
           list = list.filter(cc => cc.nhan_vien_id === userInfo.id);
         }
 
@@ -262,7 +264,7 @@ const QuanLyChamCong = () => {
       </div>
 
       {/* Search Employee for HR */}
-      {userInfo?.phong_ban_id === HR_DEPARTMENT_ID && (
+      {isHR && (
         <Card className="shadow-sm border-0 rounded-4 mb-4">
           <Card.Header 
             style={{
