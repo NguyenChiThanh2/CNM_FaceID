@@ -52,5 +52,20 @@ services:
     depends_on:
       - postgres
 
+  frontend:
+    build:
+      context: ./frontend
+    container_name: cnm_faceid_frontend
+    restart: unless-stopped
+    ports:
+      # HOST:CONTAINER — cố tình map ra đúng 5173 (cổng cũ của "npm run dev")
+      # để backend/.env's FRONTEND_ORIGIN (đang là http://localhost:5173)
+      # không cần sửa gì cả — trình duyệt vẫn thấy origin y hệt như trước.
+      # Đánh đổi: không chạy đồng thời được với "npm run dev" (trùng cổng) —
+      # đây là hành vi hợp lý: chỉ chạy 1 trong 2 (dev hoặc bản build thật).
+      - "5173:80"
+    depends_on:
+      - backend
+
 volumes:
   cnm_faceid_pgdata:

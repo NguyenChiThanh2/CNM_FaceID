@@ -4,9 +4,9 @@ Hệ thống quản lý nhân sự / chấm công bằng nhận diện khuôn m�
 
 ## Yêu cầu môi trường
 
-- **Docker Desktop** — luôn cần (chạy PostgreSQL cho database dù chọn cách nào; nếu chạy backend theo **Cách A** bên dưới thì Docker Desktop lo luôn cả backend, không cần cài Python)
+- **Docker Desktop** — luôn cần (chạy PostgreSQL cho database dù chọn cách nào; nếu chạy backend/frontend theo **Cách A** bên dưới thì Docker Desktop lo luôn, không cần cài Python/Node)
 - **Python 3.12** — chỉ cần nếu chạy backend theo **Cách B** (đã test với 3.12.10 — bản khác 3.12.x có thể không tìm được wheel `dlib` phù hợp, xem lưu ý ở mục 1.3)
-- **Node.js** (khuyến nghị bản LTS mới nhất) + npm — luôn cần, để chạy frontend
+- **Node.js** (khuyến nghị bản LTS mới nhất) + npm — chỉ cần nếu chạy frontend theo **Cách B** (`npm run dev`); Cách A (Docker) tự cài Node bên trong image, không cần cài trên máy
 - Windows + Cách B: **không cần** cài Visual Studio Build Tools nếu dùng đúng wheel `dlib` prebuilt nêu ở mục 1.3
 
 ## 1. Cài đặt lần đầu
@@ -186,20 +186,37 @@ Script này (chạy lại nhiều lần vẫn an toàn với phần quyền/vai 
 
 ### 1.9. Cài frontend
 
+Cũng có 2 cách, độc lập với cách bạn đã chọn cho backend ở trên — có thể chạy backend Cách A + frontend Cách B hoặc ngược lại, tuỳ ý.
+
+**Cách A — Chạy frontend bằng Docker (production build thật, phục vụ qua Nginx):**
+
 ```bash
-cd ../frontend
-npm install
+cd frontend
+docker compose build frontend
+docker compose up -d frontend
 ```
+
+`docker compose build frontend` chạy `npm install` + `npm run build` ngay trong image (dùng Node 20 tạm thời ở giai đoạn build), rồi đóng gói kết quả tĩnh (HTML/CSS/JS) vào 1 image Nginx gọn nhẹ để phục vụ — không cần cài Node trên máy, không cần `npm install` thủ công. Truy cập `http://localhost:5173`. Muốn build lại sau khi sửa code: chạy lại đúng 2 lệnh trên.
+
+**Cách B — `npm run dev` (dev server, hot reload):**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Phù hợp khi đang sửa code frontend liên tục — có hot reload, không cần build lại thủ công. Lưu ý: không chạy đồng thời Cách A và Cách B (cả 2 đều dùng cổng 5173).
 
 ## 2. Chạy hàng ngày (sau khi đã cài lần đầu)
 
-Cần 3 thứ chạy song song — **Database** và **Frontend** giống nhau dù chọn Cách A hay B, chỉ khác nhau ở **Backend**:
+Cần 3 thứ chạy song song — **Database**, **Backend**, **Frontend** — mỗi thứ chọn 1 trong 2 cách tuỳ bạn đã cài ở mục 1 (độc lập với nhau):
 
 ```bash
 # 1. Database (nếu chưa chạy) — chạy ở thư mục gốc CNM_FaceID
 docker compose up -d postgres
 
-# 2. Backend (port 5000) — chọn 1 trong 2 tuỳ cách bạn đã cài ở mục 1
+# 2. Backend (port 5000)
 # Cách A (Docker):
 docker compose up -d backend      # chạy ở thư mục gốc CNM_FaceID
 # Cách B (venv):
@@ -208,6 +225,9 @@ venv\Scripts\activate
 python run.py
 
 # 3. Frontend (port 5173)
+# Cách A (Docker):
+docker compose up -d frontend     # chạy ở thư mục gốc CNM_FaceID — chỉ dùng bản đã build sẵn, sửa code phải build lại (xem mục 1.9)
+# Cách B (npm run dev):
 cd frontend
 npm run dev
 ```
@@ -250,7 +270,7 @@ Nếu thay đổi thêm 1 module nghiệp vụ mới (blueprint route mới) c�
 
 ```
 CNM_FaceID/
-├── docker-compose.yml     # cấu hình Postgres + backend (Cách A)
+├── docker-compose.yml     # cấu hình Postgres + backend + frontend (Cách A)
 ├── .env.example           # mẫu .env cho docker-compose (Postgres)
 ├── backend/
 │   ├── app/                # models, routes, services, controllers (Flask)
@@ -262,5 +282,67 @@ CNM_FaceID/
 │   └── run.py              # entry point backend
 └── frontend/
     ├── src/
+    ├── Dockerfile          # multi-stage: build bằng Node, phục vụ bằng Nginx (Cách A)
+    ├── nginx.conf          # cấu hình Nginx (SPA fallback cho React Router)
+    ├── .dockerignore
     └── package.json
 ```
+
+## 6. Cấu trúc thư mục đầy đủ
+
+Bản chi tiết hơn mục 5 — mỗi thư mục/file kèm 1 dòng giải thích, để người mới vào code biết nên tìm gì ở đâu:
+
+```
+CNM_FaceID/
+├── docker-compose.yml       # Cấu hình Postgres + backend + frontend cho Cách A (Docker)
+├── .env.example             # Mẫu .env cho docker-compose (POSTGRES_USER/PASSWORD/DB)
+├── README.md                # Tài liệu này
+│
+├── backend/                  # API Flask (Python)
+│   ├── run.py                  # Entry point — `python run.py` hoặc gunicorn chạy từ đây
+│   ├── requirements.txt        # Danh sách package Python cần cài
+│   ├── Dockerfile              # Công thức build image backend (Cách A)
+│   ├── .dockerignore           # File/thư mục KHÔNG copy vào image khi build
+│   ├── .env.example            # Mẫu file .env riêng cho Flask (secret) — copy thành .env, không commit .env
+│   │
+│   ├── app/                    # Toàn bộ mã nguồn ứng dụng Flask
+│   │   ├── __init__.py           # App factory — tạo Flask app, đăng ký blueprint/extension (JWT, CORS, limiter...)
+│   │   ├── db.py                 # Khởi tạo SQLAlchemy, cấu hình kết nối database
+│   │   ├── models/                # Định nghĩa bảng database (SQLAlchemy ORM) — 1 file/1 bảng
+│   │   ├── routes/                # Khai báo endpoint (URL) — map URL → hàm controller tương ứng
+│   │   ├── controllers/           # Nhận request, validate input, gọi service, trả response JSON
+│   │   ├── services/              # Logic nghiệp vụ chính (tính lương, chấm công, đánh giá...)
+│   │   ├── decorators/            # Decorator dùng chung, vd. @require_module_permission (kiểm tra quyền)
+│   │   ├── utils/                  # Hàm tiện ích dùng chung (format, validate, xử lý ảnh khuôn mặt...)
+│   │   └── static/                 # File tĩnh app tự sinh/quản lý (ảnh chứng chỉ, avatar mặc định...)
+│   │
+│   ├── migrations/              # Lịch sử thay đổi schema database (Alembic — tự sinh bằng `flask db migrate`, không tự sửa tay)
+│   ├── scripts/                  # Script vận hành, chạy tay khi cần (vd. seed_rbac.py — khởi tạo phân quyền)
+│   ├── static/                    # File do NGƯỜI DÙNG tải lên lúc chạy thật (ảnh checkin, avatar) — mount volume ở Cách A để không mất khi build lại container
+│   └── uploads/                    # File đính kèm người dùng tải lên (hợp đồng, chứng chỉ...) — cũng mount volume ở Cách A
+│
+└── frontend/                  # Giao diện React (Vite)
+    ├── index.html               # HTML gốc — nơi React "gắn" vào (thẻ `<div id="root">`)
+    ├── package.json             # Danh sách package npm + script (dev/build/lint)
+    ├── vite.config.js           # Cấu hình Vite (dev server, cách build)
+    ├── Dockerfile                # Multi-stage: build bằng Node, phục vụ bằng Nginx (Cách A)
+    ├── nginx.conf                # Cấu hình Nginx — SPA fallback cho React Router
+    ├── .dockerignore
+    ├── public/                    # File tĩnh copy nguyên vẹn vào bản build (favicon, ...)
+    ├── context/                   # React Context dùng toàn app (AuthContext.jsx — lưu thông tin user đăng nhập)
+    │
+    └── src/                       # Toàn bộ mã nguồn React
+        ├── main.jsx                 # Entry point — render <App /> vào #root
+        ├── App.jsx                  # Component gốc — khai báo toàn bộ route (react-router-dom)
+        ├── App.css, css/, styles/   # CSS toàn cục và CSS riêng theo trang/module
+        ├── pages/                   # Từng trang trong app (gần như map 1-1 với route)
+        │   └── modules/               # Các trang nghiệp vụ chính (nhân sự, chấm công, lương, đánh giá...)
+        ├── components/              # Component tái dùng, chia theo nghiệp vụ (nhansu/, chamcong/, thuong/, khautru/...)
+        ├── services/                # Hàm gọi API backend bằng axios — 1 file cho mỗi nhóm nghiệp vụ (nhanVienApi.js...)
+        ├── hooks/                   # Custom React hook dùng chung
+        ├── lib/                     # Cấu hình/khởi tạo thư viện bên thứ ba
+        ├── utils/                   # Hàm tiện ích thuần JS (format ngày, export Excel/PDF...)
+        └── assets/                  # Ảnh/icon tĩnh import trực tiếp trong code
+```
+
+**Không liệt kê ở trên vì tự sinh ra, không commit lên Git** (đã khai trong `.gitignore`/`.dockerignore`): `backend/faceid_env*/` (virtual env cũ), `**/__pycache__/`, `backend/instance/` (file `.db` tạm lúc dev), `frontend/node_modules/`, `frontend/dist/` (kết quả `npm run build`), `.env` các loại (secret thật), `.git/`, `.idea/`.

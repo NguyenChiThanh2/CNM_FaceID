@@ -1,0 +1,17 @@
+# Giống .dockerignore của backend — loại trừ khỏi build context.
+
+# Cực kỳ quan trọng: node_modules trên máy host được build cho ĐÚNG hệ điều
+# hành của máy đó (Windows) — nếu lỡ copy vào, 1 số gói native-binding (nếu
+# có) sẽ SAI KIẾN TRÚC khi chạy trong container Linux. Dockerfile đã tự
+# "npm install" lại bên trong container (đúng Linux) nên không cần mang theo.
+node_modules/
+
+# Kết quả build cũ trên máy host — Dockerfile tự "npm run build" ra bản mới
+# bên trong container, không cần bản cũ này.
+dist/
+
+# Biến môi trường cục bộ của máy dev (nếu có) — không đưa vào image.
+.env
+
+.git/
+.gitignore

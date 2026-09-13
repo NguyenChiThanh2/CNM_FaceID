@@ -77,7 +77,6 @@ body {
   transition: color 0.25s ease-in-out;
 }
 
-<<<<<<< HEAD
 /* Ngăn xuống dòng toàn bảng, giúp ellipsis hoạt động ổn định */
 .table-nowrap td,
 .table-nowrap th {
@@ -141,7 +140,8 @@ body {
 .table thead.table-dark th {
   background: #161b22 !important;
   border-color: #222 !important;
-=======
+}
+
 .sidebar {
   min-height: 100vh;
 }
@@ -159,5 +159,4 @@ body {
   .sidebar.d-block {
     transform: translateX(0);
   }
->>>>>>> khoa/chinhsua
 }
