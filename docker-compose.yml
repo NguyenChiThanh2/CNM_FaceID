@@ -12,5 +12,45 @@ services:
     volumes:
       - cnm_faceid_pgdata:/var/lib/postgresql/data
 
+  backend:
+    # "build" (khác "image" ở service postgres): thay vì tải sẵn 1 image có
+    # sẵn, bảo Docker Compose tự BUILD image từ Dockerfile nằm trong thư mục
+    # ./backend (chính là Dockerfile vừa viết ở trên).
+    build:
+      context: ./backend
+    container_name: cnm_faceid_backend
+    restart: unless-stopped
+    # Nạp toàn bộ biến trong backend/.env (JWT_SECRET_KEY, SMTP_*,
+    # FRONTEND_ORIGIN, COOKIE_*...) làm biến môi trường cho container.
+    env_file:
+      - ./backend/.env
+    # Biến ở "environment" sẽ GHI ĐÈ lên biến cùng tên đã nạp từ env_file —
+    # dùng để sửa riêng DATABASE_URL, vì giá trị "localhost" trong
+    # backend/.env chỉ đúng khi backend chạy trực tiếp trên máy host. Bên
+    # trong mạng nội bộ do Docker Compose tự tạo, mỗi service gọi được service
+    # khác bằng ĐÚNG TÊN SERVICE làm hostname — ở đây là "postgres" (tên
+    # service khai báo phía trên), Docker tự phân giải tên đó thành đúng IP
+    # nội bộ của container postgres. Gõ "localhost" trong container backend
+    # sẽ trỏ vào chính nó, không phải sang container postgres.
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      FLASK_APP: run.py
+    ports:
+      - "5000:5000"
+    # Mount thư mục chứa dữ liệu người dùng tải lên từ máy host vào trong
+    # container — nếu không mount, dữ liệu ghi vào các thư mục này chỉ tồn
+    # tại BÊN TRONG container, mất sạch nếu container bị xoá/build lại.
+    volumes:
+      - ./backend/static/checkin_images:/app/static/checkin_images
+      - ./backend/static/images/avatars:/app/static/images/avatars
+      - ./backend/uploads:/app/uploads
+    # Yêu cầu Docker khởi động container "postgres" trước "backend" (không
+    # đảm bảo Postgres đã SẴN SÀNG nhận kết nối, chỉ đảm bảo container đó đã
+    # được start — nếu backend lỡ kết nối DB trước khi Postgres kịp khởi động
+    # xong, restart: unless-stopped ở trên sẽ tự khởi động lại cho tới khi
+    # thành công).
+    depends_on:
+      - postgres
+
 volumes:
   cnm_faceid_pgdata:

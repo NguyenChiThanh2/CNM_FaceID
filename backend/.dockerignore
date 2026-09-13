@@ -1,0 +1,36 @@
+# .dockerignore — giống .gitignore nhưng dành cho Docker: những gì liệt kê ở
+# đây sẽ KHÔNG được gửi vào "build context" (xem giải thích build context
+# trong Dockerfile bên cạnh), giúp build nhanh hơn và không lỡ đóng gói bí
+# mật/dữ liệu nặng vào image.
+
+# Virtual environment cũ trên máy host — KHÔNG cần trong image, vì Dockerfile
+# sẽ tự cài lại toàn bộ thư viện bên trong container từ requirements.txt.
+faceid_env/
+faceid_env_new/
+
+# Bí mật thật (JWT_SECRET_KEY, mật khẩu DB, SMTP...) — tuyệt đối không được
+# "nướng" (bake) vào image, vì ai có image là có luôn secret. Biến môi trường
+# thật sẽ được truyền lúc "docker run"/"docker compose up" (xem docker-compose.yml).
+.env
+
+# File Python biên dịch sẵn / cache
+__pycache__/
+*.pyc
+
+# Cấu hình IDE, không liên quan tới chạy app
+.idea/
+
+# DB SQLite dùng để test cục bộ trên máy — production dùng Postgres qua
+# DATABASE_URL, không dùng file này.
+instance/
+
+# Dữ liệu người dùng tải lên (ảnh đại diện, ảnh chấm công, file đính kèm) —
+# nên mount qua Docker volume để dữ liệu không mất khi rebuild image, không
+# đóng gói cứng vào image.
+static/checkin_images/
+static/images/avatars/
+uploads/
+
+# Thứ Docker/git tự sinh, không cần
+.git/
+.gitignore

@@ -4,12 +4,86 @@ Hệ thống quản lý nhân sự / chấm công bằng nhận diện khuôn m�
 
 ## Yêu cầu môi trường
 
-- **Python 3.12** (đã test với 3.12.10 — bản khác 3.12.x có thể không tìm được wheel `dlib` phù hợp, xem lưu ý bên dưới)
-- **Node.js** (khuyến nghị bản LTS mới nhất) + npm
-- **Docker Desktop** — chạy PostgreSQL cho database, xem thêm ở mục Database bên dưới
-- Windows: **không cần** cài Visual Studio Build Tools nếu dùng đúng wheel `dlib` prebuilt nêu bên dưới
+- **Docker Desktop** — luôn cần (chạy PostgreSQL cho database dù chọn cách nào; nếu chạy backend theo **Cách A** bên dưới thì Docker Desktop lo luôn cả backend, không cần cài Python)
+- **Python 3.12** — chỉ cần nếu chạy backend theo **Cách B** (đã test với 3.12.10 — bản khác 3.12.x có thể không tìm được wheel `dlib` phù hợp, xem lưu ý ở mục 1.3)
+- **Node.js** (khuyến nghị bản LTS mới nhất) + npm — luôn cần, để chạy frontend
+- Windows + Cách B: **không cần** cài Visual Studio Build Tools nếu dùng đúng wheel `dlib` prebuilt nêu ở mục 1.3
 
 ## 1. Cài đặt lần đầu
+
+Có 2 cách chạy **backend**: **Cách A (Docker)** — nhanh nhất, không cần tự cài Python/`dlib` gì cả, chỉ cần Docker Desktop; hoặc **Cách B (cài trực tiếp bằng venv)** — xem mục 1.1-1.9 bên dưới. Cả 2 cách đều dùng chung 1 database Postgres và chung `frontend/` — **chỉ chọn 1 trong 2** cho phần backend.
+
+### Cách A — Chạy backend bằng Docker (khuyến nghị)
+
+**Yêu cầu:** chỉ cần cài **Docker Desktop**, không cần cài Python, không cần lo tìm wheel `dlib` cho đúng hệ điều hành như Cách B.
+
+**A.1. Clone & vào thư mục gốc:**
+```bash
+git clone <repo-url> CNM_FaceID
+cd CNM_FaceID
+```
+
+**A.2. Tạo file `.env` ở thư mục gốc** (Docker Compose đọc file này để biết user/mật khẩu Postgres):
+```bash
+cp .env.example .env
+```
+
+**A.3. Tạo file `backend/.env`** (chứa secret riêng cho Flask) từ file mẫu:
+```bash
+cp backend/.env.example backend/.env
+```
+Mở `backend/.env` vừa tạo, điền `DEVICE_SETUP_KEY` và `JWT_SECRET_KEY` (lệnh sinh JWT_SECRET_KEY xem ngay dưới đây). Các dòng còn lại (`FRONTEND_ORIGIN`, `COOKIE_SECURE`, `COOKIE_SAMESITE`, `SMTP_*`) giữ nguyên giá trị mặc định trong file mẫu là chạy được ngay cho môi trường dev.
+
+Lưu ý: dòng `DATABASE_URL` có sẵn trong file mẫu **không cần sửa** cho Cách A — `docker-compose.yml` tự ghép đúng chuỗi kết nối tới container Postgres (dùng hostname **`postgres`**, đúng tên service khai trong `docker-compose.yml`, thay vì `localhost`) từ chính `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` bạn đặt ở file `.env` bước A.2, rồi tự động **ghi đè** lên giá trị này. (Chỉ Cách B — chạy `python run.py` trực tiếp, không qua Docker — mới cần sửa lại đúng `DATABASE_URL` với `localhost`, xem mục 1.5 bên dưới.)
+
+`JWT_SECRET_KEY` tự sinh bằng lệnh (chạy tạm bằng Python bất kỳ máy nào có sẵn Python, hoặc dùng công cụ sinh chuỗi ngẫu nhiên bất kỳ):
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+**A.4. Mở Docker Desktop trước** (icon con cá voi) — mọi lệnh `docker` bên dưới chỉ chạy được khi nó đã khởi động xong. Kiểm tra bằng `docker ps`.
+
+**A.5. Build image backend:**
+```bash
+docker compose build backend
+```
+Lần build **đầu tiên** sẽ mất **10-20 phút** — vì `dlib` (thư viện lõi cho nhận diện khuôn mặt) phải tự biên dịch từ mã nguồn C++ ngay trong lúc build, không có sẵn bản dựng sẵn cho mọi nền tảng. Đây là bình thường, không phải bị treo — cứ để nó chạy. Các lần build sau (khi không sửa gì trong `backend/requirements.txt`/`Dockerfile`) sẽ nhanh hơn nhiều nhờ cache.
+
+**A.6. Khởi động Postgres + backend:**
+```bash
+docker compose up -d
+```
+
+**A.7. Khởi tạo schema database** (chỉ cần làm 1 lần, hoặc mỗi khi có migration mới — xem mục 4):
+```bash
+docker compose exec backend flask db upgrade
+```
+
+**A.8. Khởi tạo phân quyền (RBAC) — bắt buộc, làm ngay sau A.7:**
+```bash
+docker compose exec backend python scripts/seed_rbac.py
+```
+Xem giải thích chi tiết vì sao bước này bắt buộc ở mục 1.8 bên dưới (Cách B) — lý do giống hệt nhau, chỉ khác là chạy lệnh bên trong container thay vì trong venv.
+
+**A.9. Kiểm tra backend đã sống:**
+```bash
+curl.exe -i http://localhost:5000/api/vai-tro
+```
+(Nếu dùng Git Bash/Linux/Mac, bỏ `.exe`: `curl -i ...`) Kỳ vọng thấy `HTTP/1.1 401 UNAUTHORIZED` kèm `{"msg":"Missing cookie \"access_token_cookie\""}` — đây là phản hồi **đúng** (route yêu cầu đăng nhập), chứng tỏ backend đã chạy hoàn chỉnh.
+
+**A.10. Cài & chạy frontend** — xem mục 1.9 và mục 2 bên dưới (không đổi gì, Docker ở đây chỉ áp dụng cho backend).
+
+> **Lệnh dùng hàng ngày sau khi đã cài xong (Cách A):**
+> ```bash
+> docker compose up -d backend      # khởi động lại (không cần build lại)
+> docker compose stop backend       # dừng khi không dùng
+> docker compose logs -f backend    # xem log real-time
+> ```
+> Chỉ cần chạy lại `docker compose build backend` khi bạn **sửa code trong `backend/`** hoặc đổi `requirements.txt`.
+
+---
+
+### Cách B — Cài trực tiếp bằng venv (native, không dùng Docker cho backend)
 
 ### 1.1. Clone & vào thư mục backend
 
@@ -48,21 +122,19 @@ pip install -r requirements.txt
 
 ### 1.5. Tạo file `.env`
 
-File `.env` **không nằm trong git** (chứa secret) — tự tạo `backend/.env`:
+File `.env` **không nằm trong git** (chứa secret) — tạo từ file mẫu (đang đứng trong thư mục `backend`):
 
-```env
-DEVICE_SETUP_KEY=<tự đặt 1 chuỗi bí mật bất kỳ, dùng để đăng ký thiết bị chấm công>
-DATABASE_URL=postgresql://faceid_app:faceid_dev_pw@localhost:5432/cnm_faceid
-JWT_SECRET_KEY=<random 64 ký tự hex, dùng để ký JWT xác thực đăng nhập>
+```bash
+cp .env.example .env
 ```
 
-`JWT_SECRET_KEY` tự sinh bằng lệnh:
+Mở `.env` vừa tạo, điền `DEVICE_SETUP_KEY` và `JWT_SECRET_KEY` (sinh bằng lệnh dưới đây); giữ nguyên `DATABASE_URL` mặc định (`...@localhost:5432/...`) nếu bạn dùng đúng user/mật khẩu/tên DB như file mẫu, hoặc sửa lại cho khớp với những gì bạn đặt ở file `.env` gốc (bước 1.6):
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Thiếu 1 trong 3 key trên, app sẽ báo lỗi ngay lúc khởi động thay vì chạy với giá trị mặc định không an toàn.
+Thiếu `DEVICE_SETUP_KEY`, `DATABASE_URL`, hoặc `JWT_SECRET_KEY`, app sẽ báo lỗi ngay lúc khởi động thay vì chạy với giá trị mặc định không an toàn.
 
 ### 1.6. Khởi động PostgreSQL (Docker)
 
@@ -121,13 +193,16 @@ npm install
 
 ## 2. Chạy hàng ngày (sau khi đã cài lần đầu)
 
-Cần 3 thứ chạy song song:
+Cần 3 thứ chạy song song — **Database** và **Frontend** giống nhau dù chọn Cách A hay B, chỉ khác nhau ở **Backend**:
 
 ```bash
-# 1. Database (nếu chưa chạy)
-docker compose up -d          # chạy ở thư mục gốc CNM_FaceID
+# 1. Database (nếu chưa chạy) — chạy ở thư mục gốc CNM_FaceID
+docker compose up -d postgres
 
-# 2. Backend (port 5000)
+# 2. Backend (port 5000) — chọn 1 trong 2 tuỳ cách bạn đã cài ở mục 1
+# Cách A (Docker):
+docker compose up -d backend      # chạy ở thư mục gốc CNM_FaceID
+# Cách B (venv):
 cd backend
 venv\Scripts\activate
 python run.py
@@ -154,25 +229,35 @@ Copy `token` trong response, dán vào form trên trang `/cham-cong-face` (chỉ
 
 ## 4. Migration database (khi models thay đổi)
 
+**Cách B (venv):**
 ```bash
 cd backend
 flask db migrate -m "mô tả thay đổi"   # tự sinh migration từ diff models
 flask db upgrade                        # áp dụng vào database
 ```
 
+**Cách A (Docker)** — chạy cùng lệnh nhưng qua container (đứng ở thư mục gốc `CNM_FaceID`):
+```bash
+docker compose exec backend flask db migrate -m "mô tả thay đổi"
+docker compose exec backend flask db upgrade
+```
+
 File migration được đặt tên tự động dạng `YYYYMMDD_HHMM_<revision>_<mô-tả>.py` để dễ theo dõi theo thời gian.
 
-Nếu thay đổi thêm 1 module nghiệp vụ mới (blueprint route mới) cần được phân quyền, nhớ thêm tên module đó vào danh sách `MODULES` trong `scripts/seed_rbac.py` rồi chạy lại `python scripts/seed_rbac.py` — script tự động seed thêm quyền còn thiếu vào catalog và gán luôn cho vai trò Admin, không đụng tới các vai trò khác đã có.
+Nếu thay đổi thêm 1 module nghiệp vụ mới (blueprint route mới) cần được phân quyền, nhớ thêm tên module đó vào danh sách `MODULES` trong `scripts/seed_rbac.py` rồi chạy lại `python scripts/seed_rbac.py` (Cách B) hoặc `docker compose exec backend python scripts/seed_rbac.py` (Cách A) — script tự động seed thêm quyền còn thiếu vào catalog và gán luôn cho vai trò Admin, không đụng tới các vai trò khác đã có.
 
 ## 5. Cấu trúc thư mục
 
 ```
 CNM_FaceID/
-├── docker-compose.yml     # cấu hình PostgreSQL local
+├── docker-compose.yml     # cấu hình Postgres + backend (Cách A)
+├── .env.example           # mẫu .env cho docker-compose (Postgres)
 ├── backend/
 │   ├── app/                # models, routes, services, controllers (Flask)
 │   ├── migrations/         # Alembic migrations
 │   ├── scripts/            # script vận hành (seed_rbac.py, ...)
+│   ├── Dockerfile          # công thức build image backend (Cách A)
+│   ├── .dockerignore
 │   ├── requirements.txt
 │   └── run.py              # entry point backend
 └── frontend/
