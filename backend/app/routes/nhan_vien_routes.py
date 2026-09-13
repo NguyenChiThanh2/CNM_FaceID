@@ -103,6 +103,8 @@ def login_nhan_vien():
             "avatar": nhan_vien.avatar,
             "ten_phong_ban": nhan_vien.phong_ban.ten_phong_ban if nhan_vien.phong_ban else None,
             "ten_chuc_vu": nhan_vien.chuc_vu_nv.ten_chuc_vu if nhan_vien.chuc_vu_nv else None,
+            "vai_tro_id": nhan_vien.vai_tro_id,
+            "ten_vai_tro": nhan_vien.vai_tro.ten_vai_tro if nhan_vien.vai_tro else None,
         },
     )
     # Token không còn trả trong JSON body — set thẳng vào cookie httpOnly để
@@ -117,7 +119,14 @@ def login_nhan_vien():
             "phong_ban_id": nhan_vien.phong_ban_id,
             "avatar": nhan_vien.avatar,
             "ten_phong_ban": nhan_vien.phong_ban.ten_phong_ban if nhan_vien.phong_ban else None,
-            "ten_chuc_vu": nhan_vien.chuc_vu_nv.ten_chuc_vu if nhan_vien.chuc_vu_nv else None
+            "ten_chuc_vu": nhan_vien.chuc_vu_nv.ten_chuc_vu if nhan_vien.chuc_vu_nv else None,
+            # Vai trò RBAC thật (bảng vai_tro/quyen) — FE dùng để nhận diện Admin
+            # (vd isHrOrAdmin trong utils/auth.js), KHÔNG suy luận quyền qua
+            # phong_ban_id một mình nữa (trước đây 1 tài khoản Admin không thuộc
+            # phòng ban nào sẽ luôn bị coi là "không có quyền HR" dù có toàn quyền
+            # thật qua RBAC — đây chính là lỗi "lệch pha" giữa FE và BE).
+            "vai_tro_id": nhan_vien.vai_tro_id,
+            "ten_vai_tro": nhan_vien.vai_tro.ten_vai_tro if nhan_vien.vai_tro else None,
         }
     })
     set_access_cookies(resp, access_token)
