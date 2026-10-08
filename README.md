@@ -1,7 +1,40 @@
 # CNM_FaceID
 
 Hệ thống quản lý nhân sự / chấm công bằng nhận diện khuôn mặt / tính lương. Backend Flask + PostgreSQL, frontend React (Vite).
+Đồ án tốt nghiệp · Nhóm 2 thành viên · Điểm bảo vệ 9,8/10
 
+## Vì sao làm dự án này
+Chấm công thủ công tốn thời gian và dễ sai sót, kéo theo bảng lương tính từ dữ liệu
+đó cũng sai. Hệ thống cho phép nhân viên chấm công bằng khuôn mặt trên thiết bị đã
+đăng ký, sau đó tính lương trực tiếp từ dữ liệu chấm công.
+
+## Chức năng chính
+- **Chấm công vào/ra bằng nhận diện khuôn mặt** trên thiết bị chấm công đã đăng ký
+  (mỗi thiết bị được đăng ký một lần và cấp token riêng)
+- **Quản lý nhân sự & tiền lương:** nhân viên, dữ liệu chấm công, tính lương
+- **Phân quyền theo vai trò (RBAC)**, xác thực bằng JWT
+- **Dashboard React** theo dõi chấm công
+
+## Công nghệ sử dụng
+| Thành phần | Công nghệ |
+|---|---|
+| Frontend | React (Vite), chạy qua Nginx |
+| Backend | Flask, chia lớp routes / controllers / services, Flask-Migrate (Alembic) |
+| Nhận diện khuôn mặt | face_recognition (dlib), OpenCV |
+| Cơ sở dữ liệu | PostgreSQL |
+| Môi trường phát triển | Docker Compose |
+
+## Phần tôi phụ trách
+[[Phần bạn tự làm, ví dụ: "Xây dựng API tính lương, Dashboard React theo dõi
+chấm công và tích hợp nhận diện khuôn mặt vào luồng chấm công."]]
+
+## Kết quả
+- Thử nghiệm với 10 nhân viên: nhận diện đúng khoảng 85% lượt check-in
+- Điểm bảo vệ đồ án 9,8/10
+
+## Hướng cải thiện
+Nâng độ chính xác nhận diện (hiện khoảng 85%), nhất là khi thiếu sáng hoặc khác góc mặt.
+Thêm kiểm tra người thật (liveness detection) để không thể chấm công bằng ảnh chụp.
 ## Yêu cầu môi trường
 
 - **Docker Desktop** — luôn cần (chạy PostgreSQL cho database dù chọn cách nào; nếu chạy backend/frontend theo **Cách A** bên dưới thì Docker Desktop lo luôn, không cần cài Python/Node)
