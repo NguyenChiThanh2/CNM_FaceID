@@ -15,25 +15,6 @@ fake = Faker("vi_VN")
 app = create_app()
 
 with app.app_context():
-    # Tạo roles
-    roles = [
-        Role(ma_vai_tro="admin", ten_role="Admin", mo_ta="Quản trị hệ thống"),
-        Role(ma_vai_tro="GiamDocNhanSu", ten_role="GiamDoc", mo_ta="Quản lý cấp cao"),
-        Role(ma_vai_tro="TruongPhongNhanSu", ten_role="TruongPhongNhanSu", mo_ta="Trưởng phòng nhân sự"),
-        Role(ma_vai_tro="NhanVienNhanSu", ten_role="NhanVien", mo_ta="Nhân viên nhân sự")
-    ]
-    db.session.add_all(roles)
-    db.session.commit()
-
-    # Tài khoản admin
-    admin_user = User(
-        username="admin",
-        password=generate_password_hash("admin123"),
-        email="admin@example.com",
-        role_id=roles[0].id
-    )
-    db.session.add(admin_user)
-    db.session.commit()
 
     # Phòng ban & chức vụ
     phong_bans = [

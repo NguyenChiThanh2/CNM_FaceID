@@ -10,7 +10,6 @@ class ChucVu(db.Model):
 
     # Quan hệ với bảng NhanVien
     chuc_vu_nv = db.relationship('NhanVien', back_populates='chuc_vu_nv', lazy=True)
-
     def __repr__(self):
         return f"<ChucVu {self.ten_chuc_vu}>"
 

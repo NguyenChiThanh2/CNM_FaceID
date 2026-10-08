@@ -42,11 +42,18 @@ def update_phuc_loi_service(phuc_loi_id, data):
     db.session.commit()
     return phuc_loi
 
-# Xóa phúc lợi
+# Xóa phúc lợi — xóa MỀM (trước đây xóa cứng làm mất vĩnh viễn lịch sử cấp
+# phúc lợi của mọi nhân viên liên quan do cascade='all, delete-orphan'), và
+# chặn hẳn nếu còn nhân viên đang gắn với phúc lợi này.
 def delete_phuc_loi_service(phuc_loi_id):
     phuc_loi = get_phuc_loi_by_id_service(phuc_loi_id)
     if not phuc_loi:
-        return False
-    db.session.delete(phuc_loi)
+        return False, None
+
+    so_nhan_vien = NhanVienPhucLoi.query.filter_by(phuc_loi_id=phuc_loi_id).count()
+    if so_nhan_vien:
+        return False, so_nhan_vien
+
+    phuc_loi.soft_delete()
     db.session.commit()
-    return True
+    return True, None

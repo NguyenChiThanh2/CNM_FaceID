@@ -9,7 +9,14 @@ from app.controllers.phuc_loi_controller import (
     get_phuc_loi_by_nhan_vien_id
 )
 
+from app.decorators.auth_decorators import require_module_permission
+
 phuc_loi_bp = Blueprint('phuc_loi_bp', __name__ , url_prefix='/api')
+
+
+@phuc_loi_bp.before_request
+def _require_permission():
+    return require_module_permission("phuc_loi")()
 
 # Lấy tất cả phúc lợi
 @phuc_loi_bp.route('/get-all-phuc-loi', methods=['GET'])

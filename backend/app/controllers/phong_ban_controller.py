@@ -6,13 +6,22 @@ from app.services.phong_ban_service import *
 def get_phong_ban():
     phong_ban_list = get_all_phong_ban_service()
     if phong_ban_list:
-        return jsonify([pb.to_dict() for pb in phong_ban_list])
+        return phong_ban_list
     else:
         return jsonify({'message': 'Không có dữ liệu phù hợp'}), 404
 
 # Lấy phòng ban theo ID
 def get_phong_ban_by_id(id):
     phong_ban = get_phong_ban_by_ma_service(id)
+    if phong_ban:
+        return jsonify(phong_ban.to_dict())
+    else:
+        return jsonify({'message': 'Không tìm thấy phòng ban'}), 404
+
+# Lấy phòng ban theo tên — route đã gọi tên này từ trước nhưng controller
+# chưa từng định nghĩa hàm, khiến GET luôn 500 (NameError)
+def get_phong_ban_by_name(ten_phong_ban):
+    phong_ban = get_phong_ban_by_name_service(ten_phong_ban)
     if phong_ban:
         return jsonify(phong_ban.to_dict())
     else:
@@ -37,9 +46,23 @@ def update_phong_ban(id):
 
 # Xóa phòng ban theo ID
 def delete_phong_ban(id):
-    phong_ban = delete_phong_ban_service(id)
-    if not phong_ban:
+    result = delete_phong_ban_service(id)
+
+    if result["status"] == "not_found":
         return jsonify({'message': 'Không tìm thấy phòng ban'}), 404
+
+    if result["status"] == "has_employee":
+        # 409 = Conflict
+        return (
+            jsonify({
+                'message': 'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc',
+                'so_luong_nhan_vien': result["count"],
+                'phong_ban': result["phong_ban"].to_dict()
+            }),
+            409
+        )
+
+    # status = deleted
     return jsonify({'message': 'Xóa phòng ban thành công'})
 
 def get_nhan_vien_by_phong_ban_id(phong_ban_id):

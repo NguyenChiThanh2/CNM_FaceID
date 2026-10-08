@@ -42,8 +42,9 @@ def get_phuc_loi_by_nhan_vien_id(nhan_vien_id):
             return jsonify([phuc_loi.to_dict() for phuc_loi in phuc_lois]), 200
         else:
             return jsonify({'message': 'Không có phúc lợi cho nhân viên này'}), 404
-    except Exception as e:  
-        return jsonify({'message': f'Lỗi khi lấy phúc lợi nhân viên: {str(e)}'}), 500
+    except Exception as e:
+        print(f"Lỗi khi lấy phúc lợi nhân viên: {e}")
+        return jsonify({'message': 'Không thể lấy dữ liệu phúc lợi, vui lòng thử lại sau'}), 500
 # Tạo mới phúc lợi
 def create_phuc_loi():
     data = request.get_json()
@@ -51,7 +52,8 @@ def create_phuc_loi():
         new_phuc_loi = create_phuc_loi_service(data)
         return jsonify(new_phuc_loi.to_dict()), 201
     except Exception as e:
-        return jsonify({'message': f'Lỗi khi tạo phúc lợi: {str(e)}'}), 500
+        print(f"Lỗi khi tạo phúc lợi: {e}")
+        return jsonify({'message': 'Không thể tạo phúc lợi, vui lòng thử lại sau'}), 500
 
 # Cập nhật phúc lợi
 def update_phuc_loi(phuc_loi_id):
@@ -64,8 +66,11 @@ def update_phuc_loi(phuc_loi_id):
 
 # Xóa phúc lợi
 def delete_phuc_loi(phuc_loi_id):
-    deleted = delete_phuc_loi_service(phuc_loi_id)
+    deleted, so_nhan_vien = delete_phuc_loi_service(phuc_loi_id)
     if deleted:
         return jsonify({'message': 'Xóa phúc lợi thành công'}), 200
-    else:
-        return jsonify({'message': 'Không tìm thấy phúc lợi để xóa'}), 404
+    if so_nhan_vien:
+        return jsonify({
+            'message': f'Không thể xóa vì còn {so_nhan_vien} nhân viên đang gắn với phúc lợi này'
+        }), 400
+    return jsonify({'message': 'Không tìm thấy phúc lợi để xóa'}), 404

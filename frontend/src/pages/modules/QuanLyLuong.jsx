@@ -1,410 +1,360 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { Button, Modal, OverlayTrigger, Tooltip, Breadcrumb, Row, Col } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
-import "react-toastify/dist/ReactToastify.css";
 
-const API_URL = "http://127.0.0.1:5000/api";
+import React, { useState } from "react";
+import {
+  Button,
+  Modal,
+  OverlayTrigger,
+  Tooltip,
+  Breadcrumb,
+  Row,
+  Col,
+  Card,
+  Form,
+  Table,
+  Tabs,
+  Tab // THÊM Tabs và Tab vào import
+} from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import { exportBangLuongToExcel } from "../../utils/exportToExcel";
+import "react-toastify/dist/ReactToastify.css";
+import Loading from "../../../src/components/Loading";
+import {
+  FaSearch,
+  FaCalculator,
+  FaFileExport,
+  FaHome,
+  FaChartBar,
+  FaTable
+} from "react-icons/fa";
+
+import { useQuanLyLuong } from "../../hooks/useQuanLyLuong";
+import LuongTable from "../../components/quanlyluong/LuongTable";
+import TableHeader from "../../components/quanlyluong/TableHeader";
+import Pagination from "../../components/quanlyluong/Pagination";
+import CalculationModal from "../../components/quanlyluong/CalculationModal";
+import SalaryCharts from "../../components/quanlyluong/SalaryCharts";
+import "../../css/QuanLyLuong.css";
 
 const QuanLyLuong = () => {
-  const [luongList, setLuongList] = useState([]);
-  const [nhanVienList, setNhanVienList] = useState([]);
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [selectedMonthNumber, setSelectedMonthNumber] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [isTinhTatCa, setIsTinhTatCa] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  const [formData, setFormData] = useState({
-    nhan_vien_id: "",
-    thang: "",
-    nam: "",
-  });
-
   const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchLuong();
-    fetchNhanVien();
-  }, []);
-
-  useEffect(() => {
-    if (!showModal) {
-      const today = new Date();
-      setFormData({
-        nhan_vien_id: "",
-        thang: today.getMonth() + 1,
-        nam: today.getFullYear(),
-      });
-      setIsTinhTatCa(false);
-    }
-  }, [showModal]);
-
-  const fetchLuong = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/get-all-luong`);
-      setLuongList(response.data);
-    } catch (error) {
-      toast.error("Không thể tải dữ liệu lương!");
-    }
-  };
-
-  const fetchNhanVien = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/get-all-nhan-vien`);
-      setNhanVienList(response.data);
-    } catch (error) {
-      toast.error("Không thể tải danh sách nhân viên!");
-    }
-  };
-
-  const handleDeleteLuong = async (luongId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xoá dòng lương này?")) return;
-    try {
-      await axios.delete(`${API_URL}/delete-luong/${luongId}`);
-      toast.success("Xoá lương thành công!");
-      fetchLuong();
-    } catch (error) {
-      toast.error("Không thể xoá lương.");
-    }
-  };
-
-  const handleSubmitLuong = async () => {
-    const { nhan_vien_id, thang, nam } = formData;
-
-    if (!thang || !nam) {
-      toast.warning("Vui lòng điền đầy đủ tháng và năm.");
-      return;
-    }
-
-    if (isTinhTatCa) {
-      try {
-        const response = await axios.post(`${API_URL}/tinh-luong-tat-ca`, {
-          thang: parseInt(thang),
-          nam: parseInt(nam),
-        });
-        if (response.data.data) {
-          toast.success("Đã tính lương cho tất cả nhân viên.");
-          setShowModal(false);
-          fetchLuong();
-        } else {
-          toast.error("Không thể tính lương.");
-        }
-      } catch (error) {
-        toast.error("Lỗi khi tính lương cho tất cả nhân viên.");
-      }
-    } else {
-      if (!nhan_vien_id) {
-        toast.warning("Vui lòng chọn nhân viên.");
-        return;
-      }
-
-      try {
-        const response = await axios.post(`${API_URL}/tinh-luong`, {
-          nhan_vien_id: parseInt(nhan_vien_id),
-          thang: parseInt(thang),
-          nam: parseInt(nam),
-        });
-
-        if (response.data.luong) {
-          toast.success("Tính lương thành công!");
-          setShowModal(false);
-          fetchLuong();
-        } else {
-          toast.error("Không thể tính lương.");
-        }
-      } catch (error) {
-        toast.error("Lỗi khi tính lương!");
-      }
-    }
-  };
+  const [activeTab, setActiveTab] = useState("table"); // "table" hoặc "charts"
+  
+  const {
+    paginatedList,
+    nhanVienList,
+    phongBanList,
+    luongList,
+    loading,
+    searchKeyword,
+    selectedMonthNumber,
+    selectedYear,
+    selectedPhongBan,
+    currentPage,
+    totalPages,
+    showModal,
+    isTinhTatCa,
+    formData,
+    isHR,
+    setSearchKeyword,
+    setSelectedMonthNumber,
+    setSelectedYear,
+    setSelectedPhongBan,
+    setCurrentPage,
+    setShowModal,
+    setIsTinhTatCa,
+    setFormData,
+    handleDeleteLuong,
+    handleSubmitLuong,
+  } = useQuanLyLuong();
 
   const formatCurrency = (amount) =>
     amount?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-  const nhanVienMap = nhanVienList.reduce((acc, nv) => {
-    acc[nv.id] = nv.ho_ten.toLowerCase();
-    return acc;
-  }, {});
-
-  const filteredList = luongList
-    .filter((luong) => {
-      const hoTen = nhanVienMap[luong.nhan_vien_id] || "";
-      const searchMatch = hoTen.includes(searchKeyword.toLowerCase());
-      const monthMatch =
-        selectedMonthNumber && selectedYear
-          ? luong.thang === parseInt(selectedMonthNumber) &&
-            luong.nam === parseInt(selectedYear)
-          : true;
-      return searchMatch && monthMatch;
-    })
-    .sort((a, b) => b.id - a.id);
-
-  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
-  const paginatedList = filteredList.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const exportToExcel = () => {
-    const dataToExport = filteredList.map((luong) => {
-      const nv = nhanVienList.find((nv) => nv.id === luong.nhan_vien_id);
-      return {
-        "Nhân viên": nv?.ho_ten || "Không rõ",
-        "Tháng": `${luong.thang}/${luong.nam}`,
-        "Số ngày công": luong.so_ngay_cong,
-        "Lương cơ bản": luong.luong_co_ban,
-        "Phụ cấp": luong.phu_cap,
-        "Khấu trừ": luong.khau_tru,
-        "Bảo hiểm xã hội": luong.bao_hiem,
-        "Thuế thu nhập cá nhân": luong.thue_thu_nhap_ca_nhan,
-        "Tổng lương": luong.tong_luong,
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Bảng Lương");
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-    saveAs(blob, "bang_luong.xlsx");
-    toast.success("Xuất file Excel thành công!");
-  };
+  if (loading) {
+    return (
+      <div>
+        <ToastContainer position="top-right" autoClose={2000} />
+        <Loading />
+      </div>
+    );
+  }
 
   return (
-    <div className="container min-vh-100">
-      <ToastContainer />
-      <div className="row">
-        <div className="col-12 mt-5">
-          <Breadcrumb className="mt-3">
-            <Breadcrumb.Item onClick={() => navigate("/")}>Trang chủ</Breadcrumb.Item>
-            <Breadcrumb.Item active>Quản lý lương</Breadcrumb.Item>
-          </Breadcrumb>
-          <Button variant="secondary" onClick={() => navigate("/")}>← Trang chủ</Button>
-          <h2 className="mb-4 text-center">Quản lý lương</h2>
+    <div className="p-4 ps-5 quan-ly-luong-container">
+      <ToastContainer position="top-right" autoClose={2000} />
 
-          {/* Bộ lọc */}
-          <div className="row mb-4">
-            <div className="col-md-4 mb-2">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Tìm theo tên nhân viên..."
-                value={searchKeyword}
-                onChange={(e) => {
-                  setSearchKeyword(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
-            <div className="col-md-4 mb-2">
-              <select
-                className="form-control"
-                value={selectedYear}
-                onChange={(e) => {
-                  setSelectedYear(e.target.value);
-                  setCurrentPage(1);
-                }}
-              >
-                <option value="">Chọn năm</option>
-                {[...Array(5).keys()].map((i) => {
-                  const year = new Date().getFullYear() - i;
-                  return (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <div className="col-md-4 mb-2">
-              <select
-                className="form-control"
-                value={selectedMonthNumber}
-                onChange={(e) => {
-                  setSelectedMonthNumber(e.target.value);
-                  setCurrentPage(1);
-                }}
-              >
-                <option value="">Chọn tháng</option>
-                {[...Array(12).keys()].map((i) => {
-                  const month = i + 1;
-                  return (
-                    <option key={month} value={month}>
-                      Tháng {month}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <div className="col-md-4 mb-2">
-              <OverlayTrigger placement="top" overlay={<Tooltip>Tính lương cho 1 nhân viên</Tooltip>}>
-                <Button variant="outline-success" className="w-100" onClick={() => setShowModal(true)}>
-                  Tính lương cho 1 nhân viên
-                </Button>
-              </OverlayTrigger>
-            </div>
-            <div className="col-md-4 mb-2">
-              <OverlayTrigger placement="top" overlay={<Tooltip>Tính lương toàn bộ nhân viên</Tooltip>}>
-                <Button
-                  variant="outline-warning"
-                  className="w-100"
-                  onClick={() => {
-                    setIsTinhTatCa(true);
-                    setShowModal(true);
-                  }}
-                >
-                  Tính lương tất cả nhân viên
-                </Button>
-              </OverlayTrigger>
-            </div>
-            <div className="col-md-2 mb-2 d-flex justify-content-md-end justify-content-center">
-              <Button variant="outline-success" className="w-100 w-md-auto" onClick={exportToExcel}>
-                Xuất Excel
-              </Button>
-            </div>
-          </div>
+      {/* Header Section */}
+      <HeaderSection navigate={navigate} />
 
-          {/* Bảng lương */}
-          <div className="table-responsive">
-            <table className="table table-bordered table-hover">
-              <thead className="table-dark">
-                <tr>
-                  <th>Nhân viên</th>
-                  <th>Tháng</th>
-                  <th>Số ngày công</th>
-                  <th>Lương cơ bản</th>
-                  <th>Thuế TNCN</th>
-                  <th>Bảo Hiểm</th>
-                  <th>Phụ cấp</th>
-                  <th>Khấu trừ</th>
-                  <th>Tổng lương</th>
-                  <th>Thực nhận</th>
-                  <th>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedList.map((luong) => {
-                  const nv = nhanVienList.find((nv) => nv.id === luong.nhan_vien_id);
-                  return (
-                    <tr key={luong.id}>
-                      <td>{nv?.ho_ten || "Không rõ"}</td>
-                      <td>{`${luong.thang}/${luong.nam}`}</td>
-                      <td>{luong.so_ngay_cong}</td>
-                      <td>{formatCurrency(luong.luong_co_ban)}</td>
-                      <td>{formatCurrency(luong.thue_thu_nhap_ca_nhan)}</td>
-                      <td>{formatCurrency(luong.bao_hiem)}</td>
-                      <td>{formatCurrency(luong.phu_cap)}</td>
-                      <td>{formatCurrency(luong.khau_tru)}</td>
-                      <td>{formatCurrency(luong.tong_luong)}</td>
-                      <td>{formatCurrency(luong.luong_thuc_nhan)}</td>
-                      <td>
-                        <OverlayTrigger placement="top" overlay={<Tooltip>Xoá dòng lương này</Tooltip>}>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleDeleteLuong(luong.id)}
-                          >
-                            Xoá
-                          </Button>
-                        </OverlayTrigger>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      {/* Filter and Actions Card */}
+      <FilterSection
+        searchKeyword={searchKeyword}
+        setSearchKeyword={setSearchKeyword}
+        setCurrentPage={setCurrentPage}
+        selectedYear={selectedYear}
+        setSelectedYear={setSelectedYear}
+        selectedMonthNumber={selectedMonthNumber}
+        setSelectedMonthNumber={setSelectedMonthNumber}
+        filteredList={paginatedList}
+        nhanVienList={nhanVienList}
+        isHR={isHR}
+        setShowModal={setShowModal}
+        setIsTinhTatCa={setIsTinhTatCa}
+      />
 
-          {/* Phân trang giữ nguyên kiểu cũ */}
-          <Row className="justify-content-center mt-3">
-            <Col xs="auto" className="text-center">
-              <div className="d-flex align-items-center gap-3">
-                <Button
-                  variant="outline-secondary"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                >
-                  ← Trước
-                </Button>
-                <span className="fw-semibold">
-                  Trang {currentPage} / {totalPages || 1}
+      {/* Tab Navigation */}
+      <Card className="shadow-sm border-0 rounded-card mb-4">
+        <Card.Body className="p-3">
+          <Tabs
+            activeKey={activeTab}
+            onSelect={(tab) => setActiveTab(tab)}
+            className="custom-tabs"
+          >
+            <Tab
+              eventKey="table"
+              title={
+                <span>
+                  <FaTable className="me-2" />
+                  Bảng Dữ Liệu
                 </span>
-                <Button
-                  variant="outline-secondary"
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                >
-                  Sau →
-                </Button>
-              </div>
-            </Col>
-          </Row>
+              }
+            >
+              {/* Table Section */}
+              <TableSection
+                data={paginatedList}
+                nhanVienList={nhanVienList}
+                isHR={isHR}
+                loading={loading}
+                onDelete={handleDeleteLuong}
+                formatCurrency={formatCurrency}
+              />
 
-          {/* Modal tính lương */}
-          <Modal show={showModal} onHide={() => setShowModal(false)}>
-            <Modal.Header closeButton>
-              <Modal.Title>Tính lương</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              {!isTinhTatCa && (
-                <select
-                  className="form-control mb-3"
-                  value={formData.nhan_vien_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nhan_vien_id: e.target.value })
-                  }
-                >
-                  <option value="">Chọn nhân viên</option>
-                  {nhanVienList.map((nv) => (
-                    <option key={nv.id} value={nv.id}>
-                      {nv.ho_ten}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <div className="d-flex gap-2">
-                <input
-                  type="number"
-                  placeholder="Tháng"
-                  className="form-control"
-                  value={formData.thang}
-                  onChange={(e) =>
-                    setFormData({ ...formData, thang: e.target.value })
-                  }
-                />
-                <input
-                  type="number"
-                  placeholder="Năm"
-                  className="form-control"
-                  value={formData.nam}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nam: e.target.value })
-                  }
-                />
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowModal(false)}>
-                Đóng
-              </Button>
-              <Button variant="primary" onClick={handleSubmitLuong}>
-                Tính lương
-              </Button>
-            </Modal.Footer>
-          </Modal>
-        </div>
-      </div>
+              {/* Pagination */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </Tab>
+            <Tab
+              eventKey="charts"
+              title={
+                <span>
+                  <FaChartBar className="me-2" />
+                  Biểu Đồ Thống Kê
+                </span>
+              }
+            >
+              {/* Charts Section */}
+              <SalaryCharts
+                luongList={luongList}
+                nhanVienList={nhanVienList}
+                phongBanList={phongBanList}
+                selectedYear={selectedYear}
+                selectedMonthNumber={selectedMonthNumber}
+                isHR={isHR}
+                currentUser={isHR ? null : { id: formData.nhan_vien_id }}
+                formatCurrency={formatCurrency}
+              />
+            </Tab>
+          </Tabs>
+        </Card.Body>
+      </Card>
+
+      {/* Calculation Modal */}
+      <CalculationModal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        isTinhTatCa={isTinhTatCa}
+        isHR={isHR}
+        formData={formData}
+        setFormData={setFormData}
+        selectedPhongBan={selectedPhongBan}
+        setSelectedPhongBan={setSelectedPhongBan}
+        phongBanList={phongBanList}
+        nhanVienList={nhanVienList}
+        onSubmit={handleSubmitLuong}
+      />
     </div>
   );
 };
+
+// Sub-components
+const HeaderSection = ({ navigate }) => (
+  <div className="quan-ly-luong-header mb-4 shadow-sm">
+    <div className="d-flex justify-content-between align-items-center">
+      <div>
+        <Breadcrumb className="mb-3">
+          <Breadcrumb.Item active>
+            <FaHome className="me-2" />
+            Trang chủ
+          </Breadcrumb.Item>
+          <Breadcrumb.Item active>Quản lý lương</Breadcrumb.Item>
+        </Breadcrumb>
+        <h1 className="fw-bold mb-2">💰 Quản lý Lương</h1>
+        <p className="mb-0 opacity-90">Quản lý và tính toán lương nhân viên</p>
+      </div>
+      <Button
+        variant="outline-light"
+        onClick={() => navigate("/")}
+        className="glass-button border-0"
+      >
+        <FaHome className="me-2" />
+        Trang chủ
+      </Button>
+    </div>
+  </div>
+);
+
+const FilterSection = ({
+  searchKeyword,
+  setSearchKeyword,
+  setCurrentPage,
+  selectedYear,
+  setSelectedYear,
+  selectedMonthNumber,
+  setSelectedMonthNumber,
+  filteredList,
+  nhanVienList,
+  isHR,
+  setShowModal,
+  setIsTinhTatCa,
+}) => (
+  <Card className="shadow-sm border-0 rounded-card mb-4">
+    <Card.Body className="p-4">
+      <Row className="g-3">
+        <Col md={4}>
+          <div className="position-relative">
+            <FaSearch className="position-absolute top-50 start-3 translate-middle-y text-muted" />
+            <Form.Control
+              type="text"
+              placeholder="Tìm theo tên nhân viên..."
+              value={searchKeyword}
+              onChange={(e) => {
+                setSearchKeyword(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{ paddingLeft: "2.5rem" }}
+            />
+          </div>
+        </Col>
+        <Col md={3}>
+          <Form.Select
+            value={selectedYear}
+            onChange={(e) => {
+              setSelectedYear(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="">Chọn năm</option>
+            {[...Array(5).keys()].map((i) => {
+              const year = new Date().getFullYear() - i;
+              return (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              );
+            })}
+          </Form.Select>
+        </Col>
+        <Col md={3}>
+          <Form.Select
+            value={selectedMonthNumber}
+            onChange={(e) => {
+              setSelectedMonthNumber(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="">Chọn tháng</option>
+            {[...Array(12).keys()].map((i) => {
+              const month = i + 1;
+              return (
+                <option key={month} value={month}>
+                  Tháng {month}
+                </option>
+              );
+            })}
+          </Form.Select>
+        </Col>
+        <Col md={2}>
+          <Button
+            variant="outline-success"
+            className="w-100"
+            onClick={() => exportBangLuongToExcel(filteredList, nhanVienList)}
+          >
+            <FaFileExport className="me-2" />
+            Xuất Excel
+          </Button>
+        </Col>
+      </Row>
+
+      <Row className="g-3 mt-2">
+        <Col md={6}>
+          {isHR && (
+          <OverlayTrigger
+            placement="top"
+            overlay={<Tooltip>Tính lương cho 1 nhân viên</Tooltip>}
+          >
+            <Button
+              variant="outline-primary"
+              className="w-100 hover-gradient-primary"
+              onClick={() => {
+                setIsTinhTatCa(false);
+                setShowModal(true);
+              }}
+            >
+              <FaCalculator className="me-2" />
+              Tính lương 1 nhân viên
+            </Button>
+          </OverlayTrigger>
+          )}
+        </Col>
+        <Col md={6}>
+          {isHR && (
+            <OverlayTrigger
+              placement="top"
+              overlay={<Tooltip>Tính lương toàn bộ nhân viên</Tooltip>}
+            >
+              <Button
+                variant="outline-warning"
+                className="w-100 hover-gradient-warning"
+                onClick={() => {
+                  setIsTinhTatCa(true);
+                  setShowModal(true);
+                }}
+              >
+                <FaCalculator className="me-2" />
+                Tính lương tất cả
+              </Button>
+            </OverlayTrigger>
+          )}
+        </Col>
+      </Row>
+    </Card.Body>
+  </Card>
+);
+
+const TableSection = ({ data, nhanVienList, isHR, loading, onDelete, formatCurrency }) => (
+  <Card className="shadow-sm border-0 rounded-card">
+    <Card.Body className="p-0">
+      <div className="table-container">
+        <Table bordered hover className="mb-0" style={{ minWidth: "1800px" }}>
+          <TableHeader isHR={isHR} />
+          <tbody>
+            <LuongTable
+              data={data}
+              nhanVienList={nhanVienList}
+              isHR={isHR}
+              loading={loading}
+              onDelete={onDelete}
+              formatCurrency={formatCurrency}
+            />
+          </tbody>
+        </Table>
+      </div>
+    </Card.Body>
+  </Card>
+);
 
 export default QuanLyLuong;

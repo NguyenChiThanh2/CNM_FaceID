@@ -21,11 +21,16 @@ def create_loai_nghi_phep():
         loai = create_loai_nghi_phep_service(
             ten=data['ten'],
             mo_ta=data.get('mo_ta'),
-            co_luong=data.get('co_luong', True)
+            co_luong=data.get('co_luong', True),
+            don_vi_tinh=data.get('don_vi_tinh'),
+            yeu_cau_cham_cong=data.get('yeu_cau_cham_cong', False),
+            yeu_cau_thong_tin_sinh=data.get('yeu_cau_thong_tin_sinh', False),
         )
         return jsonify(loai.to_dict()), 201
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
+    except KeyError:
+        return jsonify({'error': 'Thiếu trường bắt buộc: ten'}), 400
 
 def update_loai_nghi_phep(id):
     data = request.json
@@ -34,7 +39,10 @@ def update_loai_nghi_phep(id):
             id,
             ten=data.get('ten'),
             mo_ta=data.get('mo_ta'),
-            co_luong=data.get('co_luong')
+            co_luong=data.get('co_luong'),
+            don_vi_tinh=data.get('don_vi_tinh'),
+            yeu_cau_cham_cong=data.get('yeu_cau_cham_cong'),
+            yeu_cau_thong_tin_sinh=data.get('yeu_cau_thong_tin_sinh'),
         )
         return jsonify(loai.to_dict()), 200
     except ValueError as e:

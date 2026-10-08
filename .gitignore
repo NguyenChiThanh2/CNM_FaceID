@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+backend/faceid_env/
+backend/faceid_env_new/
+*/venv/
+*.egg-info/
+
+# Flask instance folder (local SQLite DB + local test data — không đưa vào git)
+backend/instance/
+
+# Secrets — KHÔNG BAO GIỜ commit
+.env
+backend/.env
+frontend/.env
+
+# Node
+node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db

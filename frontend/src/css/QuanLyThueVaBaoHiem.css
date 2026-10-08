@@ -1,0 +1,101 @@
+/* QuanLyThueVaBaoHiem.css */
+.tax-insurance-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.tax-insurance-header {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  padding: 2rem;
+  color: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(30, 60, 114, 0.3);
+}
+
+.tax-insurance-header .breadcrumb-item {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.tax-insurance-header .breadcrumb-item.active {
+  color: white !important;
+  font-weight: 500;
+}
+
+.glass-button {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.rounded-card {
+  border-radius: 1rem;
+  border: none;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.rounded-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.custom-tabs .nav-link {
+  border: none;
+  color: #6c757d;
+  font-weight: 500;
+  padding: 12px 24px;
+  transition: all 0.3s ease;
+}
+
+.custom-tabs .nav-link.active {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  border-radius: 8px;
+}
+
+.custom-tabs .nav-link:hover {
+  color: #2a5298;
+  background: rgba(42, 82, 152, 0.1);
+}
+
+/* Animation cho các số thống kê */
+.stat-number {
+  font-weight: 700;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tax-insurance-container {
+    padding: 1rem !important;
+  }
+  
+  .tax-insurance-header {
+    padding: 1.5rem !important;
+  }
+  
+  .custom-tabs .nav-link {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+}

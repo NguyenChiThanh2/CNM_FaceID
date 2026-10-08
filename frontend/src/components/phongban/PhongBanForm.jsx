@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../../services/axiosInstance";
 import { Card, Form, Button, Row, Col } from "react-bootstrap";
 
 const PhongBanForm = ({ onSaved, editingPhongBan }) => {
@@ -29,9 +29,9 @@ const PhongBanForm = ({ onSaved, editingPhongBan }) => {
 
     try {
       if (editingPhongBan) {
-        await axios.put(`http://localhost:5000/api/edit-phong-ban/${editingPhongBan.id}`, payload);
+        await axiosInstance.put(`/edit-phong-ban/${editingPhongBan.id}`, payload);
       } else {
-        await axios.post("http://localhost:5000/api/add-phong-ban", payload);
+        await axiosInstance.post("/add-phong-ban", payload);
       }
       onSaved();
     } catch (err) {

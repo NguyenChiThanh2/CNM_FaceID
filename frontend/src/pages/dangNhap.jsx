@@ -1,38 +1,84 @@
-import React, { useState } from "react";
+// src/pages/dangNhap.jsx
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import { FaUser, FaLock } from "react-icons/fa";
+import { loginApi } from "../services/authService";
+import "react-toastify/dist/ReactToastify.css";
 
 const DangNhap = () => {
-  const [username, setUsername] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // nếu đã login rồi thì đá về trang chủ
+  useEffect(() => {
+    const saved = localStorage.getItem("user");
+    if (saved) navigate("/", { replace: true });
+  }, [navigate]);
+
   const handleLogin = async () => {
-    if (!username.trim() || !password.trim()) {
-      toast.error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu");
+    if (loading) return;
+
+    if (!emailOrPhone.trim() || !password.trim()) {
+      toast.error("Vui lòng nhập đầy đủ thông tin");
       return;
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/api/login", {
-        username,
-        password,
-      });
+      setLoading(true);
 
-      const { access_token, role } = response.data;
+      // call API — token JWT giờ do BE set thẳng vào cookie httpOnly (xem
+      // set_access_cookies ở /login), không còn trả về trong JSON body nữa
+      const res = await loginApi(emailOrPhone.trim(), password.trim());
+      const { nhan_vien } = res.data || {};
 
-      localStorage.setItem("user", JSON.stringify({
-        username,
-        role,
-        token: access_token
-      }));
+      // validate response
+      if (!nhan_vien) {
+        toast.error("Phản hồi đăng nhập không hợp lệ");
+        return;
+      }
 
-      toast.success(`Đăng nhập thành công với vai trò: ${role.ma_vai_tro}`);
-      navigate("/");
+      // lưu thông tin hồ sơ (không nhạy cảm) để hiển thị UI — JWT thật nằm
+      // trong cookie httpOnly, JS không đọc/lưu được nữa
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          nhan_vien: {
+            id: nhan_vien.id,
+            ho_ten: nhan_vien.ho_ten,
+            email: nhan_vien.email,
+            so_dien_thoai: nhan_vien.so_dien_thoai,
+            chuc_vu_id: nhan_vien.chuc_vu_id,
+            phong_ban_id: nhan_vien.phong_ban_id,
+            avatar: nhan_vien.avatar,
+            ten_phong_ban: nhan_vien.ten_phong_ban || "",
+            ten_chuc_vu: nhan_vien.ten_chuc_vu || "",
+          },
+        })
+      );
+
+      // ✅ báo thành công
+      toast.success("Đăng nhập thành công!");
+
+      // điều hướng về trang chủ sau 1 chút để user thấy toast
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 800);
     } catch (error) {
-      toast.error("Tên đăng nhập hoặc mật khẩu không đúng!");
+      // axiosInstance đã tự chuẩn hoá lỗi (xem normalizeError trong
+      // axiosInstance.js) — payload gốc từ BE nằm ở error.data, không còn
+      // error.response nữa. BE /login trả field "msg" (không phải "message"),
+      // normalizeError không biết field này nên phải tự đọc lại ở đây.
+      const msg =
+        error?.data?.msg ||
+        error?.data?.message ||
+        error?.message ||
+        "Email hoặc mật khẩu không đúng!";
+      toast.error(msg); // ❌ báo lỗi
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,60 +86,236 @@ const DangNhap = () => {
     <div
       className="d-flex align-items-center justify-content-center vh-100"
       style={{
-        background: "linear-gradient(135deg, #1c1f24 0%,rgb(54, 57, 61) 100%)"
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        minHeight: "100vh",
+        width: "100vw",
+        margin: 0,
+        padding: 0,
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: "hidden",
       }}
+      onKeyDown={(e) => e.key === "Enter" && handleLogin()}
     >
+      {/* Toast container để hiện thông báo */}
+      <ToastContainer position="top-right" autoClose={2000} />
+
+      {/* Background Pattern */}
       <div
-        className="shadow p-5 rounded-4"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `
+            radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%)
+          `,
+          zIndex: 0,
+        }}
+      />
+
+      {/* Login Card */}
+      <div
+        className="shadow-lg p-4 rounded-4 border-0 position-relative"
         style={{
           width: "100%",
-          maxWidth: "400px",
-          backgroundColor: "#f8f9fa",
+          maxWidth: 420,
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(10px)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+          zIndex: 1,
         }}
       >
-        <h3 className="text-center mb-4 fw-bold text-dark">
-          Đăng nhập hệ thống
-        </h3>
-
-        <div className="mb-3 input-group">
-          <span className="input-group-text bg-white"><FaUser /></span>
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Tên đăng nhập"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+        {/* Header */}
+        <div className="text-center mb-4">
+          <div className="mb-3">
+            <div
+              className="rounded-circle d-inline-flex align-items-center justify-content-center"
+              style={{
+                width: 60,
+                height: 60,
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+              }}
+            >
+              <FaUser className="text-white" size={24} />
+            </div>
+          </div>
+          <h3 className="fw-bold mb-2" style={{ color: "#2d3748" }}>
+            Đăng nhập
+          </h3>
+          <p className="text-muted" style={{ fontSize: "0.9rem" }}>
+            Chào mừng bạn trở lại
+          </p>
         </div>
 
-        <div className="mb-4 input-group">
-          <span className="input-group-text bg-white"><FaLock /></span>
-          <input
-            type="password"
-            className="form-control"
-            placeholder="Mật khẩu"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+        {/* Form */}
+        <div className="mb-3">
+          <label
+            className="form-label fw-semibold"
+            style={{ color: "#4a5568", fontSize: "0.9rem" }}
+          >
+            Tên đăng nhập
+          </label>
+          <div className="input-group">
+            <span
+              className="input-group-text border-end-0"
+              style={{
+                backgroundColor: "#f8f9fa",
+                borderColor: "#e2e8f0",
+                transition: "all 0.3s ease",
+              }}
+            >
+              <FaUser className="text-secondary" />
+            </span>
+            <input
+              type="text"
+              className="form-control border-start-0"
+              placeholder="Email"
+              value={emailOrPhone}
+              onChange={(e) => setEmailOrPhone(e.target.value)}
+              style={{
+                borderColor: "#e2e8f0",
+                backgroundColor: "#fff",
+                transition: "all 0.3s ease",
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = "#667eea";
+                e.target.style.boxShadow =
+                  "0 0 0 2px rgba(102, 126, 234, 0.1)";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "#e2e8f0";
+                e.target.style.boxShadow = "none";
+              }}
+            />
+          </div>
         </div>
 
+        <div className="mb-4">
+          <div className="d-flex justify-content-between align-items-center">
+            <label
+              className="form-label fw-semibold"
+              style={{ color: "#4a5568", fontSize: "0.9rem" }}
+            >
+              Mật khẩu
+            </label>
+            {/* <a
+              href="#"
+              className="text-decoration-none"
+              style={{
+                fontSize: "0.85rem",
+                color: "#667eea",
+                transition: "color 0.3s ease",
+              }}
+              onMouseEnter={(e) => (e.target.style.color = "#764ba2")}
+              onMouseLeave={(e) => (e.target.style.color = "#667eea")}
+            >
+              Quên mật khẩu?
+            </a> */}
+          </div>
+          <div className="input-group">
+            <span
+              className="input-group-text border-end-0"
+              style={{
+                backgroundColor: "#f8f9fa",
+                borderColor: "#e2e8f0",
+                transition: "all 0.3s ease",
+              }}
+            >
+              <FaLock className="text-secondary" />
+            </span>
+            <input
+              type="password"
+              className="form-control border-start-0"
+              placeholder="Nhập mật khẩu"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                borderColor: "#e2e8f0",
+                backgroundColor: "#fff",
+                transition: "all 0.3s ease",
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = "#667eea";
+                e.target.style.boxShadow =
+                  "0 0 0 2px rgba(102, 126, 234, 0.1)";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "#e2e8f0";
+                e.target.style.boxShadow = "none";
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Login Button */}
         <button
-          className="btn w-100 fw-semibold py-2"
+          className="btn w-100 fw-semibold py-2 mb-3 border-0"
+          disabled={loading}
           style={{
-            background: "linear-gradient(90deg, #343a40 0%, #212529 100%)",
+            background:
+              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
             color: "#fff",
-            transition: "background 0.3s ease"
+            fontSize: "1rem",
+            transition: "all 0.3s ease",
+            opacity: loading ? 0.7 : 1,
+            cursor: loading ? "not-allowed" : "pointer",
+            borderRadius: "8px",
+            boxShadow: "0 4px 15px 0 rgba(102, 126, 234, 0.3)",
           }}
-          onMouseEnter={e => e.currentTarget.style.background = "linear-gradient(90deg, #495057 0%, #343a40 100%)"}
-          onMouseLeave={e => e.currentTarget.style.background = "linear-gradient(90deg, #343a40 0%, #212529 100%)"}
+          onMouseEnter={(e) => {
+            if (!loading) {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow =
+                "0 6px 20px 0 rgba(102, 126, 234, 0.4)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!loading) {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow =
+                "0 4px 15px 0 rgba(102, 126, 234, 0.3)";
+            }
+          }}
           onClick={handleLogin}
         >
-          Đăng nhập
+          {loading ? (
+            <div className="d-flex align-items-center justify-content-center">
+              <div
+                className="spinner-border spinner-border-sm me-2"
+                style={{
+                  width: "1rem",
+                  height: "1rem",
+                  borderWidth: "2px",
+                }}
+              />
+              <span>Đang đăng nhập...</span>
+            </div>
+          ) : (
+            "Đăng nhập"
+          )}
         </button>
 
-        <p className="text-center text-muted mt-3" style={{ fontSize: "0.9rem" }}>
-          © 2025 Công ty TNHH TK
-        </p>
+        {/* Footer */}
+        <div
+          className="text-center mt-4 pt-3"
+          style={{ borderTop: "1px solid #e2e8f0" }}
+        >
+          <p
+            className="text-muted mb-0"
+            style={{ fontSize: "0.85rem" }}
+          >
+            © 2025 Khóa luận tốt nghiệp.
+          </p>
+        </div>
       </div>
     </div>
   );

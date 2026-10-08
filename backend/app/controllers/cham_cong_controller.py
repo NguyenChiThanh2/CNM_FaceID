@@ -5,8 +5,12 @@ from app.services.cham_cong_service import (
     get_cham_cong_by_nhan_vien_id_service,
     update_cham_cong_service,
     delete_cham_cong_service,
-    create_cham_cong_from_face_service
+    create_cham_cong_from_face_service,
+    get_chamcong_1nhanvien_theothang_service,
+    get_tinhsocong_1nhanvien_theothang_service,
+    get_tinhsocong_theogiayphep_service
 )
+from app.decorators.auth_decorators import get_current_nhan_vien, is_hr
 
 # Lấy tất cả chấm công
 def get_all_cham_cong():
@@ -26,7 +30,17 @@ def get_cham_cong_by_id(id):
 
 # Cập nhật chấm công
 def update_cham_cong(id):
-    data = request.get_json()
+    # Chỉ HR hoặc đúng chủ chấm công mới được sửa — trước đây BE không kiểm
+    # tra, ai có quyền "cham_cong.sua" (cần cho nhân viên tự sửa chấm công của
+    # họ) sửa được chấm công của bất kỳ ai.
+    existing = get_cham_cong_by_id_service(id)
+    if not existing:
+        return jsonify({'message': 'Không tìm thấy chấm công'}), 404
+    nv = get_current_nhan_vien()
+    if not (is_hr(nv) or (nv and existing.nhan_vien_id == nv.id)):
+        return jsonify({'message': 'Bạn không có quyền sửa chấm công này'}), 403
+
+    data = request.get_json(silent=True) or {}  # body sai định dạng -> {} thay vì crash 500
     cham_cong = update_cham_cong_service(
         id,
         thoi_gian_vao=data.get('thoi_gian_vao'),
@@ -41,8 +55,53 @@ def update_cham_cong(id):
 
 # Xóa chấm công
 def delete_cham_cong(id):
+    # Chỉ HR hoặc đúng chủ chấm công mới được xóa — cùng lý do như update_cham_cong.
+    existing = get_cham_cong_by_id_service(id)
+    if not existing:
+        return jsonify({'message': 'Không tìm thấy chấm công'}), 404
+    nv = get_current_nhan_vien()
+    if not (is_hr(nv) or (nv and existing.nhan_vien_id == nv.id)):
+        return jsonify({'message': 'Bạn không có quyền xóa chấm công này'}), 403
+
     if delete_cham_cong_service(id):
         return jsonify({'message': 'Xóa chấm công thành công'}), 200
     else:
         return jsonify({'message': 'Không tìm thấy chấm công'}), 404
+
+# Lấy chấm công theo ID theo tháng năm
+def get_chamcong_1nhanvien_theothang_controller(id, thang, nam):
+    cham_cong = get_chamcong_1nhanvien_theothang_service(id, thang, nam)
+    if cham_cong:
+        return jsonify([cham_cong.to_dict() for cham_cong in cham_cong]), 200
+    else:
+        return jsonify({'message': 'Không tìm thấy chấm công'}), 404
+    
+# Lấy chấm công theo ID theo tháng năm
+def get_tinhsocong_1nhanvien_theothang_controller(id, thang, nam):
+    tinh_so_cong =get_tinhsocong_1nhanvien_theothang_service(id, thang, nam)
+    if tinh_so_cong:
+        return jsonify({'message': 'Cập nhật thành công'}), 200
+    else:
+        return jsonify({'message': 'Cạp nhật thất bại'}), 404
+    
+    
+def get_tinhsocong_theogiayphep_controller(id):
+    data, status_code = get_tinhsocong_theogiayphep_service(id)
+    if status_code == 200:
+        return jsonify({
+            'message': 'Cập nhật thành công',
+            'body': data
+        }), 200
+    else:
+        return jsonify({
+            'message': 'Cập nhật thất bại',
+            'body': data
+        }), status_code
+    # if tinh_so_cong:
+    #     return jsonify({'message': 'Cập nhật thành công', 'body': tinh_so_cong}), 200
+    # else:
+    #     return jsonify({'message': 'Cập nhật thất bại', 'body': tinh_so_cong}), 404
+
+
+
 

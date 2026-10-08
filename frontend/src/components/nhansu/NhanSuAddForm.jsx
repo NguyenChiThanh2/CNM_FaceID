@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
-const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
+// dùng service
+import {
+  createNhanVien,
+  updateNhanVien,
+} from "../../services/nhanSuApi";
+import { ganVaiTroChoNhanVien } from "../../services/vaiTroApi";
+
+// dsChucVu/dsPhongBan/dsVaiTro nhận qua props từ QuanLyNhanSu.jsx (trang cha
+// đã fetch sẵn 1 lần cho bảng danh sách) — trước đây form tự fetch lại các
+// API này mỗi lần modal "Thêm/Sửa nhân sự" mở, dù dữ liệu đã có sẵn ở trang cha.
+const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu, dsChucVu = [], dsPhongBan = [], dsVaiTro = [] }) => {
   const [formData, setFormData] = useState({
     ho_ten: "",
     gioi_tinh: "Nam",
@@ -15,48 +22,27 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
     phong_ban_id: "",
     trang_thai: "Đang làm việc",
     avatar: null,
-    luong_co_ban: "",  // Thêm trường lương cơ bản
+    // Chỉ dùng lúc TẠO MỚI (xem handleSubmit) — không gửi kèm trong form data
+    // của add-nhan-vien/edit-nhan-vien (BE cố tình không cho sửa vai_tro_id
+    // qua 2 API đó, tránh 1 nhân viên tự sửa hồ sơ của mình tự nâng quyền).
+    // Sau khi tạo xong, gọi riêng API PUT /nhan-vien/:id/vai-tro để gán.
+    vai_tro_id: "",
   });
 
-  const [dsChucVu, setDsChucVu] = useState([]);
-  const [dsPhongBan, setDsPhongBan] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [alertType, setAlertType] = useState("success");
 
   useEffect(() => {
     if (editingNhanSu) {
       setFormData({
         ...editingNhanSu,
-        avatar: null,
+        avatar: null, // tránh gửi lại file cũ
+        chuc_vu_id: editingNhanSu.chuc_vu_id ? String(editingNhanSu.chuc_vu_id) : "",
+        phong_ban_id: editingNhanSu.phong_ban_id ? String(editingNhanSu.phong_ban_id) : "",
       });
     } else {
       resetForm();
     }
   }, [editingNhanSu]);
-
-  useEffect(() => {
-    fetchChucVu();
-    fetchPhongBan();
-  }, []);
-
-  const fetchChucVu = async () => {
-    try {
-      const res = await axios.get("http://127.0.0.1:5000/api/get-all-chuc-vu");
-      setDsChucVu(res.data);
-    } catch (err) {
-      console.error("Lỗi load chức vụ:", err);
-    }
-  };
-
-  const fetchPhongBan = async () => {
-    try {
-      const res = await axios.get("http://127.0.0.1:5000/api/get-all-phong-ban");
-      setDsPhongBan(res.data);
-    } catch (err) {
-      console.error("Lỗi load phòng ban:", err);
-    }
-  };
 
   const resetForm = () => {
     setFormData({
@@ -70,92 +56,76 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
       phong_ban_id: "",
       trang_thai: "Đang làm việc",
       avatar: null,
-      luong_co_ban: "",  // Reset trường lương cơ bản
+      vai_tro_id: "",
     });
   };
 
-  const validatePhoneNumber = (phone) => {
-    const phoneRegex = /^(03|05|07|08|09)\d{8}$/;
-    return phoneRegex.test(phone);
-  };
+  const validatePhoneNumber = (phone) => /^(03|05|07|08|09)\d{8}$/.test(phone);
 
   const validateForm = () => {
-    if (!formData.ho_ten || !formData.email || !formData.so_dien_thoai || !formData.luong_co_ban) {
-      setSuccessMessage("❌ Vui lòng điền đầy đủ thông tin.");
-      setAlertType("danger");
-      return false;
+    if (!formData.ho_ten || !formData.email || !formData.so_dien_thoai) {
+      return { ok: false, msg: "Vui lòng điền đầy đủ thông tin." };
     }
     if (!validatePhoneNumber(formData.so_dien_thoai)) {
-      setSuccessMessage("❌ Số điện thoại không hợp lệ.");
-      setAlertType("danger");
-      return false;
+      return { ok: false, msg: "Số điện thoại không hợp lệ." };
     }
-    if (formData.luong_co_ban <= 0) {
-      setSuccessMessage("❌ Lương cơ bản phải là số dương.");
-      setAlertType("danger");
-      return false;
-    }
-    return true;
+    const luong = Number(formData.luong_co_ban);
+    return { ok: true };
   };
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
-    if (type === "file") {
-      setFormData({ ...formData, [name]: files[0] });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    if (type === "file") setFormData((s) => ({ ...s, [name]: files?.[0] || null }));
+    else setFormData((s) => ({ ...s, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSuccessMessage("");
 
-    // Kiểm tra tính hợp lệ của form
-    if (!validateForm()) {
+    const v = validateForm();
+    if (!v.ok) {
+      // báo cho cha biết để hiển thị toast
+      await onAdded?.(false, new Error(v.msg));
       setIsSubmitting(false);
       return;
     }
 
     try {
       const form = new FormData();
-      for (const key in formData) {
-        if (formData[key] !== null) {
-          form.append(key, formData[key]);
+      Object.entries(formData).forEach(([k, v]) => {
+        // vai_tro_id không gửi qua đây — BE cố tình không nhận field này ở
+        // add-nhan-vien/edit-nhan-vien, gán riêng ở dưới bằng API khác.
+        if (k === "vai_tro_id") return;
+        if (v !== null && v !== undefined) form.append(k, v);
+      });
+
+      if (editingNhanSu?.id) {
+        await updateNhanVien(editingNhanSu.id, form);
+      } else {
+        const created = await createNhanVien(form);
+        if (formData.vai_tro_id) {
+          await ganVaiTroChoNhanVien(created.id, Number(formData.vai_tro_id));
         }
       }
 
-      if (editingNhanSu) {
-        await axios.put(`http://127.0.0.1:5000/api/edit-nhan-vien/${editingNhanSu.id}`, form);
-        setSuccessMessage("✅ Cập nhật nhân sự thành công!");
-        setAlertType("success");
-      } else {
-        await axios.post("http://127.0.0.1:5000/api/add-nhan-vien", form);
-        toast.success("✅ Thêm mới nhân sự thành công!");
-        setAlertType("success");
-      }
-
-      onAdded();
+      await onAdded?.(true);
       resetForm();
-      setEditingNhanSu(null);
+      setEditingNhanSu?.(null);
     } catch (err) {
       console.error("Lỗi submit:", err);
-      setSuccessMessage("❌ Đã xảy ra lỗi khi lưu dữ liệu.");
-      setAlertType("danger");
+      await onAdded?.(false, err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} encType="multipart/form-data" className="p-4 border rounded shadow-sm bg-white">
-      {successMessage && (
-        <div className={`alert alert-${alertType}`} role="alert">
-          {successMessage}
-        </div>
-      )}
-
+    <form
+      onSubmit={handleSubmit}
+      encType="multipart/form-data"
+      className="p-4 border rounded shadow-sm bg-white"
+    >
       <div className="row">
         <div className="col-md-6 mb-3">
           <label><strong>Họ tên</strong></label>
@@ -210,7 +180,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
         <div className="col-md-6 mb-3">
           <label><strong>Số điện thoại</strong></label>
           <input
-            type="text"
+            type="tel"
             name="so_dien_thoai"
             className="form-control"
             value={formData.so_dien_thoai}
@@ -242,7 +212,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
           >
             <option value="">-- Chọn chức vụ --</option>
             {dsChucVu.map((cv) => (
-              <option key={cv.id} value={cv.id}>
+              <option key={cv.id} value={String(cv.id)}>
                 {cv.ten_chuc_vu}
               </option>
             ))}
@@ -267,6 +237,28 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
           </select>
         </div>
 
+        {!editingNhanSu && (
+          <div className="col-md-6 mb-3">
+            <label><strong>Vai trò</strong></label>
+            <select
+              name="vai_tro_id"
+              className="form-control"
+              value={formData.vai_tro_id}
+              onChange={handleChange}
+            >
+              <option value="">-- Không gán vai trò --</option>
+              {dsVaiTro.map((vt) => (
+                <option key={vt.id} value={String(vt.id)}>
+                  {vt.ten_vai_tro}
+                </option>
+              ))}
+            </select>
+            <small className="text-muted">
+              Quyết định nhân viên này được thao tác gì trong hệ thống. Có thể để trống, gán sau.
+            </small>
+          </div>
+        )}
+
         <div className="col-md-6 mb-3">
           <label><strong>Trạng thái</strong></label>
           <select
@@ -278,7 +270,7 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
           >
             <option value="Đang làm việc">Đang làm việc</option>
             <option value="Đã nghỉ việc">Đã nghỉ việc</option>
-            <option value="Đang thử viênc">Đang thử việc</option>
+            <option value="Đang thử việc">Đang thử việc</option>
           </select>
         </div>
 
@@ -292,33 +284,13 @@ const NhanSuAddForm = ({ onAdded, editingNhanSu, setEditingNhanSu }) => {
             onChange={handleChange}
           />
         </div>
-
-        {/* Trường Lương Cơ Bản */}
-        <div className="col-md-6 mb-3">
-          <label><strong>Lương cơ bản</strong></label>
-          <input
-            type="number"
-            name="luong_co_ban"
-            className="form-control"
-            value={formData.luong_co_ban}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
       </div>
 
       <div className="mt-3">
-        <button
-          type="submit"
-          className="btn btn-success w-100"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "⏳ Đang xử lý..." : (editingNhanSu ? "💾 Cập nhật nhân sự" : "➕ Thêm mới nhân sự")}
+        <button type="submit" className="btn btn-success w-100" disabled={isSubmitting}>
+          {isSubmitting ? "⏳ Đang xử lý..." : editingNhanSu ? "💾 Cập nhật nhân sự" : "➕ Thêm mới nhân sự"}
         </button>
       </div>
-
-      <ToastContainer position="top-center" autoClose={3000} />
     </form>
   );
 };
