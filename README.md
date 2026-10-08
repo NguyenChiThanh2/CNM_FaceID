@@ -25,8 +25,7 @@ Chấm công thủ công tốn thời gian và dễ sai sót, kéo theo bảng l
 | Môi trường phát triển | Docker Compose |
 
 ## Phần tôi phụ trách
-[[Phần bạn tự làm, ví dụ: "Xây dựng API tính lương, Dashboard React theo dõi
-chấm công và tích hợp nhận diện khuôn mặt vào luồng chấm công."]]
+chấm công và tích hợp nhận diện khuôn mặt vào luồng chấm công.
 
 ## Kết quả
 - Thử nghiệm với 10 nhân viên: nhận diện đúng khoảng 85% lượt check-in
